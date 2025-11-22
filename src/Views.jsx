@@ -291,14 +291,7 @@ export const SettingsView = () => {
                         <div className="text-xs mb-3 p-3 bg-blue-50 border-2 border-blue-300">
                             <p className="font-bold mb-1">📱 Want to sync across devices?</p>
                             <p className="opacity-80">Follow the setup guide to connect Firebase and access your data from both PC and Android phone!</p>
-                            <a 
-                                href="https://github.com/jxburros/AlbumTracker/blob/main/FIREBASE_SETUP.md" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="inline-block mt-2 underline hover:text-blue-700"
-                            >
-                                View Firebase Setup Guide →
-                            </a>
+                            <p className="mt-2 opacity-70">See FIREBASE_SETUP.md in the project repository for detailed instructions.</p>
                         </div>
                     )}
                     

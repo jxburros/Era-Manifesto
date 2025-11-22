@@ -42,7 +42,11 @@ jobs:
       - name: Sync with main branch
         run: |
           # Merge main into deploy
-          git merge origin/main --no-edit --allow-unrelated-histories || true
+          if ! git merge origin/main --no-edit --allow-unrelated-histories; then
+            echo "Merge conflict detected. Manual resolution required."
+            echo "Please resolve conflicts manually and push to the deploy branch."
+            exit 1
+          fi
           
       - name: Remove development files
         run: |
