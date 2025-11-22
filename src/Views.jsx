@@ -184,10 +184,12 @@ export const ActiveView = ({ onEdit }) => {
 };
 
 export const SettingsView = () => {
-    const { data, actions } = useStore();
+    const { data, actions, mode } = useStore();
     const settings = data.settings || {};
     const themeMode = settings.themeMode || 'light';
     const accent = settings.themeColor || 'pink';
+    const isConnected = mode === 'cloud';
+    const isLoading = mode === 'loading';
 
     return (
         <div className="p-6 max-w-xl">
@@ -272,25 +274,63 @@ export const SettingsView = () => {
 
                 {/* Cloud connection */}
                 <div className="pt-4 border-t-4 border-black">
-                    <h3 className="font-black text-xs uppercase mb-2">Cloud Sync (Optional)</h3>
-                    <p className="text-xs mb-2 opacity-70">
-                        To sync across devices, paste your Firebase web config JSON here and connect.
+                    <h3 className="font-black text-xs uppercase mb-2">Cloud Sync</h3>
+                    
+                    {/* Connection Status */}
+                    <div className={cn("p-3 mb-3 text-xs font-bold border-4 border-black", isConnected ? "bg-green-100" : isLoading ? "bg-yellow-100" : "bg-gray-100")}>
+                        Status: {isLoading ? "Loading..." : isConnected ? "✓ Connected (Cloud Mode)" : "○ Local Storage Only"}
+                    </div>
+                    
+                    <p className="text-xs mb-3 opacity-70">
+                        {isConnected 
+                            ? "Your data is syncing across all devices via Firebase. Disconnect to switch back to local storage." 
+                            : "Currently using local storage. Connect to Firebase to sync data across PC and mobile devices."}
                     </p>
+                    
+                    {!isConnected && (
+                        <div className="text-xs mb-3 p-3 bg-blue-50 border-2 border-blue-300">
+                            <p className="font-bold mb-1">📱 Want to sync across devices?</p>
+                            <p className="opacity-80">Follow the setup guide to connect Firebase and access your data from both PC and Android phone!</p>
+                            <a 
+                                href="https://github.com/jxburros/AlbumTracker/blob/main/FIREBASE_SETUP.md" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-block mt-2 underline hover:text-blue-700"
+                            >
+                                View Firebase Setup Guide →
+                            </a>
+                        </div>
+                    )}
+                    
                     <button
                         onClick={() => {
-                            const c = prompt("Paste Firebase config JSON:");
-                            if (c) actions.connectCloud(JSON.parse(c));
+                            const c = prompt("Paste Firebase config JSON:\n\nExample:\n{\n  \"apiKey\": \"YOUR_API_KEY\",\n  \"authDomain\": \"...\",\n  \"projectId\": \"...\",\n  \"storageBucket\": \"...\",\n  \"messagingSenderId\": \"...\",\n  \"appId\": \"...\"\n}");
+                            if (c) {
+                                try {
+                                    actions.connectCloud(JSON.parse(c));
+                                } catch (e) {
+                                    alert("Invalid JSON format. Please check your Firebase config and try again.");
+                                }
+                            }
                         }}
                         className={cn("w-full py-3 bg-blue-500 text-white mb-2", THEME.punk.btn)}
+                        disabled={isConnected}
                     >
-                        Connect Cloud
+                        {isConnected ? "Already Connected" : "Connect to Firebase"}
                     </button>
-                    <button
-                        onClick={actions.disconnect}
-                        className={cn("w-full py-3 bg-red-500 text-white", THEME.punk.btn)}
-                    >
-                        Disconnect
-                    </button>
+                    
+                    {isConnected && (
+                        <button
+                            onClick={() => {
+                                if (confirm("Disconnect from Firebase? Your local data will be preserved, but you'll lose cloud sync until you reconnect.")) {
+                                    actions.disconnect();
+                                }
+                            }}
+                            className={cn("w-full py-3 bg-red-500 text-white", THEME.punk.btn)}
+                        >
+                            Disconnect from Firebase
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
