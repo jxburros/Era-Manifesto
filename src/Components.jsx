@@ -23,6 +23,7 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
       // Original views (secondary)
       { id: 'list', label: 'Plan', icon: 'List' },
       { id: 'active', label: 'Active', icon: 'Zap' },
+      { id: 'calendar', label: 'Calendar', icon: 'PieChart' },
       { id: 'gallery', label: 'Photos', icon: 'Image' },
       { id: 'team', label: 'Team', icon: 'Users' },
       { id: 'misc', label: 'Expenses', icon: 'Receipt' },
