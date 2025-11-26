@@ -459,8 +459,15 @@ export const StoreProvider = ({ children }) => {
      // Recalculate song deadlines from release date
      recalculateSongDeadlines: async (songId) => {
        const song = data.songs.find(s => s.id === songId);
-       if (song) {
-         const newDeadlines = recalculateDeadlines(song.deadlines, song.releaseDate, song.isSingle, song.videoType);
+       if (song && song.releaseDate) {
+         let newDeadlines;
+         // If no deadlines exist, create them from scratch
+         if (!song.deadlines || song.deadlines.length === 0) {
+           newDeadlines = calculateDeadlines(song.releaseDate, song.isSingle, song.videoType);
+         } else {
+           // Recalculate existing deadlines
+           newDeadlines = recalculateDeadlines(song.deadlines, song.releaseDate, song.isSingle, song.videoType);
+         }
          if (mode === 'cloud') {
            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_songs', songId), { deadlines: newDeadlines });
          } else {
