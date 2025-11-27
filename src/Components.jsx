@@ -17,6 +17,7 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
   const menu = [
       // New Spec Views (primary)
       { id: 'songs', label: 'Songs', icon: 'Music' },
+      { id: 'videos', label: 'Videos', icon: 'PlayCircle' },
       { id: 'globalTasks', label: 'Global Tasks', icon: 'Activity' },
       { id: 'releases', label: 'Releases', icon: 'Download' },
       { id: 'timeline', label: 'Timeline', icon: 'Calendar' },

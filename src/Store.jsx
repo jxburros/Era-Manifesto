@@ -79,17 +79,18 @@ export const calculateSongTasks = (releaseDate, isSingle, videoType) => {
     const taskDate = new Date(release);
     taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
     
-    tasks.push({
-      id: crypto.randomUUID(),
-      type: taskType.type,
-      category: taskType.category,
-      date: taskDate.toISOString().split('T')[0],
-      status: 'Not Started',
-      estimatedCost: 0,
-      notes: '',
-      isOverridden: false
+      tasks.push({
+        id: crypto.randomUUID(),
+        type: taskType.type,
+        category: taskType.category,
+        date: taskDate.toISOString().split('T')[0],
+        status: 'Not Started',
+        estimatedCost: 0,
+        notes: '',
+        assignedMembers: [],
+        isOverridden: false
+      });
     });
-  });
   
   // Add video tasks based on video type
   if (videoType && videoType !== 'None') {
@@ -106,6 +107,7 @@ export const calculateSongTasks = (releaseDate, isSingle, videoType) => {
           status: 'Not Started',
           estimatedCost: 0,
           notes: '',
+          assignedMembers: [],
           isOverridden: false
         });
       }
@@ -142,6 +144,7 @@ export const calculateReleaseTasks = (releaseDate) => {
       status: 'Not Started',
       estimatedCost: 0,
       notes: '',
+      assignedMembers: [],
       isOverridden: false
     });
   });
@@ -474,6 +477,7 @@ export const StoreProvider = ({ children }) => {
         exclusiveNotes: song.exclusiveNotes || '',
         extraVersionsNeeded: song.extraVersionsNeeded || '',
         instruments: song.instruments || [],
+        musicians: song.musicians || [],
         deadlines: deadlines,
         customTasks: [],
         versions: [
@@ -485,6 +489,7 @@ export const StoreProvider = ({ children }) => {
             exclusiveType: song.exclusiveType || 'None',
             exclusiveNotes: song.exclusiveNotes || '',
             instruments: song.instruments || [],
+            musicians: song.musicians || [],
             estimatedCost: 0,
             basedOnCore: true
           }
@@ -524,12 +529,13 @@ export const StoreProvider = ({ children }) => {
          id: crypto.randomUUID(),
          songId,
          title: task.title || 'New Task',
-         description: task.description || '',
-         date: task.date || '',
-         status: task.status || 'Not Started',
-         estimatedCost: task.estimatedCost || 0,
-         notes: task.notes || ''
-       };
+        description: task.description || '',
+        date: task.date || '',
+        status: task.status || 'Not Started',
+        estimatedCost: task.estimatedCost || 0,
+        notes: task.notes || '',
+        assignedMembers: []
+      };
        if (mode === 'cloud') {
          // For cloud mode, we need to update the song document
          const song = data.songs.find(s => s.id === songId);
@@ -583,6 +589,48 @@ export const StoreProvider = ({ children }) => {
       }
     },
 
+    addSongMusician: async (songId, musician) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => song.id === songId ? {
+          ...song,
+          musicians: [...(song.musicians || []), musician]
+        } : song)
+      }));
+    },
+
+    removeSongMusician: async (songId, musicianId) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => song.id === songId ? {
+          ...song,
+          musicians: (song.musicians || []).filter(m => m.id !== musicianId)
+        } : song)
+      }));
+    },
+
+    addVersionMusician: async (songId, versionId, musician) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => {
+          if (song.id !== songId) return song;
+          const updatedVersions = (song.versions || []).map(v => v.id === versionId ? { ...v, musicians: [...(v.musicians || []), musician] } : v);
+          return { ...song, versions: updatedVersions };
+        })
+      }));
+    },
+
+    removeVersionMusician: async (songId, versionId, musicianId) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => {
+          if (song.id !== songId) return song;
+          const updatedVersions = (song.versions || []).map(v => v.id === versionId ? { ...v, musicians: (v.musicians || []).filter(m => m.id !== musicianId) } : v);
+          return { ...song, versions: updatedVersions };
+        })
+      }));
+    },
+
     // Version helpers
     addSongVersion: async (songId, baseData = null) => {
       const song = data.songs.find(s => s.id === songId);
@@ -596,6 +644,7 @@ export const StoreProvider = ({ children }) => {
         exclusiveType: template.exclusiveType || 'None',
         exclusiveNotes: template.exclusiveNotes || '',
         instruments: [...(template.instruments || [])],
+        musicians: [...(template.musicians || [])],
         estimatedCost: template.estimatedCost || 0,
         basedOnCore: true
       };
@@ -869,11 +918,11 @@ export const StoreProvider = ({ children }) => {
      },
      
      // Update a release task
-     updateReleaseTask: async (releaseId, taskId, updates) => {
-       const finalUpdates = updates.date !== undefined ? { ...updates, isOverridden: true } : updates;
-       if (mode === 'cloud') {
-         const release = data.releases.find(r => r.id === releaseId);
-         if (release) {
+    updateReleaseTask: async (releaseId, taskId, updates) => {
+      const finalUpdates = updates.date !== undefined ? { ...updates, isOverridden: true } : updates;
+      if (mode === 'cloud') {
+        const release = data.releases.find(r => r.id === releaseId);
+        if (release) {
            const updatedTasks = (release.tasks || []).map(t => t.id === taskId ? { ...t, ...finalUpdates } : t);
            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_releases', releaseId), { tasks: updatedTasks });
          }
@@ -884,9 +933,36 @@ export const StoreProvider = ({ children }) => {
              ...r,
              tasks: (r.tasks || []).map(t => t.id === taskId ? { ...t, ...finalUpdates } : t)
            } : r)
-         }));
-       }
-     },
+        }));
+      }
+    },
+
+    addSongVideo: async (songId, video) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => song.id === songId ? {
+          ...song,
+          videos: [...(song.videos || []), { id: crypto.randomUUID(), title: video.title || 'New Video', versionId: video.versionId || 'core', subtasks: video.subtasks || [], types: video.types || { lyric: false, enhancedLyric: false, music: false, visualizer: false, custom: false, customLabel: '' } }]
+        } : song)
+      }));
+    },
+
+    updateSongVideo: async (songId, videoId, updates) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => song.id === songId ? {
+          ...song,
+          videos: (song.videos || []).map(v => v.id === videoId ? { ...v, ...updates } : v)
+        } : song)
+      }));
+    },
+
+    deleteSongVideo: async (songId, videoId) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => song.id === songId ? { ...song, videos: (song.videos || []).filter(v => v.id !== videoId) } : song)
+      }));
+    },
      
      // Recalculate release tasks from release date
      recalculateReleaseTasksAction: async (releaseId) => {

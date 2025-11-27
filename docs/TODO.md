@@ -13,8 +13,8 @@ This list captures the remaining work from the specification that is not yet imp
 
 ## Team Members
 - [x] Create Individual and Company team member records and allow linking individuals to companies.
-- [ ] Add contact fields (name, phone, email, role, notes) and support musician assignments to songs/versions with instrument lists.
-- [ ] Support assigning team members to tasks with costs, preventing assigned subtotals from exceeding each task’s total cost.
+- [x] Add contact fields (name, phone, email, role, notes) and support musician assignments to songs/versions with instrument lists.
+- [x] Support assigning team members to tasks with costs, preventing assigned subtotals from exceeding each task’s total cost.
 
 ## Financial System
 - [x] Track estimated, quoted, and paid costs with precedence rules (Paid > Quoted > Estimated) across tasks and dashboard rollups.
@@ -30,10 +30,10 @@ This list captures the remaining work from the specification that is not yet imp
 - [x] Display release dates, task due dates, and standalone events; support creating standalone calendar events.
 
 ## Videos
-- [ ] Provide a dedicated Videos page per song/version with sub-tasks (scripting, shooting, editing) and required video type checkboxes (lyric, enhanced lyric, music, visualizer, custom).
+- [x] Provide a dedicated Videos page per song/version with sub-tasks (scripting, shooting, editing) and required video type checkboxes (lyric, enhanced lyric, music, visualizer, custom).
 
 ## UI Updates
-- [ ] Review and further increase accent color usage where applicable without harming readability.
+- [x] Review and further increase accent color usage where applicable without harming readability.
 
 ## Miscellaneous
 - [x] Enable the artist (user) to assign themselves to any task, song, version, or role.
