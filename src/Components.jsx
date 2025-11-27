@@ -126,7 +126,7 @@ export const Editor = ({ task, onClose }) => {
                        <div className="border-t-4 border-black pt-4">
                             <div className="flex gap-2">
                                <input value={sub} onChange={e => setSub(e.target.value)} className={cn("w-full", THEME.punk.input)} placeholder="Quick sub-task..." onKeyDown={e => { if(e.key === 'Enter') { actions.add('tasks', { title: sub, parentId: form.id, status: 'todo' }); setSub(''); }}} />
-                               <button onClick={() => { actions.add('tasks', { title: sub, parentId: form.id, status: 'todo' }); setSub(''); }} className={cn("px-4 bg-black text-white", THEME.punk.btn)}>Add</button>
+                               <button onClick={() => { actions.add('tasks', { title: sub, parentId: form.id, status: 'todo' }); setSub(''); }} className={cn("px-4", THEME.punk.btn, "bg-black text-white")}>Add</button>
                             </div>
                        </div>
                     </>
@@ -148,7 +148,7 @@ export const Editor = ({ task, onClose }) => {
                     </div>
                 )}
             </div>
-            <div className="p-4 border-t-4 border-black bg-white"><button onClick={save} className={cn("w-full py-3 bg-black text-white", THEME.punk.btn)}>Save Changes</button></div>
+            <div className="p-4 border-t-4 border-black bg-white"><button onClick={save} className={cn("w-full py-3", THEME.punk.btn, "bg-black text-white")}>Save Changes</button></div>
         </div>
     );
 };

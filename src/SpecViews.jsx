@@ -54,7 +54,7 @@ export const SongListView = ({ onSelectSong }) => {
             <input type="checkbox" checked={filterSingles} onChange={e => setFilterSingles(e.target.checked)} className="w-4 h-4" />
             Singles Only
           </label>
-          <button onClick={handleAddSong} className={cn("px-4 py-2 bg-black text-white", THEME.punk.btn)}>+ Add Song</button>
+          <button onClick={handleAddSong} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Add Song</button>
         </div>
       </div>
       <div className={cn("overflow-x-auto", THEME.punk.card)}>
@@ -138,7 +138,7 @@ export const SongDetailView = ({ song, onBack }) => {
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
           <Icon name="ChevronLeft" size={16} /> Back to Songs
         </button>
-        <button onClick={handleDeleteSong} className={cn("px-4 py-2 bg-red-500 text-white", THEME.punk.btn)}>
+        <button onClick={handleDeleteSong} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
           <Icon name="Trash2" size={16} />
         </button>
       </div>
@@ -192,7 +192,7 @@ export const SongDetailView = ({ song, onBack }) => {
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
           <h3 className="font-black uppercase">Deadlines</h3>
-          <button onClick={handleRecalculateDeadlines} className={cn("px-3 py-1 text-xs bg-blue-500 text-white", THEME.punk.btn)}>Recalculate from Release Date</button>
+          <button onClick={handleRecalculateDeadlines} className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-blue-500 text-white")}>Recalculate from Release Date</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -224,7 +224,7 @@ export const SongDetailView = ({ song, onBack }) => {
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
           <h3 className="font-black uppercase">Custom Tasks</h3>
-          <button onClick={() => setShowAddTask(!showAddTask)} className={cn("px-3 py-1 text-xs bg-black text-white", THEME.punk.btn)}>{showAddTask ? 'Cancel' : '+ Add Task'}</button>
+          <button onClick={() => setShowAddTask(!showAddTask)} className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-black text-white")}>{showAddTask ? 'Cancel' : '+ Add Task'}</button>
         </div>
         {showAddTask && (
           <div className="bg-gray-50 p-4 mb-4 border-2 border-black">
@@ -234,7 +234,7 @@ export const SongDetailView = ({ song, onBack }) => {
               <input value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} placeholder="Description" className={cn("w-full", THEME.punk.input)} />
               <input type="number" value={newTask.estimatedCost} onChange={e => setNewTask({ ...newTask, estimatedCost: parseFloat(e.target.value) || 0 })} placeholder="Estimated Cost" className={cn("w-full", THEME.punk.input)} />
               <select value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
-              <button onClick={handleAddCustomTask} className={cn("px-4 py-2 bg-green-500 text-white", THEME.punk.btn)}>Add Task</button>
+              <button onClick={handleAddCustomTask} className={cn("px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Add Task</button>
             </div>
           </div>
         )}
@@ -321,7 +321,7 @@ export const GlobalTasksView = () => {
     <div className="p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className={THEME.punk.textStyle}>Global Tasks</h2>
-        <button onClick={() => setShowAddForm(!showAddForm)} className={cn("px-4 py-2 bg-black text-white", THEME.punk.btn)}>{showAddForm ? 'Cancel' : '+ Add Task'}</button>
+        <button onClick={() => setShowAddForm(!showAddForm)} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>{showAddForm ? 'Cancel' : '+ Add Task'}</button>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
@@ -347,7 +347,7 @@ export const GlobalTasksView = () => {
             <input type="number" value={newTask.estimatedCost} onChange={e => setNewTask({ ...newTask, estimatedCost: parseFloat(e.target.value) || 0 })} placeholder="Estimated Cost" className={cn("w-full", THEME.punk.input)} />
             <select value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
             <input value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} placeholder="Description" className={cn("w-full md:col-span-2", THEME.punk.input)} />
-            <button onClick={handleAddTask} className={cn("px-4 py-2 bg-green-500 text-white", THEME.punk.btn)}>Add Task</button>
+            <button onClick={handleAddTask} className={cn("px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Add Task</button>
           </div>
         </div>
       )}
@@ -365,7 +365,7 @@ export const GlobalTasksView = () => {
               <select value={editingTask.status} onChange={e => setEditingTask({ ...editingTask, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
               <input value={editingTask.description} onChange={e => setEditingTask({ ...editingTask, description: e.target.value })} placeholder="Description" className={cn("w-full", THEME.punk.input)} />
               <div className="flex gap-2">
-                <button onClick={handleUpdateTask} className={cn("flex-1 px-4 py-2 bg-green-500 text-white", THEME.punk.btn)}>Save</button>
+                <button onClick={handleUpdateTask} className={cn("flex-1 px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Save</button>
                 <button onClick={() => setEditingTask(null)} className={cn("flex-1 px-4 py-2 bg-gray-300", THEME.punk.btn)}>Cancel</button>
               </div>
             </div>
@@ -427,7 +427,7 @@ export const ReleasesListView = ({ onSelectRelease }) => {
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
         <h2 className={THEME.punk.textStyle}>Releases</h2>
-        <button onClick={handleAddRelease} className={cn("px-4 py-2 bg-black text-white", THEME.punk.btn)}>+ Add Release</button>
+        <button onClick={handleAddRelease} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Add Release</button>
       </div>
       <div className={cn("overflow-x-auto", THEME.punk.card)}>
         <table className="w-full text-sm">
@@ -496,7 +496,7 @@ export const ReleaseDetailView = ({ release, onBack }) => {
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}><Icon name="ChevronLeft" size={16} /> Back to Releases</button>
-        <button onClick={handleDeleteRelease} className={cn("px-4 py-2 bg-red-500 text-white", THEME.punk.btn)}><Icon name="Trash2" size={16} /></button>
+        <button onClick={handleDeleteRelease} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}><Icon name="Trash2" size={16} /></button>
       </div>
 
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
@@ -530,7 +530,7 @@ export const ReleaseDetailView = ({ release, onBack }) => {
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
           <h3 className="font-black uppercase">Required Recordings</h3>
-          <button onClick={() => setShowAddReq(!showAddReq)} className={cn("px-3 py-1 text-xs bg-black text-white", THEME.punk.btn)}>{showAddReq ? 'Cancel' : '+ Add Requirement'}</button>
+          <button onClick={() => setShowAddReq(!showAddReq)} className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-black text-white")}>{showAddReq ? 'Cancel' : '+ Add Requirement'}</button>
         </div>
 
         {showAddReq && (
@@ -542,7 +542,7 @@ export const ReleaseDetailView = ({ release, onBack }) => {
               </select>
               <select value={newReq.versionType} onChange={e => setNewReq({ ...newReq, versionType: e.target.value })} className={cn("w-full", THEME.punk.input)}>{VERSION_TYPES.map(v => <option key={v} value={v}>{v}</option>)}</select>
               <select value={newReq.status} onChange={e => setNewReq({ ...newReq, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
-              <button onClick={handleAddRequirement} className={cn("px-4 py-2 bg-green-500 text-white", THEME.punk.btn)}>Add</button>
+              <button onClick={handleAddRequirement} className={cn("px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Add</button>
             </div>
           </div>
         )}
