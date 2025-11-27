@@ -16,7 +16,43 @@ export const SONG_CATEGORIES = ['Album', 'Bonus', 'Christmas EP', 'EP', 'Other']
 // Video types
 export const VIDEO_TYPES = ['None', 'Lyric', 'Enhanced', 'Enhanced + Loop', 'Full'];
 
-// Deadline types
+// Task types for songs - comprehensive list
+export const SONG_TASK_TYPES = [
+  // Production Tasks
+  { type: 'Arrangement', category: 'Production', daysBeforeRelease: 90, appliesTo: 'all' },
+  { type: 'Demo', category: 'Production', daysBeforeRelease: 80, appliesTo: 'all' },
+  { type: 'Vocal Recording', category: 'Recording', daysBeforeRelease: 60, appliesTo: 'all' },
+  { type: 'Instrument Recording', category: 'Recording', daysBeforeRelease: 55, appliesTo: 'all' },
+  { type: 'Mix', category: 'Post-Production', daysBeforeRelease: 42, appliesTo: 'all' },
+  { type: 'Master', category: 'Post-Production', daysBeforeRelease: 21, appliesTo: 'all' },
+  // Single-specific tasks
+  { type: 'Artwork', category: 'Marketing', daysBeforeRelease: 28, appliesTo: 'single' },
+  { type: 'DSP Upload', category: 'Distribution', daysBeforeRelease: 14, appliesTo: 'single' },
+  { type: 'Radio/Playlist Push', category: 'Marketing', daysBeforeRelease: 7, appliesTo: 'single' },
+  // Release task
+  { type: 'Release', category: 'Distribution', daysBeforeRelease: 0, appliesTo: 'all' }
+];
+
+// Video task types
+export const VIDEO_TASK_TYPES = [
+  { type: 'Video Concept', category: 'Video', daysBeforeRelease: 45, videoTypes: ['Full'] },
+  { type: 'Video Shoot', category: 'Video', daysBeforeRelease: 35, videoTypes: ['Full'] },
+  { type: 'Video Edit', category: 'Video', daysBeforeRelease: 25, videoTypes: ['Full'] },
+  { type: 'Video Delivery', category: 'Video', daysBeforeRelease: 14, videoTypes: ['Lyric', 'Enhanced', 'Enhanced + Loop'] },
+  { type: 'Full Video Delivery', category: 'Video', daysBeforeRelease: 30, videoTypes: ['Full'] }
+];
+
+// Release task types - auto-spawn when release is created
+export const RELEASE_TASK_TYPES = [
+  { type: 'Cover Art Design', category: 'Marketing', daysBeforeRelease: 45 },
+  { type: 'Cover Art Approval', category: 'Marketing', daysBeforeRelease: 35 },
+  { type: 'Album Reveal', category: 'Marketing', daysBeforeRelease: 14 },
+  { type: 'Pre-order Setup', category: 'Distribution', daysBeforeRelease: 21 },
+  { type: 'Metadata Submission', category: 'Distribution', daysBeforeRelease: 14 },
+  { type: 'Release', category: 'Distribution', daysBeforeRelease: 0 }
+];
+
+// Deadline types (legacy - kept for compatibility)
 export const DEADLINE_TYPES = ['Mix', 'Master', 'Artwork', 'Upload', 'VideoDelivery', 'Release'];
 
 // Release types
@@ -28,101 +64,92 @@ export const VERSION_TYPES = ['Album', 'Radio Edit', 'Acoustic', 'Extended', 'Lo
 // Global task categories
 export const GLOBAL_TASK_CATEGORIES = ['Branding', 'Web', 'Legal', 'Visuals', 'Marketing', 'Events', 'Audio', 'Video', 'Merch', 'Other'];
 
-// Helper function to calculate deadline dates based on release date
-export const calculateDeadlines = (releaseDate, isSingle, videoType) => {
+// Helper function to calculate task dates based on release date
+export const calculateSongTasks = (releaseDate, isSingle, videoType) => {
   if (!releaseDate) return [];
   
   const release = new Date(releaseDate);
-  const deadlines = [];
+  const tasks = [];
   
-  // Mix deadline: releaseDate minus 42 days
-  const mixDate = new Date(release);
-  mixDate.setDate(mixDate.getDate() - 42);
-  deadlines.push({
-    id: crypto.randomUUID(),
-    type: 'Mix',
-    date: mixDate.toISOString().split('T')[0],
-    status: 'Not Started',
-    estimatedCost: 0,
-    notes: '',
-    isOverridden: false
-  });
-  
-  // Master deadline: releaseDate minus 21 days
-  const masterDate = new Date(release);
-  masterDate.setDate(masterDate.getDate() - 21);
-  deadlines.push({
-    id: crypto.randomUUID(),
-    type: 'Master',
-    date: masterDate.toISOString().split('T')[0],
-    status: 'Not Started',
-    estimatedCost: 0,
-    notes: '',
-    isOverridden: false
-  });
-  
-  // Artwork deadline: releaseDate minus 28 days (only if isSingle is true)
-  if (isSingle) {
-    const artworkDate = new Date(release);
-    artworkDate.setDate(artworkDate.getDate() - 28);
-    deadlines.push({
+  // Add production/recording tasks from SONG_TASK_TYPES
+  SONG_TASK_TYPES.forEach(taskType => {
+    // Skip single-specific tasks if not a single
+    if (taskType.appliesTo === 'single' && !isSingle) return;
+    
+    const taskDate = new Date(release);
+    taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+    
+    tasks.push({
       id: crypto.randomUUID(),
-      type: 'Artwork',
-      date: artworkDate.toISOString().split('T')[0],
+      type: taskType.type,
+      category: taskType.category,
+      date: taskDate.toISOString().split('T')[0],
       status: 'Not Started',
       estimatedCost: 0,
       notes: '',
       isOverridden: false
     });
-  }
+  });
   
-  // Upload deadline (DSP upload): releaseDate minus 14 days (only if isSingle is true)
-  if (isSingle) {
-    const uploadDate = new Date(release);
-    uploadDate.setDate(uploadDate.getDate() - 14);
-    deadlines.push({
-      id: crypto.randomUUID(),
-      type: 'Upload',
-      date: uploadDate.toISOString().split('T')[0],
-      status: 'Not Started',
-      estimatedCost: 0,
-      notes: '',
-      isOverridden: false
-    });
-  }
-  
-  // Video delivery deadline based on videoType
+  // Add video tasks based on video type
   if (videoType && videoType !== 'None') {
-    const videoDate = new Date(release);
-    if (videoType === 'Full') {
-      videoDate.setDate(videoDate.getDate() - 30);
-    } else {
-      // Lyric, Enhanced, Enhanced + Loop
-      videoDate.setDate(videoDate.getDate() - 14);
-    }
-    deadlines.push({
+    VIDEO_TASK_TYPES.forEach(taskType => {
+      if (taskType.videoTypes.includes(videoType)) {
+        const taskDate = new Date(release);
+        taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+        
+        tasks.push({
+          id: crypto.randomUUID(),
+          type: taskType.type,
+          category: taskType.category,
+          date: taskDate.toISOString().split('T')[0],
+          status: 'Not Started',
+          estimatedCost: 0,
+          notes: '',
+          isOverridden: false
+        });
+      }
+    });
+  }
+  
+  // Sort by date
+  tasks.sort((a, b) => a.date.localeCompare(b.date));
+  
+  return tasks;
+};
+
+// Legacy function - calls the new one for backwards compatibility
+export const calculateDeadlines = (releaseDate, isSingle, videoType) => {
+  return calculateSongTasks(releaseDate, isSingle, videoType);
+};
+
+// Helper function to calculate release tasks
+export const calculateReleaseTasks = (releaseDate) => {
+  if (!releaseDate) return [];
+  
+  const release = new Date(releaseDate);
+  const tasks = [];
+  
+  RELEASE_TASK_TYPES.forEach(taskType => {
+    const taskDate = new Date(release);
+    taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+    
+    tasks.push({
       id: crypto.randomUUID(),
-      type: 'VideoDelivery',
-      date: videoDate.toISOString().split('T')[0],
+      type: taskType.type,
+      category: taskType.category,
+      date: taskDate.toISOString().split('T')[0],
       status: 'Not Started',
       estimatedCost: 0,
       notes: '',
       isOverridden: false
     });
-  }
-  
-  // Release deadline: exactly releaseDate
-  deadlines.push({
-    id: crypto.randomUUID(),
-    type: 'Release',
-    date: releaseDate,
-    status: 'Not Started',
-    estimatedCost: 0,
-    notes: '',
-    isOverridden: false
   });
   
-  return deadlines;
+  // Sort by date
+  tasks.sort((a, b) => a.date.localeCompare(b.date));
+  
+  return tasks;
 };
 
 // Recalculate deadlines from release date (only non-overridden ones)
@@ -132,14 +159,18 @@ export const recalculateDeadlines = (existingDeadlines, releaseDate, isSingle, v
   const release = new Date(releaseDate);
   const newDeadlines = [...existingDeadlines];
   
-  const offsets = {
-    'Mix': -42,
-    'Master': -21,
-    'Artwork': -28,
-    'Upload': -14,
-    'VideoDelivery': videoType === 'Full' ? -30 : -14,
-    'Release': 0
-  };
+  // Build offsets from SONG_TASK_TYPES and VIDEO_TASK_TYPES
+  const offsets = {};
+  SONG_TASK_TYPES.forEach(task => {
+    if (task.appliesTo === 'all' || (task.appliesTo === 'single' && isSingle)) {
+      offsets[task.type] = -task.daysBeforeRelease;
+    }
+  });
+  VIDEO_TASK_TYPES.forEach(task => {
+    if (videoType && task.videoTypes.includes(videoType)) {
+      offsets[task.type] = -task.daysBeforeRelease;
+    }
+  });
   
   newDeadlines.forEach(deadline => {
     if (!deadline.isOverridden && offsets[deadline.type] !== undefined) {
@@ -150,6 +181,29 @@ export const recalculateDeadlines = (existingDeadlines, releaseDate, isSingle, v
   });
   
   return newDeadlines;
+};
+
+// Recalculate release tasks from release date
+export const recalculateReleaseTasks = (existingTasks, releaseDate) => {
+  if (!releaseDate) return existingTasks;
+  
+  const release = new Date(releaseDate);
+  const newTasks = [...existingTasks];
+  
+  const offsets = {};
+  RELEASE_TASK_TYPES.forEach(task => {
+    offsets[task.type] = -task.daysBeforeRelease;
+  });
+  
+  newTasks.forEach(task => {
+    if (!task.isOverridden && offsets[task.type] !== undefined) {
+      const newDate = new Date(release);
+      newDate.setDate(newDate.getDate() + offsets[task.type]);
+      task.date = newDate.toISOString().split('T')[0];
+    }
+  });
+  
+  return newTasks;
 };
 
 export const StoreProvider = ({ children }) => {
@@ -521,6 +575,9 @@ export const StoreProvider = ({ children }) => {
      
      // Release actions
      addRelease: async (release) => {
+       // Auto-spawn release tasks based on release date
+       const releaseTasks = calculateReleaseTasks(release.releaseDate);
+       
        const newRelease = {
          id: crypto.randomUUID(),
          name: release.name || 'New Release',
@@ -528,7 +585,8 @@ export const StoreProvider = ({ children }) => {
          releaseDate: release.releaseDate || '',
          estimatedCost: release.estimatedCost || 0,
          notes: release.notes || '',
-         requiredRecordings: []
+         requiredRecordings: [],
+         tasks: releaseTasks  // Auto-spawned tasks
        };
        if (mode === 'cloud') {
          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'album_releases'), { ...newRelease, createdAt: serverTimestamp() });
@@ -619,6 +677,47 @@ export const StoreProvider = ({ children }) => {
              requiredRecordings: (r.requiredRecordings || []).filter(req => req.id !== reqId)
            } : r)
          }));
+       }
+     },
+     
+     // Update a release task
+     updateReleaseTask: async (releaseId, taskId, updates) => {
+       const finalUpdates = updates.date !== undefined ? { ...updates, isOverridden: true } : updates;
+       if (mode === 'cloud') {
+         const release = data.releases.find(r => r.id === releaseId);
+         if (release) {
+           const updatedTasks = (release.tasks || []).map(t => t.id === taskId ? { ...t, ...finalUpdates } : t);
+           await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_releases', releaseId), { tasks: updatedTasks });
+         }
+       } else {
+         setData(p => ({
+           ...p,
+           releases: (p.releases || []).map(r => r.id === releaseId ? {
+             ...r,
+             tasks: (r.tasks || []).map(t => t.id === taskId ? { ...t, ...finalUpdates } : t)
+           } : r)
+         }));
+       }
+     },
+     
+     // Recalculate release tasks from release date
+     recalculateReleaseTasksAction: async (releaseId) => {
+       const release = data.releases.find(r => r.id === releaseId);
+       if (release && release.releaseDate) {
+         let newTasks;
+         if (!release.tasks || release.tasks.length === 0) {
+           newTasks = calculateReleaseTasks(release.releaseDate);
+         } else {
+           newTasks = recalculateReleaseTasks(release.tasks, release.releaseDate);
+         }
+         if (mode === 'cloud') {
+           await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_releases', releaseId), { tasks: newTasks });
+         } else {
+           setData(p => ({
+             ...p,
+             releases: (p.releases || []).map(r => r.id === releaseId ? { ...r, tasks: newTasks } : r)
+           }));
+         }
        }
      }
   };

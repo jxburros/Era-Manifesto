@@ -54,7 +54,7 @@ export const SongListView = ({ onSelectSong }) => {
             <input type="checkbox" checked={filterSingles} onChange={e => setFilterSingles(e.target.checked)} className="w-4 h-4" />
             Singles Only
           </label>
-          <button onClick={handleAddSong} className={cn("px-4 py-2 bg-black text-white", THEME.punk.btn)}>+ Add Song</button>
+          <button onClick={handleAddSong} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Add Song</button>
         </div>
       </div>
       <div className={cn("overflow-x-auto", THEME.punk.card)}>
@@ -128,9 +128,11 @@ export const SongDetailView = ({ song, onBack }) => {
   };
 
   const currentSong = data.songs.find(s => s.id === song.id) || song;
-  const deadlinesCost = (currentSong.deadlines || []).reduce((sum, d) => sum + (d.estimatedCost || 0), 0);
-  const customTasksCost = (currentSong.customTasks || []).reduce((sum, t) => sum + (t.estimatedCost || 0), 0);
-  const totalCost = (currentSong.estimatedCost || 0) + deadlinesCost + customTasksCost;
+  const songTasks = currentSong.deadlines || [];
+  const songCustomTasks = currentSong.customTasks || [];
+  const tasksCost = songTasks.reduce((sum, d) => sum + (d.estimatedCost || 0), 0);
+  const customTasksCost = songCustomTasks.reduce((sum, t) => sum + (t.estimatedCost || 0), 0);
+  const totalCost = (currentSong.estimatedCost || 0) + tasksCost + customTasksCost;
 
   return (
     <div className="p-6 pb-24">
@@ -138,7 +140,7 @@ export const SongDetailView = ({ song, onBack }) => {
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
           <Icon name="ChevronLeft" size={16} /> Back to Songs
         </button>
-        <button onClick={handleDeleteSong} className={cn("px-4 py-2 bg-red-500 text-white", THEME.punk.btn)}>
+        <button onClick={handleDeleteSong} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
           <Icon name="Trash2" size={16} />
         </button>
       </div>
@@ -188,17 +190,18 @@ export const SongDetailView = ({ song, onBack }) => {
         </div>
       </div>
 
-      {/* Deadlines Section (2.2.2) */}
+      {/* Song Tasks Section - Auto-generated tasks based on release date */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
-          <h3 className="font-black uppercase">Deadlines</h3>
-          <button onClick={handleRecalculateDeadlines} className={cn("px-3 py-1 text-xs bg-blue-500 text-white", THEME.punk.btn)}>Recalculate from Release Date</button>
+          <h3 className="font-black uppercase">Song Tasks</h3>
+          <button onClick={handleRecalculateDeadlines} className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-blue-500 text-white")}>Recalculate from Release Date</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-black">
                 <th className="p-2 text-left">Type</th>
+                <th className="p-2 text-left">Category</th>
                 <th className="p-2 text-left">Date</th>
                 <th className="p-2 text-left">Status</th>
                 <th className="p-2 text-right">Est. Cost</th>
@@ -206,13 +209,16 @@ export const SongDetailView = ({ song, onBack }) => {
               </tr>
             </thead>
             <tbody>
-              {(currentSong.deadlines || []).map(deadline => (
-                <tr key={deadline.id} className="border-b border-gray-200">
-                  <td className="p-2 font-bold">{deadline.type}{deadline.isOverridden && <span className="text-xs text-orange-500 ml-1">(edited)</span>}</td>
-                  <td className="p-2"><input type="date" value={deadline.date || ''} onChange={e => handleDeadlineChange(deadline.id, 'date', e.target.value)} className="border-2 border-black p-1 text-xs" /></td>
-                  <td className="p-2"><select value={deadline.status || 'Not Started'} onChange={e => handleDeadlineChange(deadline.id, 'status', e.target.value)} className="border-2 border-black p-1 text-xs">{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select></td>
-                  <td className="p-2"><input type="number" value={deadline.estimatedCost || 0} onChange={e => handleDeadlineChange(deadline.id, 'estimatedCost', parseFloat(e.target.value) || 0)} className="border-2 border-black p-1 text-xs w-20 text-right" /></td>
-                  <td className="p-2"><input value={deadline.notes || ''} onChange={e => handleDeadlineChange(deadline.id, 'notes', e.target.value)} className="border-2 border-black p-1 text-xs w-full" placeholder="Notes..." /></td>
+              {songTasks.length === 0 ? (
+                <tr><td colSpan="6" className="p-4 text-center opacity-50">No tasks yet. Set a release date and click Recalculate.</td></tr>
+              ) : songTasks.map(task => (
+                <tr key={task.id} className="border-b border-gray-200">
+                  <td className="p-2 font-bold">{task.type}{task.isOverridden && <span className="text-xs text-orange-500 ml-1">(edited)</span>}</td>
+                  <td className="p-2"><span className="px-2 py-1 text-xs bg-gray-200">{task.category || '-'}</span></td>
+                  <td className="p-2"><input type="date" value={task.date || ''} onChange={e => handleDeadlineChange(task.id, 'date', e.target.value)} className="border-2 border-black p-1 text-xs" /></td>
+                  <td className="p-2"><select value={task.status || 'Not Started'} onChange={e => handleDeadlineChange(task.id, 'status', e.target.value)} className="border-2 border-black p-1 text-xs">{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select></td>
+                  <td className="p-2"><input type="number" value={task.estimatedCost || 0} onChange={e => handleDeadlineChange(task.id, 'estimatedCost', parseFloat(e.target.value) || 0)} className="border-2 border-black p-1 text-xs w-20 text-right" /></td>
+                  <td className="p-2"><input value={task.notes || ''} onChange={e => handleDeadlineChange(task.id, 'notes', e.target.value)} className="border-2 border-black p-1 text-xs w-full" placeholder="Notes..." /></td>
                 </tr>
               ))}
             </tbody>
@@ -224,7 +230,7 @@ export const SongDetailView = ({ song, onBack }) => {
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
           <h3 className="font-black uppercase">Custom Tasks</h3>
-          <button onClick={() => setShowAddTask(!showAddTask)} className={cn("px-3 py-1 text-xs bg-black text-white", THEME.punk.btn)}>{showAddTask ? 'Cancel' : '+ Add Task'}</button>
+          <button onClick={() => setShowAddTask(!showAddTask)} className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-black text-white")}>{showAddTask ? 'Cancel' : '+ Add Task'}</button>
         </div>
         {showAddTask && (
           <div className="bg-gray-50 p-4 mb-4 border-2 border-black">
@@ -234,15 +240,15 @@ export const SongDetailView = ({ song, onBack }) => {
               <input value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} placeholder="Description" className={cn("w-full", THEME.punk.input)} />
               <input type="number" value={newTask.estimatedCost} onChange={e => setNewTask({ ...newTask, estimatedCost: parseFloat(e.target.value) || 0 })} placeholder="Estimated Cost" className={cn("w-full", THEME.punk.input)} />
               <select value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
-              <button onClick={handleAddCustomTask} className={cn("px-4 py-2 bg-green-500 text-white", THEME.punk.btn)}>Add Task</button>
+              <button onClick={handleAddCustomTask} className={cn("px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Add Task</button>
             </div>
           </div>
         )}
-        {(currentSong.customTasks || []).length === 0 ? (
+        {songCustomTasks.length === 0 ? (
           <p className="text-center opacity-50 py-4">No custom tasks yet.</p>
         ) : (
           <div className="space-y-2">
-            {(currentSong.customTasks || []).map(task => (
+            {songCustomTasks.map(task => (
               <div key={task.id} className="flex items-center gap-2 p-3 bg-gray-50 border-2 border-black">
                 <div className="flex-1">
                   <div className="font-bold">{task.title}</div>
@@ -261,7 +267,7 @@ export const SongDetailView = ({ song, onBack }) => {
         <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Cost Summary</h3>
         <div className="space-y-2">
           <div className="flex justify-between"><span>Song Base Cost:</span><span className="font-bold">{formatMoney(currentSong.estimatedCost || 0)}</span></div>
-          <div className="flex justify-between"><span>Deadlines Total:</span><span className="font-bold">{formatMoney(deadlinesCost)}</span></div>
+          <div className="flex justify-between"><span>Song Tasks Total:</span><span className="font-bold">{formatMoney(tasksCost)}</span></div>
           <div className="flex justify-between"><span>Custom Tasks Total:</span><span className="font-bold">{formatMoney(customTasksCost)}</span></div>
           <div className="flex justify-between border-t-4 border-black pt-2 text-lg"><span className="font-black">TOTAL:</span><span className="font-black">{formatMoney(totalCost)}</span></div>
         </div>
@@ -321,7 +327,7 @@ export const GlobalTasksView = () => {
     <div className="p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className={THEME.punk.textStyle}>Global Tasks</h2>
-        <button onClick={() => setShowAddForm(!showAddForm)} className={cn("px-4 py-2 bg-black text-white", THEME.punk.btn)}>{showAddForm ? 'Cancel' : '+ Add Task'}</button>
+        <button onClick={() => setShowAddForm(!showAddForm)} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>{showAddForm ? 'Cancel' : '+ Add Task'}</button>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
@@ -347,7 +353,7 @@ export const GlobalTasksView = () => {
             <input type="number" value={newTask.estimatedCost} onChange={e => setNewTask({ ...newTask, estimatedCost: parseFloat(e.target.value) || 0 })} placeholder="Estimated Cost" className={cn("w-full", THEME.punk.input)} />
             <select value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
             <input value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} placeholder="Description" className={cn("w-full md:col-span-2", THEME.punk.input)} />
-            <button onClick={handleAddTask} className={cn("px-4 py-2 bg-green-500 text-white", THEME.punk.btn)}>Add Task</button>
+            <button onClick={handleAddTask} className={cn("px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Add Task</button>
           </div>
         </div>
       )}
@@ -365,7 +371,7 @@ export const GlobalTasksView = () => {
               <select value={editingTask.status} onChange={e => setEditingTask({ ...editingTask, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
               <input value={editingTask.description} onChange={e => setEditingTask({ ...editingTask, description: e.target.value })} placeholder="Description" className={cn("w-full", THEME.punk.input)} />
               <div className="flex gap-2">
-                <button onClick={handleUpdateTask} className={cn("flex-1 px-4 py-2 bg-green-500 text-white", THEME.punk.btn)}>Save</button>
+                <button onClick={handleUpdateTask} className={cn("flex-1 px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Save</button>
                 <button onClick={() => setEditingTask(null)} className={cn("flex-1 px-4 py-2 bg-gray-300", THEME.punk.btn)}>Cancel</button>
               </div>
             </div>
@@ -427,7 +433,7 @@ export const ReleasesListView = ({ onSelectRelease }) => {
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
         <h2 className={THEME.punk.textStyle}>Releases</h2>
-        <button onClick={handleAddRelease} className={cn("px-4 py-2 bg-black text-white", THEME.punk.btn)}>+ Add Release</button>
+        <button onClick={handleAddRelease} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Add Release</button>
       </div>
       <div className={cn("overflow-x-auto", THEME.punk.card)}>
         <table className="w-full text-sm">
@@ -496,7 +502,7 @@ export const ReleaseDetailView = ({ release, onBack }) => {
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}><Icon name="ChevronLeft" size={16} /> Back to Releases</button>
-        <button onClick={handleDeleteRelease} className={cn("px-4 py-2 bg-red-500 text-white", THEME.punk.btn)}><Icon name="Trash2" size={16} /></button>
+        <button onClick={handleDeleteRelease} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}><Icon name="Trash2" size={16} /></button>
       </div>
 
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
@@ -530,7 +536,7 @@ export const ReleaseDetailView = ({ release, onBack }) => {
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
           <h3 className="font-black uppercase">Required Recordings</h3>
-          <button onClick={() => setShowAddReq(!showAddReq)} className={cn("px-3 py-1 text-xs bg-black text-white", THEME.punk.btn)}>{showAddReq ? 'Cancel' : '+ Add Requirement'}</button>
+          <button onClick={() => setShowAddReq(!showAddReq)} className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-black text-white")}>{showAddReq ? 'Cancel' : '+ Add Requirement'}</button>
         </div>
 
         {showAddReq && (
@@ -542,7 +548,7 @@ export const ReleaseDetailView = ({ release, onBack }) => {
               </select>
               <select value={newReq.versionType} onChange={e => setNewReq({ ...newReq, versionType: e.target.value })} className={cn("w-full", THEME.punk.input)}>{VERSION_TYPES.map(v => <option key={v} value={v}>{v}</option>)}</select>
               <select value={newReq.status} onChange={e => setNewReq({ ...newReq, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
-              <button onClick={handleAddRequirement} className={cn("px-4 py-2 bg-green-500 text-white", THEME.punk.btn)}>Add</button>
+              <button onClick={handleAddRequirement} className={cn("px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Add</button>
             </div>
           </div>
         )}
@@ -575,11 +581,51 @@ export const ReleaseDetailView = ({ release, onBack }) => {
         </div>
       </div>
 
+      {/* Release Tasks Section */}
+      <div className={cn("p-6 mb-6", THEME.punk.card)}>
+        <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+          <h3 className="font-black uppercase">Release Tasks</h3>
+          <button onClick={() => actions.recalculateReleaseTasksAction(release.id)} className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-blue-500 text-white")}>Recalculate from Release Date</button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-100 border-b-2 border-black">
+                <th className="p-2 text-left">Type</th>
+                <th className="p-2 text-left">Category</th>
+                <th className="p-2 text-left">Date</th>
+                <th className="p-2 text-left">Status</th>
+                <th className="p-2 text-right">Est. Cost</th>
+                <th className="p-2 text-left">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(currentRelease.tasks || []).length === 0 ? (
+                <tr><td colSpan="6" className="p-4 text-center opacity-50">No tasks yet. Set a release date and click Recalculate.</td></tr>
+              ) : (currentRelease.tasks || []).map(task => (
+                <tr key={task.id} className="border-b border-gray-200">
+                  <td className="p-2 font-bold">{task.type}{task.isOverridden && <span className="text-xs text-orange-500 ml-1">(edited)</span>}</td>
+                  <td className="p-2"><span className="px-2 py-1 text-xs bg-gray-200">{task.category}</span></td>
+                  <td className="p-2"><input type="date" value={task.date || ''} onChange={e => actions.updateReleaseTask(release.id, task.id, { date: e.target.value })} className="border-2 border-black p-1 text-xs" /></td>
+                  <td className="p-2"><select value={task.status || 'Not Started'} onChange={e => actions.updateReleaseTask(release.id, task.id, { status: e.target.value })} className="border-2 border-black p-1 text-xs">{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select></td>
+                  <td className="p-2"><input type="number" value={task.estimatedCost || 0} onChange={e => actions.updateReleaseTask(release.id, task.id, { estimatedCost: parseFloat(e.target.value) || 0 })} className="border-2 border-black p-1 text-xs w-20 text-right" /></td>
+                  <td className="p-2"><input value={task.notes || ''} onChange={e => actions.updateReleaseTask(release.id, task.id, { notes: e.target.value })} className="border-2 border-black p-1 text-xs w-full" placeholder="Notes..." /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className={cn("p-6", THEME.punk.card)}>
         <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Cost Summary</h3>
-        <div className="flex justify-between text-lg">
-          <span className="font-black">Release Estimated Cost:</span>
-          <span className="font-black">{formatMoney(currentRelease.estimatedCost || 0)}</span>
+        <div className="space-y-2">
+          <div className="flex justify-between"><span>Release Base Cost:</span><span className="font-bold">{formatMoney(currentRelease.estimatedCost || 0)}</span></div>
+          <div className="flex justify-between"><span>Tasks Total:</span><span className="font-bold">{formatMoney((currentRelease.tasks || []).reduce((sum, t) => sum + (t.estimatedCost || 0), 0))}</span></div>
+          <div className="flex justify-between border-t-4 border-black pt-2 text-lg">
+            <span className="font-black">TOTAL:</span>
+            <span className="font-black">{formatMoney((currentRelease.estimatedCost || 0) + (currentRelease.tasks || []).reduce((sum, t) => sum + (t.estimatedCost || 0), 0))}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -598,25 +644,65 @@ export const CombinedTimelineView = () => {
   const timelineItems = useMemo(() => {
     const items = [];
 
-    // Song Deadlines
+    // Song Tasks (formerly deadlines)
     (data.songs || []).forEach(song => {
-      (song.deadlines || []).forEach(deadline => {
-        items.push({ id: 'deadline-' + deadline.id, date: deadline.date, sourceType: 'Song Deadline', label: deadline.type, name: song.title, category: song.category, status: deadline.status, estimatedCost: deadline.estimatedCost, notes: deadline.notes, songId: song.id });
+      const songTasks = song.deadlines || [];
+      songTasks.forEach(task => {
+        items.push({
+          id: 'song-task-' + task.id,
+          date: task.date,
+          sourceType: 'Song Task',
+          label: task.type,
+          name: song.title,
+          category: task.category || song.category,
+          status: task.status,
+          estimatedCost: task.estimatedCost,
+          notes: task.notes,
+          songId: song.id
+        });
       });
       // Song Custom Tasks
-      (song.customTasks || []).forEach(task => {
-        items.push({ id: 'custom-' + task.id, date: task.date, sourceType: 'Song Custom', label: 'Custom task', name: song.title, category: song.category, status: task.status, estimatedCost: task.estimatedCost, notes: task.description || task.notes, songId: song.id });
+      const customTasks = song.customTasks || [];
+      customTasks.forEach(task => {
+        items.push({
+          id: 'custom-' + task.id,
+          date: task.date,
+          sourceType: 'Song Custom',
+          label: 'Custom task',
+          name: song.title,
+          category: song.category,
+          status: task.status,
+          estimatedCost: task.estimatedCost,
+          notes: task.description || task.notes,
+          songId: song.id
+        });
       });
     });
 
     // Global Tasks
     (data.globalTasks || []).forEach(task => {
-      items.push({ id: 'global-' + task.id, date: task.date, sourceType: 'Global', label: 'Task', name: task.taskName, category: task.category, status: task.status, estimatedCost: task.estimatedCost, notes: task.description, songId: null });
+      items.push({
+        id: 'global-' + task.id,
+        date: task.date,
+        sourceType: 'Global',
+        label: 'Task',
+        name: task.taskName,
+        category: task.category,
+        status: task.status,
+        estimatedCost: task.estimatedCost,
+        notes: task.description,
+        songId: null
+      });
     });
 
-    // Releases
+    // Releases and their tasks
     (data.releases || []).forEach(release => {
+      // Release date itself
       items.push({ id: 'release-' + release.id, date: release.releaseDate, sourceType: 'Release', label: 'Release', name: release.name, category: release.type, status: null, estimatedCost: release.estimatedCost, notes: release.notes, songId: null });
+      // Release tasks
+      (release.tasks || []).forEach(task => {
+        items.push({ id: 'release-task-' + task.id, date: task.date, sourceType: 'Release Task', label: task.type, name: release.name, category: task.category, status: task.status, estimatedCost: task.estimatedCost, notes: task.notes, songId: null });
+      });
     });
 
     // Filter
@@ -635,9 +721,10 @@ export const CombinedTimelineView = () => {
 
   const getSourceColor = (sourceType) => {
     switch (sourceType) {
-      case 'Song Deadline': return 'bg-blue-100 border-blue-500';
+      case 'Song Task': return 'bg-blue-100 border-blue-500';
       case 'Song Custom': return 'bg-purple-100 border-purple-500';
       case 'Global': return 'bg-orange-100 border-orange-500';
+      case 'Release Task': return 'bg-teal-100 border-teal-500';
       case 'Release': return 'bg-green-100 border-green-500';
       default: return 'bg-gray-100';
     }
@@ -653,10 +740,11 @@ export const CombinedTimelineView = () => {
             <label className="block text-xs font-bold uppercase mb-1">Source</label>
             <select value={filterSource} onChange={e => setFilterSource(e.target.value)} className={cn("w-full", THEME.punk.input)}>
               <option value="all">All Sources</option>
-              <option value="Song Deadline">Song Deadlines</option>
+              <option value="Song Task">Song Tasks</option>
               <option value="Song Custom">Song Custom Tasks</option>
               <option value="Global">Global Tasks</option>
               <option value="Release">Releases</option>
+              <option value="Release Task">Release Tasks</option>
             </select>
           </div>
           <div>
@@ -716,6 +804,317 @@ export const CombinedTimelineView = () => {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+};
+
+// Task Dashboard View - Shows tasks in progress, due soon, and macro overview
+export const TaskDashboardView = () => {
+  const { data } = useStore();
+  const [view, setView] = useState('upcoming'); // 'upcoming', 'inProgress', 'overview'
+  
+  // Get today's date for comparison
+  const today = new Date().toISOString().split('T')[0];
+  const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // Collect all tasks from all sources
+  const allTasks = useMemo(() => {
+    const tasks = [];
+    
+    // Song tasks
+    (data.songs || []).forEach(song => {
+      (song.deadlines || []).forEach(task => {
+        tasks.push({
+          id: 'song-' + task.id,
+          type: task.type,
+          category: task.category || 'Production',
+          date: task.date,
+          status: task.status,
+          estimatedCost: task.estimatedCost,
+          source: 'Song',
+          sourceName: song.title,
+          sourceType: 'song',
+          sourceId: song.id
+        });
+      });
+      (song.customTasks || []).forEach(task => {
+        tasks.push({
+          id: 'custom-' + task.id,
+          type: task.title,
+          category: 'Custom',
+          date: task.date,
+          status: task.status,
+          estimatedCost: task.estimatedCost,
+          source: 'Song',
+          sourceName: song.title,
+          sourceType: 'song',
+          sourceId: song.id
+        });
+      });
+    });
+    
+    // Global tasks
+    (data.globalTasks || []).forEach(task => {
+      tasks.push({
+        id: 'global-' + task.id,
+        type: task.taskName,
+        category: task.category,
+        date: task.date,
+        status: task.status,
+        estimatedCost: task.estimatedCost,
+        source: 'Global',
+        sourceName: task.taskName,
+        sourceType: 'global',
+        sourceId: task.id
+      });
+    });
+    
+    // Release tasks
+    (data.releases || []).forEach(release => {
+      (release.tasks || []).forEach(task => {
+        tasks.push({
+          id: 'release-' + task.id,
+          type: task.type,
+          category: task.category,
+          date: task.date,
+          status: task.status,
+          estimatedCost: task.estimatedCost,
+          source: 'Release',
+          sourceName: release.name,
+          sourceType: 'release',
+          sourceId: release.id
+        });
+      });
+    });
+    
+    return tasks;
+  }, [data.songs, data.globalTasks, data.releases]);
+
+  // Filter tasks based on view
+  const filteredTasks = useMemo(() => {
+    let filtered = [...allTasks];
+    
+    if (view === 'upcoming') {
+      // Tasks due in next 30 days that are not done
+      filtered = filtered.filter(t => 
+        t.date && 
+        t.date >= today && 
+        t.date <= nextMonth && 
+        t.status !== 'Done'
+      );
+      filtered.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    } else if (view === 'inProgress') {
+      // Tasks that are in progress
+      filtered = filtered.filter(t => t.status === 'In Progress');
+      filtered.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    }
+    
+    return filtered;
+  }, [allTasks, view, today, nextMonth]);
+
+  // Calculate overview statistics
+  const stats = useMemo(() => {
+    const notStarted = allTasks.filter(t => t.status === 'Not Started').length;
+    const inProgress = allTasks.filter(t => t.status === 'In Progress').length;
+    const done = allTasks.filter(t => t.status === 'Done').length;
+    const delayed = allTasks.filter(t => t.status === 'Delayed').length;
+    const dueSoon = allTasks.filter(t => t.date && t.date >= today && t.date <= nextWeek && t.status !== 'Done').length;
+    const overdue = allTasks.filter(t => t.date && t.date < today && t.status !== 'Done').length;
+    const totalCost = allTasks.reduce((sum, t) => sum + (t.estimatedCost || 0), 0);
+    
+    return { notStarted, inProgress, done, delayed, dueSoon, overdue, total: allTasks.length, totalCost };
+  }, [allTasks, today, nextWeek]);
+
+  // Group tasks by category for overview
+  const categoryGroups = useMemo(() => {
+    const groups = {};
+    allTasks.forEach(task => {
+      const cat = task.category || 'Other';
+      if (!groups[cat]) groups[cat] = { total: 0, done: 0, inProgress: 0 };
+      groups[cat].total++;
+      if (task.status === 'Done') groups[cat].done++;
+      if (task.status === 'In Progress') groups[cat].inProgress++;
+    });
+    return groups;
+  }, [allTasks]);
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Done': return 'bg-green-200 text-green-800';
+      case 'In Progress': return 'bg-blue-200 text-blue-800';
+      case 'Delayed': return 'bg-red-200 text-red-800';
+      default: return 'bg-gray-200 text-gray-800';
+    }
+  };
+
+  const isOverdue = (date) => date && date < today;
+  const isDueSoon = (date) => date && date >= today && date <= nextWeek;
+
+  return (
+    <div className="p-6 pb-24">
+      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <h2 className={THEME.punk.textStyle}>Task Dashboard</h2>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setView('upcoming')} 
+            className={cn("px-4 py-2", THEME.punk.btn, view === 'upcoming' ? "bg-black text-white" : "bg-white")}
+          >
+            Upcoming
+          </button>
+          <button 
+            onClick={() => setView('inProgress')} 
+            className={cn("px-4 py-2", THEME.punk.btn, view === 'inProgress' ? "bg-black text-white" : "bg-white")}
+          >
+            In Progress
+          </button>
+          <button 
+            onClick={() => setView('overview')} 
+            className={cn("px-4 py-2", THEME.punk.btn, view === 'overview' ? "bg-black text-white" : "bg-white")}
+          >
+            Overview
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+        <div className={cn("p-4 text-center", THEME.punk.card)}>
+          <div className="text-3xl font-black text-gray-600">{stats.total}</div>
+          <div className="text-xs font-bold uppercase">Total Tasks</div>
+        </div>
+        <div className={cn("p-4 text-center", THEME.punk.card, "bg-blue-50")}>
+          <div className="text-3xl font-black text-blue-600">{stats.inProgress}</div>
+          <div className="text-xs font-bold uppercase">In Progress</div>
+        </div>
+        <div className={cn("p-4 text-center", THEME.punk.card, "bg-yellow-50")}>
+          <div className="text-3xl font-black text-yellow-600">{stats.dueSoon}</div>
+          <div className="text-xs font-bold uppercase">Due This Week</div>
+        </div>
+        <div className={cn("p-4 text-center", THEME.punk.card, "bg-red-50")}>
+          <div className="text-3xl font-black text-red-600">{stats.overdue}</div>
+          <div className="text-xs font-bold uppercase">Overdue</div>
+        </div>
+        <div className={cn("p-4 text-center", THEME.punk.card, "bg-green-50")}>
+          <div className="text-3xl font-black text-green-600">{stats.done}</div>
+          <div className="text-xs font-bold uppercase">Completed</div>
+        </div>
+        <div className={cn("p-4 text-center", THEME.punk.card)}>
+          <div className="text-2xl font-black text-pink-600">{formatMoney(stats.totalCost)}</div>
+          <div className="text-xs font-bold uppercase">Total Est. Cost</div>
+        </div>
+      </div>
+
+      {view === 'overview' ? (
+        /* Overview by Category */
+        <div className={cn("p-6", THEME.punk.card)}>
+          <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Progress by Category</h3>
+          <div className="space-y-4">
+            {Object.entries(categoryGroups).map(([category, data]) => (
+              <div key={category} className="flex items-center gap-4">
+                <div className="w-32 font-bold text-sm truncate">{category}</div>
+                <div className="flex-1 h-6 bg-gray-200 relative overflow-hidden">
+                  <div 
+                    className="absolute inset-y-0 left-0 bg-green-500 transition-all"
+                    style={{ width: `${(data.done / data.total) * 100}%` }}
+                  />
+                  <div 
+                    className="absolute inset-y-0 bg-blue-500 transition-all"
+                    style={{ 
+                      left: `${(data.done / data.total) * 100}%`,
+                      width: `${(data.inProgress / data.total) * 100}%` 
+                    }}
+                  />
+                </div>
+                <div className="w-24 text-xs font-bold text-right">
+                  {data.done}/{data.total} done
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Status Distribution */}
+          <h3 className="font-black uppercase mt-8 mb-4 border-b-4 border-black pb-2">Status Distribution</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-3 bg-gray-100 border-4 border-black">
+              <div className="text-2xl font-black">{stats.notStarted}</div>
+              <div className="text-xs font-bold uppercase">Not Started</div>
+            </div>
+            <div className="p-3 bg-blue-100 border-4 border-black">
+              <div className="text-2xl font-black">{stats.inProgress}</div>
+              <div className="text-xs font-bold uppercase">In Progress</div>
+            </div>
+            <div className="p-3 bg-green-100 border-4 border-black">
+              <div className="text-2xl font-black">{stats.done}</div>
+              <div className="text-xs font-bold uppercase">Done</div>
+            </div>
+            <div className="p-3 bg-red-100 border-4 border-black">
+              <div className="text-2xl font-black">{stats.delayed}</div>
+              <div className="text-xs font-bold uppercase">Delayed</div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Task List */
+        <div className={cn("overflow-x-auto", THEME.punk.card)}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-black text-white">
+                <th className="p-3 text-left">Date</th>
+                <th className="p-3 text-left">Task</th>
+                <th className="p-3 text-left">Category</th>
+                <th className="p-3 text-left">Source</th>
+                <th className="p-3 text-left">Status</th>
+                <th className="p-3 text-right">Est. Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTasks.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-10 text-center opacity-50">
+                    {view === 'upcoming' ? 'No upcoming tasks in the next 30 days.' : 'No tasks in progress.'}
+                  </td>
+                </tr>
+              ) : filteredTasks.map(task => (
+                <tr 
+                  key={task.id} 
+                  className={cn(
+                    "border-b border-gray-200",
+                    isOverdue(task.date) ? "bg-red-50" : isDueSoon(task.date) ? "bg-yellow-50" : ""
+                  )}
+                >
+                  <td className="p-3">
+                    <span className={cn(
+                      "font-bold",
+                      isOverdue(task.date) ? "text-red-600" : isDueSoon(task.date) ? "text-yellow-600" : ""
+                    )}>
+                      {task.date || '-'}
+                    </span>
+                    {isOverdue(task.date) && <span className="ml-2 text-xs bg-red-500 text-white px-1">OVERDUE</span>}
+                    {isDueSoon(task.date) && !isOverdue(task.date) && <span className="ml-2 text-xs bg-yellow-500 text-white px-1">SOON</span>}
+                  </td>
+                  <td className="p-3 font-bold">{task.type}</td>
+                  <td className="p-3"><span className="px-2 py-1 text-xs bg-gray-200">{task.category}</span></td>
+                  <td className="p-3">
+                    <span className={cn(
+                      "px-2 py-1 text-xs font-bold",
+                      task.source === 'Song' ? "bg-blue-100" : task.source === 'Release' ? "bg-green-100" : "bg-orange-100"
+                    )}>
+                      {task.source}: {task.sourceName}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className={cn("px-2 py-1 text-xs font-bold", getStatusColor(task.status))}>
+                      {task.status}
+                    </span>
+                  </td>
+                  <td className="p-3 text-right">{formatMoney(task.estimatedCost || 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
