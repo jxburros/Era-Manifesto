@@ -128,8 +128,10 @@ export const SongDetailView = ({ song, onBack }) => {
   };
 
   const currentSong = data.songs.find(s => s.id === song.id) || song;
-  const tasksCost = (currentSong.deadlines || []).reduce((sum, d) => sum + (d.estimatedCost || 0), 0);
-  const customTasksCost = (currentSong.customTasks || []).reduce((sum, t) => sum + (t.estimatedCost || 0), 0);
+  const songTasks = currentSong.deadlines || [];
+  const songCustomTasks = currentSong.customTasks || [];
+  const tasksCost = songTasks.reduce((sum, d) => sum + (d.estimatedCost || 0), 0);
+  const customTasksCost = songCustomTasks.reduce((sum, t) => sum + (t.estimatedCost || 0), 0);
   const totalCost = (currentSong.estimatedCost || 0) + tasksCost + customTasksCost;
 
   return (
@@ -207,9 +209,9 @@ export const SongDetailView = ({ song, onBack }) => {
               </tr>
             </thead>
             <tbody>
-              {(currentSong.deadlines || []).length === 0 ? (
+              {songTasks.length === 0 ? (
                 <tr><td colSpan="6" className="p-4 text-center opacity-50">No tasks yet. Set a release date and click Recalculate.</td></tr>
-              ) : (currentSong.deadlines || []).map(task => (
+              ) : songTasks.map(task => (
                 <tr key={task.id} className="border-b border-gray-200">
                   <td className="p-2 font-bold">{task.type}{task.isOverridden && <span className="text-xs text-orange-500 ml-1">(edited)</span>}</td>
                   <td className="p-2"><span className="px-2 py-1 text-xs bg-gray-200">{task.category || '-'}</span></td>
@@ -242,11 +244,11 @@ export const SongDetailView = ({ song, onBack }) => {
             </div>
           </div>
         )}
-        {(currentSong.customTasks || []).length === 0 ? (
+        {songCustomTasks.length === 0 ? (
           <p className="text-center opacity-50 py-4">No custom tasks yet.</p>
         ) : (
           <div className="space-y-2">
-            {(currentSong.customTasks || []).map(task => (
+            {songCustomTasks.map(task => (
               <div key={task.id} className="flex items-center gap-2 p-3 bg-gray-50 border-2 border-black">
                 <div className="flex-1">
                   <div className="font-bold">{task.title}</div>
@@ -644,18 +646,53 @@ export const CombinedTimelineView = () => {
 
     // Song Tasks (formerly deadlines)
     (data.songs || []).forEach(song => {
-      (song.deadlines || []).forEach(task => {
-        items.push({ id: 'song-task-' + task.id, date: task.date, sourceType: 'Song Task', label: task.type, name: song.title, category: task.category || song.category, status: task.status, estimatedCost: task.estimatedCost, notes: task.notes, songId: song.id });
+      const songTasks = song.deadlines || [];
+      songTasks.forEach(task => {
+        items.push({
+          id: 'song-task-' + task.id,
+          date: task.date,
+          sourceType: 'Song Task',
+          label: task.type,
+          name: song.title,
+          category: task.category || song.category,
+          status: task.status,
+          estimatedCost: task.estimatedCost,
+          notes: task.notes,
+          songId: song.id
+        });
       });
       // Song Custom Tasks
-      (song.customTasks || []).forEach(task => {
-        items.push({ id: 'custom-' + task.id, date: task.date, sourceType: 'Song Custom', label: 'Custom task', name: song.title, category: song.category, status: task.status, estimatedCost: task.estimatedCost, notes: task.description || task.notes, songId: song.id });
+      const customTasks = song.customTasks || [];
+      customTasks.forEach(task => {
+        items.push({
+          id: 'custom-' + task.id,
+          date: task.date,
+          sourceType: 'Song Custom',
+          label: 'Custom task',
+          name: song.title,
+          category: song.category,
+          status: task.status,
+          estimatedCost: task.estimatedCost,
+          notes: task.description || task.notes,
+          songId: song.id
+        });
       });
     });
 
     // Global Tasks
     (data.globalTasks || []).forEach(task => {
-      items.push({ id: 'global-' + task.id, date: task.date, sourceType: 'Global', label: 'Task', name: task.taskName, category: task.category, status: task.status, estimatedCost: task.estimatedCost, notes: task.description, songId: null });
+      items.push({
+        id: 'global-' + task.id,
+        date: task.date,
+        sourceType: 'Global',
+        label: 'Task',
+        name: task.taskName,
+        category: task.category,
+        status: task.status,
+        estimatedCost: task.estimatedCost,
+        notes: task.description,
+        songId: null
+      });
     });
 
     // Releases and their tasks
