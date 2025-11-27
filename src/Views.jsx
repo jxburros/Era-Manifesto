@@ -46,7 +46,7 @@ export const ListView = ({ onEdit }) => {
                        {data.stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                    </select>
                 </div>
-                <button onClick={() => handleAdd('category', null)} className={cn("px-4 py-2 bg-black text-white", THEME.punk.btn)}>+ Category</button>
+                <button onClick={() => handleAdd('category', null)} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Category</button>
             </div>
             <div className={cn("min-h-[500px]", THEME.punk.card)}>
                 {tree.length === 0 ? <div className="p-10 text-center opacity-50">No tasks. Add a category to start.</div> : tree.map(n => <TaskRow key={n.id} task={n} />)}
@@ -145,7 +145,7 @@ export const TeamView = () => {
     const add = () => { const n = prompt('Name:'); if(n) actions.add('vendors', {name:n, role:'Staff', type:'individual'}); };
     return (
         <div className="p-6">
-            <div className="flex justify-between mb-6"><h2 className={THEME.punk.textStyle}>Team</h2><button onClick={add} className={cn("px-4 py-2 bg-black text-white", THEME.punk.btn)}>+ Add</button></div>
+            <div className="flex justify-between mb-6"><h2 className={THEME.punk.textStyle}>Team</h2><button onClick={add} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Add</button></div>
             <div className="grid md:grid-cols-2 gap-4">{data.vendors.map(v => (<div key={v.id} className={cn("p-4 relative", THEME.punk.card)}><h3 className="font-bold">{v.name}</h3><p className="text-sm opacity-50">{v.role}</p><button onClick={()=>actions.delete('vendors', v.id)} className="absolute top-2 right-2 text-red-500"><Icon name="Trash2" size={16}/></button></div>))}</div>
         </div>
     );
@@ -156,7 +156,7 @@ export const MiscView = () => {
     const add = () => { const d = prompt('Desc:'); const a = prompt('Amount:'); if(d && a) actions.add('misc', {description:d, amount:parseFloat(a)}); };
     return (
         <div className="p-6">
-            <div className="flex justify-between mb-6"><h2 className={THEME.punk.textStyle}>Expenses</h2><button onClick={add} className={cn("px-4 py-2 bg-black text-white", THEME.punk.btn)}>+ Add</button></div>
+            <div className="flex justify-between mb-6"><h2 className={THEME.punk.textStyle}>Expenses</h2><button onClick={add} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Add</button></div>
             <div className={THEME.punk.card}>{data.misc.map(m => (<div key={m.id} className="flex justify-between p-3 border-b border-gray-100"><span>{m.description}</span><span className="font-bold">{formatMoney(m.amount)}</span></div>))}</div>
         </div>
     );
@@ -312,7 +312,7 @@ export const SettingsView = () => {
                                 }
                             }
                         }}
-                        className={cn("w-full py-3 bg-blue-500 text-white mb-2", THEME.punk.btn)}
+                        className={cn("w-full py-3 mb-2", THEME.punk.btn, "bg-blue-500 text-white")}
                         disabled={isConnected}
                     >
                         {isConnected ? "Already Connected" : "Connect to Firebase"}
@@ -325,7 +325,7 @@ export const SettingsView = () => {
                                     actions.disconnect();
                                 }
                             }}
-                            className={cn("w-full py-3 bg-red-500 text-white", THEME.punk.btn)}
+                            className={cn("w-full py-3", THEME.punk.btn, "bg-red-500 text-white")}
                         >
                             Disconnect from Firebase
                         </button>
