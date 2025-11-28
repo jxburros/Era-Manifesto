@@ -36,7 +36,7 @@ export const COLORS = {
 };
 
 export const STAGES = {
-  todo: { label: 'To Do', icon: 'Circle' },
+  todo: { label: 'Not Started', icon: 'Circle' },
   in_progress: { label: 'In Progress', icon: 'PlayCircle' },
   review: { label: 'Review', icon: 'Activity' },
   done: { label: 'Done', icon: 'CheckCircle' }
