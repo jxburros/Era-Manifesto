@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload } from 'lucide-react';
-import { useStore } from './Store';
+import { useStore, STATUS_OPTIONS, getEffectiveCost } from './Store';
 import { THEME, COLORS, formatMoney, STAGES, cn } from './utils';
 
 export const Icon = ({ name, ...props }) => {
@@ -173,6 +173,201 @@ export const Editor = ({ task, onClose }) => {
                 )}
             </div>
             <div className="p-4 border-t-4 border-black bg-white"><button onClick={save} className={cn("w-full py-3", THEME.punk.btn, "bg-black text-white")}>Save Changes</button></div>
+        </div>
+    );
+};
+
+// Phase 4: Unified Task Editor Component
+// Provides consistent task editing interface across songs, versions, videos, releases, global tasks, and events
+export const UnifiedTaskEditor = ({ 
+    task, 
+    onSave, 
+    onCancel, 
+    onDelete,
+    showSourceInfo = false,
+    sourceLabel = '',
+    sourceName = '',
+    teamMembers = []
+}) => {
+    const [form, setForm] = useState({ ...task });
+    const [newAssignment, setNewAssignment] = useState({ memberId: '', cost: 0 });
+
+    useEffect(() => {
+        setForm({ ...task });
+    }, [task]);
+
+    const handleChange = (field, value) => {
+        setForm(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSave = () => {
+        if (onSave) onSave(form);
+    };
+
+    const addAssignment = () => {
+        if (!newAssignment.memberId) return;
+        const budget = getEffectiveCost(form);
+        const current = (form.assignedMembers || []).reduce((s, m) => s + (parseFloat(m.cost) || 0), 0);
+        const nextTotal = current + (parseFloat(newAssignment.cost) || 0);
+        if (budget > 0 && nextTotal > budget) return;
+        const updatedMembers = [...(form.assignedMembers || []), { 
+            memberId: newAssignment.memberId, 
+            cost: parseFloat(newAssignment.cost) || 0 
+        }];
+        handleChange('assignedMembers', updatedMembers);
+        setNewAssignment({ memberId: '', cost: 0 });
+    };
+
+    const removeAssignment = (index) => {
+        const updatedMembers = (form.assignedMembers || []).filter((_, i) => i !== index);
+        handleChange('assignedMembers', updatedMembers);
+    };
+
+    const budget = getEffectiveCost(form);
+    const allocated = (form.assignedMembers || []).reduce((s, m) => s + (m.cost || 0), 0);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onCancel}>
+            <div className={cn("w-full max-w-lg p-6 bg-white max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+                    <h3 className="font-black uppercase">{form.type || form.title || 'Edit Task'}</h3>
+                    <button onClick={onCancel} className="p-1 hover:bg-gray-200"><Icon name="X" size={16} /></button>
+                </div>
+
+                {showSourceInfo && (
+                    <div className="mb-4 p-2 bg-gray-100 border-2 border-black text-xs">
+                        <span className="font-bold">{sourceLabel}:</span> {sourceName}
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    {/* Title/Type */}
+                    <div>
+                        <label className="block text-xs font-bold uppercase mb-1">Task Name</label>
+                        <input 
+                            value={form.title || form.type || ''} 
+                            onChange={e => handleChange(form.title !== undefined ? 'title' : 'type', e.target.value)} 
+                            className={cn("w-full", THEME.punk.input)} 
+                        />
+                    </div>
+
+                    {/* Date and Status */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-bold uppercase mb-1">Due Date</label>
+                            <input 
+                                type="date" 
+                                value={form.date || form.dueDate || ''} 
+                                onChange={e => handleChange(form.date !== undefined ? 'date' : 'dueDate', e.target.value)} 
+                                className={cn("w-full", THEME.punk.input)} 
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase mb-1">Status</label>
+                            <select 
+                                value={form.status || 'Not Started'} 
+                                onChange={e => handleChange('status', e.target.value)} 
+                                className={cn("w-full", THEME.punk.input)}
+                            >
+                                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Cost Layers */}
+                    <div className="grid grid-cols-3 gap-2">
+                        <div>
+                            <label className="block text-xs font-bold uppercase mb-1">Estimated</label>
+                            <input 
+                                type="number" 
+                                value={form.estimatedCost || 0} 
+                                onChange={e => handleChange('estimatedCost', parseFloat(e.target.value) || 0)} 
+                                className={cn("w-full text-sm", THEME.punk.input)} 
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase mb-1">Quoted</label>
+                            <input 
+                                type="number" 
+                                value={form.quotedCost || 0} 
+                                onChange={e => handleChange('quotedCost', parseFloat(e.target.value) || 0)} 
+                                className={cn("w-full text-sm", THEME.punk.input)} 
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase mb-1">Paid</label>
+                            <input 
+                                type="number" 
+                                value={form.paidCost || 0} 
+                                onChange={e => handleChange('paidCost', parseFloat(e.target.value) || 0)} 
+                                className={cn("w-full text-sm", THEME.punk.input)} 
+                            />
+                        </div>
+                    </div>
+
+                    {/* Description/Notes */}
+                    <div>
+                        <label className="block text-xs font-bold uppercase mb-1">Notes</label>
+                        <textarea 
+                            value={form.notes || form.description || ''} 
+                            onChange={e => handleChange(form.notes !== undefined ? 'notes' : 'description', e.target.value)} 
+                            className={cn("w-full h-20", THEME.punk.input)} 
+                            placeholder="Additional details..."
+                        />
+                    </div>
+
+                    {/* Team Member Assignments */}
+                    <div className="border-t-2 border-black pt-4">
+                        <label className="block text-xs font-bold uppercase mb-2">Team Assignments</label>
+                        {budget > 0 && (
+                            <div className="text-xs mb-2 p-2 bg-gray-100 border border-black">
+                                Budget: {formatMoney(budget)} | Allocated: {formatMoney(allocated)} | Remaining: {formatMoney(budget - allocated)}
+                            </div>
+                        )}
+                        <div className="flex flex-wrap gap-2 mb-2">
+                            {(form.assignedMembers || []).map((m, idx) => {
+                                const member = teamMembers.find(tm => tm.id === m.memberId);
+                                return (
+                                    <span key={idx} className="px-2 py-1 border-2 border-black bg-purple-100 text-xs font-bold flex items-center gap-2">
+                                        {member?.name || 'Member'} ({formatMoney(m.cost)})
+                                        <button onClick={() => removeAssignment(idx)} className="text-red-600">×</button>
+                                    </span>
+                                );
+                            })}
+                        </div>
+                        <div className="flex gap-2 items-center">
+                            <select 
+                                value={newAssignment.memberId} 
+                                onChange={e => setNewAssignment(prev => ({ ...prev, memberId: e.target.value }))} 
+                                className={cn("flex-1 text-xs", THEME.punk.input)}
+                            >
+                                <option value="">Select member...</option>
+                                {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            </select>
+                            <input 
+                                type="number" 
+                                value={newAssignment.cost || ''} 
+                                onChange={e => setNewAssignment(prev => ({ ...prev, cost: e.target.value }))} 
+                                placeholder="Cost" 
+                                className={cn("w-20 text-xs", THEME.punk.input)} 
+                            />
+                            <button onClick={addAssignment} className={cn("px-3 py-2 text-xs", THEME.punk.btn, "bg-purple-600 text-white")}>Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-6 pt-4 border-t-4 border-black">
+                    <button onClick={handleSave} className={cn("flex-1 px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>
+                        Save Changes
+                    </button>
+                    {onDelete && (
+                        <button onClick={onDelete} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
+                            <Icon name="Trash2" size={16} />
+                        </button>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };

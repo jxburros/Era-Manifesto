@@ -26,11 +26,11 @@ Order check: current phase ordering already aligns with dependencies (data found
 - [x] Auto-generate release tasks: album art, tracklist selection, physical production (if enabled), release task.
 - [x] Fix release recalculation crash.
 
-## Phase 4 — Tasks, Global Tasks & Active Tasks (foundation for timeline/calendar) ✓ MOSTLY COMPLETE
+## Phase 4 — Tasks, Global Tasks & Active Tasks (foundation for timeline/calendar) ✓ COMPLETE
 - [x] Add global/misc tasks with team members, costs, and due dates.
-- [ ] Create unified task editor component with consistent interactions, fields, and cost behavior.
+- [x] Create unified task editor component with consistent interactions, fields, and cost behavior.
 - [x] Enable team member assignment on all tasks (songs, versions, videos, releases, global tasks, events).
-- [ ] Unify version tasks and song tasks display: show in the same location with clear notation of which version each task belongs to (core version tasks and song tasks are interchangeable).
+- [x] Unify version tasks and song tasks display: show in the same location with clear notation of which version each task belongs to (core version tasks and song tasks are interchangeable).
 - [x] Remove "inherits from core" checkbox from task interface (functionality appears to be obsolete).
 - [x] Remove video type field from Songs page basic information section.
 - [x] Improve method for adding releases to versions and add ability to decouple/unlink releases from versions.

@@ -394,40 +394,10 @@ export const SongDetailView = ({ song, onBack }) => {
                 </div>
               </div>
               
-              {/* Version Tasks (for non-core versions) */}
+              {/* Version Tasks Count - Tasks now shown in unified view below */}
               {v.id !== 'core' && (v.tasks || []).length > 0 && (
-                <div className="mt-3 border-t border-black pt-3">
-                  <div className="text-xs font-bold uppercase mb-2">Version Tasks</div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="p-1 text-left">Type</th>
-                          <th className="p-1 text-left">Date</th>
-                          <th className="p-1 text-left">Status</th>
-                          <th className="p-1 text-right">Cost</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(v.tasks || []).map(task => (
-                          <tr key={task.id} className="border-b border-gray-200">
-                            <td className="p-1 font-bold">{task.type}</td>
-                            <td className="p-1">
-                              <input type="date" value={task.date || ''} onChange={e => actions.updateVersionTask(song.id, v.id, task.id, { date: e.target.value })} className="border border-black p-1 text-xs w-28" />
-                            </td>
-                            <td className="p-1">
-                              <select value={task.status || 'Not Started'} onChange={e => actions.updateVersionTask(song.id, v.id, task.id, { status: e.target.value })} className="border border-black p-1 text-xs">
-                                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                              </select>
-                            </td>
-                            <td className="p-1 text-right">
-                              <input type="number" value={task.estimatedCost || 0} onChange={e => actions.updateVersionTask(song.id, v.id, task.id, { estimatedCost: parseFloat(e.target.value) || 0 })} className="border border-black p-1 text-xs w-16 text-right" />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="mt-3 text-xs text-gray-500 border-t border-gray-200 pt-2">
+                  <span className="font-bold">{(v.tasks || []).length}</span> version tasks (see All Tasks section below)
                 </div>
               )}
             </div>
@@ -435,16 +405,26 @@ export const SongDetailView = ({ song, onBack }) => {
         </div>
       </div>
 
-      {/* Song Tasks Section - Auto-generated tasks based on release date */}
+      {/* Unified Tasks Section - Shows all tasks from core song and versions together */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
-          <h3 className="font-black uppercase">Song Tasks</h3>
+          <h3 className="font-black uppercase">All Tasks</h3>
           <button onClick={handleRecalculateDeadlines} className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-blue-500 text-white")}>Recalculate from Release Date</button>
         </div>
+        
+        {/* Legend */}
+        <div className="flex flex-wrap gap-2 mb-3 text-[10px] font-bold">
+          <span className="px-2 py-1 bg-yellow-100 border-2 border-black">Core Song</span>
+          {(currentSong.versions || []).filter(v => v.id !== 'core').map(v => (
+            <span key={v.id} className="px-2 py-1 bg-blue-100 border-2 border-black">{v.name}</span>
+          ))}
+        </div>
+        
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-black">
+                <th className="p-2 text-left">Version</th>
                 <th className="p-2 text-left">Type</th>
                 <th className="p-2 text-left">Category</th>
                 <th className="p-2 text-left">Date</th>
@@ -455,38 +435,61 @@ export const SongDetailView = ({ song, onBack }) => {
               </tr>
             </thead>
             <tbody>
-              {songTasks.length === 0 ? (
-                <tr><td colSpan="7" className="p-4 text-center opacity-50">No tasks yet. Set a release date and click Recalculate.</td></tr>
-              ) : songTasks.map(task => (
-                <tr key={task.id} className="border-b border-gray-200">
-                  <td className="p-2 font-bold">{task.type}{task.isOverridden && <span className="text-xs text-orange-500 ml-1">(edited)</span>}</td>
-                  <td className="p-2"><span className="px-2 py-1 text-xs bg-gray-200">{task.category || '-'}</span></td>
-                  <td className="p-2"><input type="date" value={task.date || ''} onChange={e => handleDeadlineChange(task.id, 'date', e.target.value)} className="border-2 border-black p-1 text-xs" /></td>
-                  <td className="p-2"><select value={task.status || 'Not Started'} onChange={e => handleDeadlineChange(task.id, 'status', e.target.value)} className="border-2 border-black p-1 text-xs">{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select></td>
-                  <td className="p-2"><input type="number" value={task.estimatedCost || 0} onChange={e => handleDeadlineChange(task.id, 'estimatedCost', parseFloat(e.target.value) || 0)} className="border-2 border-black p-1 text-xs w-20 text-right" /></td>
-                  <td className="p-2 text-xs space-y-1">
-                    <div className="flex flex-wrap gap-1">
-                      {(task.assignedMembers || []).map(m => {
-                        const member = teamMembers.find(tm => tm.id === m.memberId);
-                        return <span key={m.memberId + m.cost} className="px-2 py-1 bg-purple-100 border-2 border-black font-bold">{member?.name || 'Member'} ({formatMoney(m.cost)})</span>;
-                      })}
-                    </div>
-                    <div className="flex gap-1 items-center">
-                      <select value={newAssignments[task.id]?.memberId || ''} onChange={e => setNewAssignments(prev => ({ ...prev, [task.id]: { ...(prev[task.id] || {}), memberId: e.target.value } }))} className={cn("px-2 py-1 text-xs", THEME.punk.input)}>
-                        <option value="">Assign member</option>
-                        {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                      </select>
-                      <input type="number" value={newAssignments[task.id]?.cost || ''} onChange={e => setNewAssignments(prev => ({ ...prev, [task.id]: { ...(prev[task.id] || {}), cost: e.target.value } }))} placeholder="Cost" className={cn("px-2 py-1 text-xs w-20", THEME.punk.input)} />
-                      <button onClick={() => addAssignment(task.id, task, (assignedMembers) => {
-                        const updatedTasks = songTasks.map(t => t.id === task.id ? { ...t, assignedMembers } : t);
-                        actions.updateSong(song.id, { deadlines: updatedTasks });
-                      })} className={cn("px-2 py-1 text-xs", THEME.punk.btn, "bg-pink-600 text-white")}>Add</button>
-                    </div>
-                    {taskBudget(task) > 0 && <div className="text-[10px] font-bold">Budget Remaining: {formatMoney(taskBudget(task) - (task.assignedMembers || []).reduce((s, m) => s + (m.cost || 0), 0))}</div>}
-                  </td>
-                  <td className="p-2"><input value={task.notes || ''} onChange={e => handleDeadlineChange(task.id, 'notes', e.target.value)} className="border-2 border-black p-1 text-xs w-full" placeholder="Notes..." /></td>
-                </tr>
-              ))}
+              {/* Core Song Tasks */}
+              {songTasks.length === 0 && (currentSong.versions || []).every(v => (v.tasks || []).length === 0) ? (
+                <tr><td colSpan="8" className="p-4 text-center opacity-50">No tasks yet. Set a release date and click Recalculate.</td></tr>
+              ) : (
+                <>
+                  {/* Core song tasks */}
+                  {songTasks.map(task => (
+                    <tr key={`core-${task.id}`} className="border-b border-gray-200 bg-yellow-50">
+                      <td className="p-2"><span className="px-2 py-1 text-xs font-bold bg-yellow-200 border border-black">Core</span></td>
+                      <td className="p-2 font-bold">{task.type}{task.isOverridden && <span className="text-xs text-orange-500 ml-1">(edited)</span>}</td>
+                      <td className="p-2"><span className="px-2 py-1 text-xs bg-gray-200">{task.category || '-'}</span></td>
+                      <td className="p-2"><input type="date" value={task.date || ''} onChange={e => handleDeadlineChange(task.id, 'date', e.target.value)} className="border-2 border-black p-1 text-xs" /></td>
+                      <td className="p-2"><select value={task.status || 'Not Started'} onChange={e => handleDeadlineChange(task.id, 'status', e.target.value)} className="border-2 border-black p-1 text-xs">{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select></td>
+                      <td className="p-2"><input type="number" value={task.estimatedCost || 0} onChange={e => handleDeadlineChange(task.id, 'estimatedCost', parseFloat(e.target.value) || 0)} className="border-2 border-black p-1 text-xs w-20 text-right" /></td>
+                      <td className="p-2 text-xs space-y-1">
+                        <div className="flex flex-wrap gap-1">
+                          {(task.assignedMembers || []).map(m => {
+                            const member = teamMembers.find(tm => tm.id === m.memberId);
+                            return <span key={m.memberId + m.cost} className="px-2 py-1 bg-purple-100 border-2 border-black font-bold">{member?.name || 'Member'} ({formatMoney(m.cost)})</span>;
+                          })}
+                        </div>
+                        <div className="flex gap-1 items-center">
+                          <select value={newAssignments[task.id]?.memberId || ''} onChange={e => setNewAssignments(prev => ({ ...prev, [task.id]: { ...(prev[task.id] || {}), memberId: e.target.value } }))} className={cn("px-2 py-1 text-xs", THEME.punk.input)}>
+                            <option value="">Assign member</option>
+                            {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                          </select>
+                          <input type="number" value={newAssignments[task.id]?.cost || ''} onChange={e => setNewAssignments(prev => ({ ...prev, [task.id]: { ...(prev[task.id] || {}), cost: e.target.value } }))} placeholder="Cost" className={cn("px-2 py-1 text-xs w-20", THEME.punk.input)} />
+                          <button onClick={() => addAssignment(task.id, task, (assignedMembers) => {
+                            const updatedTasks = songTasks.map(t => t.id === task.id ? { ...t, assignedMembers } : t);
+                            actions.updateSong(song.id, { deadlines: updatedTasks });
+                          })} className={cn("px-2 py-1 text-xs", THEME.punk.btn, "bg-pink-600 text-white")}>Add</button>
+                        </div>
+                        {taskBudget(task) > 0 && <div className="text-[10px] font-bold">Budget Remaining: {formatMoney(taskBudget(task) - (task.assignedMembers || []).reduce((s, m) => s + (m.cost || 0), 0))}</div>}
+                      </td>
+                      <td className="p-2"><input value={task.notes || ''} onChange={e => handleDeadlineChange(task.id, 'notes', e.target.value)} className="border-2 border-black p-1 text-xs w-full" placeholder="Notes..." /></td>
+                    </tr>
+                  ))}
+                  
+                  {/* Version tasks */}
+                  {(currentSong.versions || []).filter(v => v.id !== 'core').flatMap(v => 
+                    (v.tasks || []).map(task => (
+                      <tr key={`${v.id}-${task.id}`} className="border-b border-gray-200 bg-blue-50">
+                        <td className="p-2"><span className="px-2 py-1 text-xs font-bold bg-blue-200 border border-black">{v.name}</span></td>
+                        <td className="p-2 font-bold">{task.type}{task.isOverridden && <span className="text-xs text-orange-500 ml-1">(edited)</span>}</td>
+                        <td className="p-2"><span className="px-2 py-1 text-xs bg-gray-200">{task.category || '-'}</span></td>
+                        <td className="p-2"><input type="date" value={task.date || ''} onChange={e => actions.updateVersionTask(song.id, v.id, task.id, { date: e.target.value })} className="border-2 border-black p-1 text-xs" /></td>
+                        <td className="p-2"><select value={task.status || 'Not Started'} onChange={e => actions.updateVersionTask(song.id, v.id, task.id, { status: e.target.value })} className="border-2 border-black p-1 text-xs">{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select></td>
+                        <td className="p-2"><input type="number" value={task.estimatedCost || 0} onChange={e => actions.updateVersionTask(song.id, v.id, task.id, { estimatedCost: parseFloat(e.target.value) || 0 })} className="border-2 border-black p-1 text-xs w-20 text-right" /></td>
+                        <td className="p-2 text-xs"><span className="opacity-50">(Assign via version)</span></td>
+                        <td className="p-2"><span className="opacity-50">-</span></td>
+                      </tr>
+                    ))
+                  )}
+                </>
+              )}
             </tbody>
           </table>
         </div>
