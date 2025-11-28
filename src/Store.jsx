@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, setDoc } from 'firebase/firestore';
@@ -16,6 +16,53 @@ export const SONG_CATEGORIES = ['Album', 'Bonus', 'Christmas EP', 'EP', 'Other']
 
 // Video types - DEPRECATED: Use video type checkboxes on video entities instead
 export const VIDEO_TYPES = ['None', 'Lyric', 'Enhanced', 'Enhanced + Loop', 'Full'];
+
+// Unified Item/Task scaffolding for forward-compatible persistence
+export const createUnifiedItem = (overrides = {}) => ({
+  id: overrides.id || crypto.randomUUID(),
+  type: overrides.type || 'generic',
+  name: overrides.name || '',
+  primaryDate: overrides.primaryDate || '',
+  tags: overrides.tags || [],
+  tagGroups: overrides.tagGroups || [],
+  people: overrides.people || [],
+  cost: {
+    estimated: overrides.cost?.estimated || 0,
+    quoted: overrides.cost?.quoted || 0,
+    paid: overrides.cost?.paid || 0
+  },
+  progress: {
+    percentComplete: overrides.progress?.percentComplete || 0,
+    status: overrides.progress?.status || 'Not Started',
+    stage: overrides.progress?.stage || ''
+  },
+  metadata: overrides.metadata || {},
+  ...overrides
+});
+
+export const createUnifiedTaskType = (overrides = {}) => ({
+  id: overrides.id || crypto.randomUUID(),
+  type: overrides.type || 'Custom',
+  name: overrides.name || overrides.title || '',
+  primaryDate: overrides.primaryDate || overrides.date || '',
+  status: overrides.status || 'Not Started',
+  tags: overrides.tags || [],
+  people: overrides.people || overrides.assignedMembers || [],
+  parentItemId: overrides.parentItemId || overrides.parentId || null,
+  parentType: overrides.parentType || null,
+  cost: {
+    estimated: overrides.cost?.estimated ?? overrides.estimatedCost ?? 0,
+    quoted: overrides.cost?.quoted ?? overrides.quotedCost ?? 0,
+    paid: overrides.cost?.paid ?? overrides.paidCost ?? 0
+  },
+  progress: {
+    percentComplete: overrides.progress?.percentComplete || 0,
+    stage: overrides.progress?.stage || '',
+    status: overrides.progress?.status || overrides.status || 'Not Started'
+  },
+  metadata: overrides.metadata || {},
+  ...overrides
+});
 
 // Unified Task schema factory - Phase 0 standardization
 export const createUnifiedTask = (overrides = {}) => ({
@@ -50,6 +97,13 @@ export const getEffectiveCost = (entity = {}) => {
   if (entity.quotedCost !== undefined && entity.quotedCost > 0) return entity.quotedCost;
   return entity.estimatedCost || 0;
 };
+
+// Normalize legacy cost fields into the Item/Task cost envelope
+const summarizeLegacyCost = (entity = {}, amountKey = 'amount') => ({
+  estimated: entity.estimatedCost || 0,
+  quoted: entity.quotedCost || 0,
+  paid: entity.paidCost || entity.actualCost || (amountKey && entity[amountKey]) || 0
+});
 
 // Exclusivity options for availability windows
 export const EXCLUSIVITY_OPTIONS = ['None', 'Platform Exclusive', 'Website Only', 'Radio Only', 'Timed Exclusive'];
@@ -331,10 +385,15 @@ export const StoreProvider = ({ children }) => {
     globalTasks: [],
     releases: [],
     // Phase 2: Standalone videos
-    standaloneVideos: []
+    standaloneVideos: [],
+    // Unified Item/Task collections
+    items: [],
+    tasksV2: []
   });
   const [user, setUser] = useState(null);
   const [db, setDb] = useState(null);
+  const [hasMigratedUnified, setHasMigratedUnified] = useState(false);
+  const unifiedSyncedRef = useRef(false);
   const appId = "album-tracker-v2";
 
   useEffect(() => {
@@ -354,7 +413,11 @@ export const StoreProvider = ({ children }) => {
         } catch (e) { console.error("Cloud Error", e); }
       }
       const localData = JSON.parse(localStorage.getItem(appId)) || {};
-      setData(prev => ({ ...prev, ...localData }));
+      setData(prev => {
+        const merged = { ...prev, ...localData };
+        const migrated = migrateLegacyData(merged);
+        return { ...merged, items: migrated.items, tasksV2: migrated.tasks };
+      });
       setMode('local');
     };
     init();
@@ -363,6 +426,7 @@ export const StoreProvider = ({ children }) => {
   useEffect(() => {
     if (mode === 'cloud' && db && user) {
       const collections = [
+        'album_items', 'album_tasks_v2',
         'album_tasks', 'album_photos', 'album_vendors', 'album_teamMembers', 'album_misc_expenses',
         'album_events', 'album_stages', 'album_eras', 'album_tags', 'album_songs', 'album_globalTasks', 'album_releases'
       ];
@@ -370,7 +434,11 @@ export const StoreProvider = ({ children }) => {
         const q = query(collection(db, 'artifacts', appId, 'users', user.uid, col));
         return onSnapshot(q, (snap) => {
           const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-          if (col === 'album_tasks') {
+          if (col === 'album_items') {
+             setData(prev => ({ ...prev, items: list }));
+          } else if (col === 'album_tasks_v2') {
+             setData(prev => ({ ...prev, tasksV2: list }));
+          } else if (col === 'album_tasks') {
              const settingsDoc = list.find(d => d.id === 'settings');
              const taskDocs = list.filter(d => d.id !== 'settings');
              setData(prev => ({ ...prev, tasks: taskDocs, settings: settingsDoc || prev.settings }));
@@ -398,6 +466,44 @@ export const StoreProvider = ({ children }) => {
         setData(prev => ({ ...prev, stages: defaults }));
     }
   }, [mode, data.stages]);
+
+  useEffect(() => {
+    const hasLegacyPayload = () => {
+      if (mode === 'local') return true;
+      return (
+        data.tasks?.length || data.songs?.length || data.releases?.length || data.events?.length || data.standaloneVideos?.length ||
+        data.items?.length || data.tasksV2?.length
+      );
+    };
+
+    if ((mode === 'local' || mode === 'cloud') && !hasMigratedUnified && hasLegacyPayload()) {
+      setData(prev => {
+        const migrated = migrateLegacyData(prev);
+        return { ...prev, items: migrated.items, tasksV2: migrated.tasks };
+      });
+      setHasMigratedUnified(true);
+    }
+  }, [mode, hasMigratedUnified, data.tasks, data.songs, data.releases, data.events, data.standaloneVideos]);
+
+  useEffect(() => {
+    if (mode !== 'cloud' || !db || !user || !hasMigratedUnified || unifiedSyncedRef.current) return;
+    if ((!data.items || data.items.length === 0) && (!data.tasksV2 || data.tasksV2.length === 0)) return;
+
+    const persistUnifiedCollections = async () => {
+      const itemWrites = (data.items || []).map(item => setDoc(
+        doc(db, 'artifacts', appId, 'users', user.uid, 'album_items', item.id),
+        { ...item, _schema: 'item_v1', updatedAt: serverTimestamp() }
+      ));
+      const taskWrites = (data.tasksV2 || []).map(task => setDoc(
+        doc(db, 'artifacts', appId, 'users', user.uid, 'album_tasks_v2', task.id),
+        { ...task, _schema: 'task_v1', updatedAt: serverTimestamp() }
+      ));
+      await Promise.all([...itemWrites, ...taskWrites]);
+      unifiedSyncedRef.current = true;
+    };
+
+    persistUnifiedCollections();
+  }, [mode, db, user, hasMigratedUnified, data.items, data.tasksV2]);
 
     const stats = useMemo(() => {
     // Use getEffectiveCost directly for consistent cost calculation (paid > quoted > estimated)
