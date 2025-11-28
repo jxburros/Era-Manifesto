@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useStore, STATUS_OPTIONS, SONG_CATEGORIES, VIDEO_TYPES, RELEASE_TYPES, VERSION_TYPES, GLOBAL_TASK_CATEGORIES, EXCLUSIVITY_OPTIONS, getEffectiveCost } from './Store';
+import { useStore, STATUS_OPTIONS, SONG_CATEGORIES, RELEASE_TYPES, VERSION_TYPES, GLOBAL_TASK_CATEGORIES, EXCLUSIVITY_OPTIONS, getEffectiveCost } from './Store';
 import { THEME, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 
@@ -197,12 +197,6 @@ export const SongDetailView = ({ song, onBack }) => {
               {(data.releases || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase mb-1">Video Type</label>
-            <select value={form.videoType || 'None'} onChange={e => { handleFieldChange('videoType', e.target.value); }} onBlur={handleSave} className={cn("w-full", THEME.punk.input)}>
-              {VIDEO_TYPES.map(v => <option key={v} value={v}>{v}</option>)}
-            </select>
-          </div>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 font-bold">
               <input type="checkbox" checked={form.isSingle || false} onChange={e => { handleFieldChange('isSingle', e.target.checked); setTimeout(handleSave, 0); }} className="w-5 h-5" />
@@ -298,10 +292,6 @@ export const SongDetailView = ({ song, onBack }) => {
                   <button onClick={() => { if (confirm('Delete this version?')) actions.deleteSongVersion(song.id, v.id); }} className="p-1 text-red-500 hover:bg-red-100"><Icon name="Trash2" size={14} /></button>
                 )}
                 {v.id === 'core' && <span className="px-2 py-1 bg-yellow-200 text-xs font-bold border border-black">CORE</span>}
-                <label className="flex items-center gap-1 text-xs font-bold">
-                  <input type="checkbox" checked={v.basedOnCore || false} onChange={e => actions.updateSongVersion(song.id, v.id, { basedOnCore: e.target.checked })} className="w-4 h-4" />
-                  Inherits from Core
-                </label>
               </div>
               
               {/* Availability Windows */}
@@ -363,14 +353,15 @@ export const SongDetailView = ({ song, onBack }) => {
                 <span className="font-bold">Releases:</span>
                 <select onChange={e => actions.attachVersionToRelease(song.id, v.id, e.target.value, data.releases.find(r => r.id === e.target.value)?.releaseDate)} className={cn("px-2 py-1 text-xs", THEME.punk.input)} value="">
                   <option value="">Attach to release...</option>
-                  {(data.releases || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  {(data.releases || []).filter(r => !(v.releaseIds || []).includes(r.id)).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
                 {(v.releaseIds || []).map(rid => {
                   const rel = data.releases.find(r => r.id === rid);
                   const overrideDate = v.releaseOverrides?.[rid];
                   return (
-                    <span key={rid} className="px-2 py-1 border-2 border-black bg-yellow-100 font-bold">
+                    <span key={rid} className="px-2 py-1 border-2 border-black bg-yellow-100 font-bold flex items-center gap-1">
                       {rel?.name || 'Release'} — {overrideDate || rel?.releaseDate || 'TBD'}
+                      <button onClick={() => actions.detachVersionFromRelease(song.id, v.id, rid)} className="text-red-600 hover:bg-red-100 ml-1" title="Unlink release">×</button>
                     </span>
                   );
                 })}
@@ -758,8 +749,9 @@ export const GlobalTasksView = () => {
                 </td>
                 <td className="p-3"><span className={cn("px-2 py-1 text-xs font-bold", task.status === 'Done' ? 'bg-green-200' : task.status === 'In Progress' ? 'bg-blue-200' : task.status === 'Delayed' ? 'bg-red-200' : 'bg-gray-200')}>{task.status}</span></td>
                 <td className="p-3 text-center">
-                  <button onClick={() => setEditingTask({ ...task })} className="p-1 hover:bg-blue-100 text-blue-500 mr-1"><Icon name="Settings" size={14} /></button>
-                  <button onClick={() => handleDeleteTask(task.id)} className="p-1 hover:bg-red-100 text-red-500"><Icon name="Trash2" size={14} /></button>
+                  <button onClick={() => setEditingTask({ ...task })} className="p-1 hover:bg-blue-100 text-blue-500 mr-1" title="Edit"><Icon name="Settings" size={14} /></button>
+                  <button onClick={() => actions.updateGlobalTask(task.id, { isArchived: !task.isArchived })} className={cn("p-1 mr-1", task.isArchived ? "hover:bg-green-100 text-green-500" : "hover:bg-yellow-100 text-yellow-600")} title={task.isArchived ? "Restore" : "Archive"}><Icon name="Archive" size={14} /></button>
+                  <button onClick={() => handleDeleteTask(task.id)} className="p-1 hover:bg-red-100 text-red-500" title="Delete"><Icon name="Trash2" size={14} /></button>
                 </td>
               </tr>
             ))}
@@ -1127,7 +1119,7 @@ export const ReleaseDetailView = ({ release, onBack }) => {
   );
 };
 
-// Combined Timeline View (Spec 2.6)
+// Combined Timeline View (Spec 2.6) - Phase 6: Enhanced with events, videos, exclusivity windows, and clickable entries
 export const CombinedTimelineView = () => {
   const { data } = useStore();
   const [filterSource, setFilterSource] = useState('all');
@@ -1135,6 +1127,8 @@ export const CombinedTimelineView = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // 'list', 'week', 'month'
+  const [selectedItem, setSelectedItem] = useState(null);
 
   const timelineItems = useMemo(() => {
     const items = [];
@@ -1153,9 +1147,11 @@ export const CombinedTimelineView = () => {
           status: task.status,
           estimatedCost: task.estimatedCost,
           notes: task.notes,
-          songId: song.id
+          songId: song.id,
+          clickable: true
         });
       });
+      
       // Song Custom Tasks
       const customTasks = song.customTasks || [];
       customTasks.forEach(task => {
@@ -1163,19 +1159,131 @@ export const CombinedTimelineView = () => {
           id: 'custom-' + task.id,
           date: task.date,
           sourceType: 'Song Custom',
-          label: 'Custom task',
+          label: task.title || 'Custom task',
           name: song.title,
           category: song.category,
           status: task.status,
           estimatedCost: task.estimatedCost,
           notes: task.description || task.notes,
-          songId: song.id
+          songId: song.id,
+          clickable: true
         });
       });
+      
+      // Version tasks
+      (song.versions || []).filter(v => v.id !== 'core').forEach(version => {
+        (version.tasks || []).forEach(task => {
+          items.push({
+            id: 'version-task-' + song.id + '-' + version.id + '-' + task.id,
+            date: task.date,
+            sourceType: 'Version Task',
+            label: task.type,
+            name: `${version.name} (${song.title})`,
+            category: task.category || 'Version',
+            status: task.status,
+            estimatedCost: task.estimatedCost,
+            notes: task.notes,
+            songId: song.id,
+            clickable: true
+          });
+        });
+      });
+      
+      // Video tasks
+      (song.videos || []).forEach(video => {
+        (video.tasks || []).forEach(task => {
+          items.push({
+            id: 'video-task-' + song.id + '-' + video.id + '-' + task.id,
+            date: task.date,
+            sourceType: 'Video Task',
+            label: task.type,
+            name: `${video.title} (${song.title})`,
+            category: 'Video',
+            status: task.status,
+            estimatedCost: task.estimatedCost,
+            notes: task.notes,
+            songId: song.id,
+            clickable: true
+          });
+        });
+        
+        // Video release date
+        if (video.releaseDate) {
+          items.push({
+            id: 'video-release-' + song.id + '-' + video.id,
+            date: video.releaseDate,
+            sourceType: 'Video',
+            label: 'Video Release',
+            name: video.title,
+            category: 'Video',
+            status: null,
+            estimatedCost: video.estimatedCost,
+            notes: null,
+            songId: song.id,
+            clickable: true
+          });
+        }
+      });
+      
+      // Exclusivity windows (start)
+      if (song.exclusiveType && song.exclusiveType !== 'None' && song.exclusiveStartDate) {
+        items.push({
+          id: 'excl-start-' + song.id,
+          date: song.exclusiveStartDate,
+          sourceType: 'Exclusivity',
+          label: `${song.exclusiveType} Start`,
+          name: song.title,
+          category: 'Exclusive',
+          status: null,
+          estimatedCost: 0,
+          notes: song.exclusiveNotes,
+          songId: song.id,
+          isExclusivityStart: true,
+          exclusiveEndDate: song.exclusiveEndDate,
+          clickable: true
+        });
+      }
+      
+      // Exclusivity windows (end)
+      if (song.exclusiveType && song.exclusiveType !== 'None' && song.exclusiveEndDate) {
+        items.push({
+          id: 'excl-end-' + song.id,
+          date: song.exclusiveEndDate,
+          sourceType: 'Exclusivity',
+          label: `${song.exclusiveType} End`,
+          name: song.title,
+          category: 'Exclusive',
+          status: null,
+          estimatedCost: 0,
+          notes: song.exclusiveNotes,
+          songId: song.id,
+          isExclusivityEnd: true,
+          clickable: true
+        });
+      }
+    });
+
+    // Events
+    (data.events || []).forEach(event => {
+      if (event.date) {
+        items.push({
+          id: 'event-' + event.id,
+          date: event.date,
+          sourceType: 'Event',
+          label: event.type || 'Event',
+          name: event.title,
+          category: 'Event',
+          status: null,
+          estimatedCost: event.estimatedCost || 0,
+          notes: event.description,
+          songId: null,
+          clickable: true
+        });
+      }
     });
 
     // Global Tasks
-    (data.globalTasks || []).forEach(task => {
+    (data.globalTasks || []).filter(t => !t.isArchived).forEach(task => {
       items.push({
         id: 'global-' + task.id,
         date: task.date,
@@ -1186,18 +1294,63 @@ export const CombinedTimelineView = () => {
         status: task.status,
         estimatedCost: task.estimatedCost,
         notes: task.description,
-        songId: null
+        songId: null,
+        clickable: true
       });
     });
 
     // Releases and their tasks
     (data.releases || []).forEach(release => {
       // Release date itself
-      items.push({ id: 'release-' + release.id, date: release.releaseDate, sourceType: 'Release', label: 'Release', name: release.name, category: release.type, status: null, estimatedCost: release.estimatedCost, notes: release.notes, songId: null });
+      items.push({ 
+        id: 'release-' + release.id, 
+        date: release.releaseDate, 
+        sourceType: 'Release', 
+        label: 'Release', 
+        name: release.name, 
+        category: release.type, 
+        status: null, 
+        estimatedCost: release.estimatedCost, 
+        notes: release.notes, 
+        songId: null,
+        clickable: true 
+      });
+      
       // Release tasks
       (release.tasks || []).forEach(task => {
-        items.push({ id: 'release-task-' + task.id, date: task.date, sourceType: 'Release Task', label: task.type, name: release.name, category: task.category, status: task.status, estimatedCost: task.estimatedCost, notes: task.notes, songId: null });
+        items.push({ 
+          id: 'release-task-' + task.id, 
+          date: task.date, 
+          sourceType: 'Release Task', 
+          label: task.type, 
+          name: release.name, 
+          category: task.category, 
+          status: task.status, 
+          estimatedCost: task.estimatedCost, 
+          notes: task.notes, 
+          songId: null,
+          clickable: true 
+        });
       });
+      
+      // Release exclusivity
+      if (release.exclusiveType && release.exclusiveType !== 'None' && release.exclusiveStartDate) {
+        items.push({
+          id: 'release-excl-start-' + release.id,
+          date: release.exclusiveStartDate,
+          sourceType: 'Exclusivity',
+          label: `${release.exclusiveType} Start`,
+          name: release.name,
+          category: 'Release Exclusive',
+          status: null,
+          estimatedCost: 0,
+          notes: release.exclusiveNotes,
+          songId: null,
+          isExclusivityStart: true,
+          exclusiveEndDate: release.exclusiveEndDate,
+          clickable: true
+        });
+      }
     });
 
     // Filter
@@ -1212,22 +1365,41 @@ export const CombinedTimelineView = () => {
     filtered.sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1);
 
     return filtered;
-  }, [data.songs, data.globalTasks, data.releases, filterSource, filterSong, filterStatus, dateFrom, dateTo]);
+  }, [data.songs, data.globalTasks, data.releases, data.events, filterSource, filterSong, filterStatus, dateFrom, dateTo]);
 
   const getSourceColor = (sourceType) => {
     switch (sourceType) {
-      case 'Song Task': return 'bg-blue-100 border-blue-500';
-      case 'Song Custom': return 'bg-purple-100 border-purple-500';
-      case 'Global': return 'bg-orange-100 border-orange-500';
-      case 'Release Task': return 'bg-teal-100 border-teal-500';
-      case 'Release': return 'bg-green-100 border-green-500';
+      case 'Song Task': return 'bg-blue-100 border-l-4 border-l-blue-500';
+      case 'Song Custom': return 'bg-purple-100 border-l-4 border-l-purple-500';
+      case 'Version Task': return 'bg-indigo-100 border-l-4 border-l-indigo-500';
+      case 'Video Task': return 'bg-orange-100 border-l-4 border-l-orange-500';
+      case 'Video': return 'bg-orange-200 border-l-4 border-l-orange-600';
+      case 'Global': return 'bg-yellow-100 border-l-4 border-l-yellow-500';
+      case 'Release Task': return 'bg-teal-100 border-l-4 border-l-teal-500';
+      case 'Release': return 'bg-green-100 border-l-4 border-l-green-500';
+      case 'Event': return 'bg-pink-100 border-l-4 border-l-pink-500';
+      case 'Exclusivity': return 'bg-red-100 border-l-4 border-l-red-500';
       default: return 'bg-gray-100';
     }
   };
 
+  const handleItemClick = (item) => {
+    setSelectedItem(item);
+  };
+
+  // Unique source types for filter
+  const sourceTypes = ['Song Task', 'Song Custom', 'Version Task', 'Video Task', 'Video', 'Global', 'Release', 'Release Task', 'Event', 'Exclusivity'];
+
   return (
     <div className="p-6 pb-24">
-      <h2 className={cn("mb-6", THEME.punk.textStyle)}>Combined Timeline</h2>
+      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <h2 className={THEME.punk.textStyle}>Combined Timeline</h2>
+        <div className="flex gap-2">
+          <button onClick={() => setViewMode('list')} className={cn("px-3 py-1 text-xs font-bold", THEME.punk.btn, viewMode === 'list' ? 'bg-black text-white' : 'bg-white')}>List</button>
+          <button onClick={() => setViewMode('week')} className={cn("px-3 py-1 text-xs font-bold", THEME.punk.btn, viewMode === 'week' ? 'bg-black text-white' : 'bg-white')}>Week</button>
+          <button onClick={() => setViewMode('month')} className={cn("px-3 py-1 text-xs font-bold", THEME.punk.btn, viewMode === 'month' ? 'bg-black text-white' : 'bg-white')}>Month</button>
+        </div>
+      </div>
 
       <div className={cn("p-4 mb-6 bg-gray-50", THEME.punk.card)}>
         <div className="grid md:grid-cols-5 gap-3">
@@ -1235,11 +1407,7 @@ export const CombinedTimelineView = () => {
             <label className="block text-xs font-bold uppercase mb-1">Source</label>
             <select value={filterSource} onChange={e => setFilterSource(e.target.value)} className={cn("w-full", THEME.punk.input)}>
               <option value="all">All Sources</option>
-              <option value="Song Task">Song Tasks</option>
-              <option value="Song Custom">Song Custom Tasks</option>
-              <option value="Global">Global Tasks</option>
-              <option value="Release">Releases</option>
-              <option value="Release Task">Release Tasks</option>
+              {sourceTypes.map(st => <option key={st} value={st}>{st}</option>)}
             </select>
           </div>
           <div>
@@ -1267,6 +1435,18 @@ export const CombinedTimelineView = () => {
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2 mb-4 text-[10px] font-bold">
+        <span className="px-2 py-1 bg-blue-100 border-l-4 border-l-blue-500 border border-black">Song Task</span>
+        <span className="px-2 py-1 bg-purple-100 border-l-4 border-l-purple-500 border border-black">Custom</span>
+        <span className="px-2 py-1 bg-indigo-100 border-l-4 border-l-indigo-500 border border-black">Version</span>
+        <span className="px-2 py-1 bg-orange-100 border-l-4 border-l-orange-500 border border-black">Video</span>
+        <span className="px-2 py-1 bg-yellow-100 border-l-4 border-l-yellow-500 border border-black">Global</span>
+        <span className="px-2 py-1 bg-green-100 border-l-4 border-l-green-500 border border-black">Release</span>
+        <span className="px-2 py-1 bg-pink-100 border-l-4 border-l-pink-500 border border-black">Event</span>
+        <span className="px-2 py-1 bg-red-100 border-l-4 border-l-red-500 border border-black">Exclusivity</span>
+      </div>
+
       <div className={cn("overflow-x-auto", THEME.punk.card)}>
         <table className="w-full text-sm">
           <thead>
@@ -1285,7 +1465,16 @@ export const CombinedTimelineView = () => {
             {timelineItems.length === 0 ? (
               <tr><td colSpan="8" className="p-10 text-center opacity-50">No timeline items found.</td></tr>
             ) : timelineItems.map(item => (
-              <tr key={item.id} className={cn("border-b border-gray-200", getSourceColor(item.sourceType))}>
+              <tr 
+                key={item.id} 
+                onClick={() => handleItemClick(item)}
+                className={cn(
+                  "border-b border-gray-200 cursor-pointer hover:opacity-80", 
+                  getSourceColor(item.sourceType),
+                  item.isExclusivityStart && "border-l-4 border-l-red-500 bg-red-50",
+                  item.isExclusivityEnd && "border-l-4 border-l-gray-500 bg-gray-50"
+                )}
+              >
                 <td className="p-3 font-bold">{item.date || '-'}</td>
                 <td className="p-3"><span className="px-2 py-1 text-xs font-bold bg-white border border-black">{item.sourceType}</span></td>
                 <td className="p-3">{item.label}</td>
@@ -1299,6 +1488,28 @@ export const CombinedTimelineView = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Detail Modal */}
+      {selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
+          <div className={cn("w-full max-w-md p-6 bg-white", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="font-black uppercase">{selectedItem.name}</h3>
+              <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-gray-200" aria-label="Close"><Icon name="X" size={16} /></button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div><span className="font-bold">Type:</span> {selectedItem.sourceType}</div>
+              <div><span className="font-bold">Label:</span> {selectedItem.label}</div>
+              <div><span className="font-bold">Date:</span> {selectedItem.date || '-'}</div>
+              <div><span className="font-bold">Category:</span> {selectedItem.category}</div>
+              {selectedItem.status && <div><span className="font-bold">Status:</span> {selectedItem.status}</div>}
+              {selectedItem.estimatedCost > 0 && <div><span className="font-bold">Est. Cost:</span> {formatMoney(selectedItem.estimatedCost)}</div>}
+              {selectedItem.notes && <div><span className="font-bold">Notes:</span> {selectedItem.notes}</div>}
+              {selectedItem.exclusiveEndDate && <div><span className="font-bold">Exclusivity Ends:</span> {selectedItem.exclusiveEndDate}</div>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1645,6 +1856,89 @@ export const TaskDashboardView = () => {
     return groups;
   }, [allTasks]);
 
+  // Phase 9: Generate notifications/alerts
+  const notifications = useMemo(() => {
+    const alerts = [];
+    
+    // Overdue tasks
+    const overdueTasks = allTasks.filter(t => t.date && t.date < today && t.status !== 'Done');
+    if (overdueTasks.length > 0) {
+      alerts.push({
+        id: 'overdue',
+        type: 'error',
+        icon: '⚠️',
+        message: `${overdueTasks.length} task${overdueTasks.length > 1 ? 's are' : ' is'} overdue!`,
+        count: overdueTasks.length
+      });
+    }
+    
+    // Tasks due this week
+    const dueThisWeek = allTasks.filter(t => t.date && t.date >= today && t.date <= nextWeek && t.status !== 'Done');
+    if (dueThisWeek.length > 0) {
+      alerts.push({
+        id: 'due-soon',
+        type: 'warning',
+        icon: '📅',
+        message: `${dueThisWeek.length} task${dueThisWeek.length > 1 ? 's' : ''} due this week`,
+        count: dueThisWeek.length
+      });
+    }
+    
+    // Upcoming releases (within 30 days)
+    const upcomingReleases = (data.releases || []).filter(r => 
+      r.releaseDate && r.releaseDate >= today && r.releaseDate <= nextMonth
+    );
+    if (upcomingReleases.length > 0) {
+      alerts.push({
+        id: 'releases',
+        type: 'info',
+        icon: '🎵',
+        message: `${upcomingReleases.length} release${upcomingReleases.length > 1 ? 's' : ''} coming up in the next 30 days`,
+        count: upcomingReleases.length
+      });
+    }
+    
+    // Songs with upcoming release dates
+    const upcomingSongs = (data.songs || []).filter(s =>
+      s.releaseDate && s.releaseDate >= today && s.releaseDate <= nextMonth
+    );
+    if (upcomingSongs.length > 0) {
+      alerts.push({
+        id: 'songs',
+        type: 'info',
+        icon: '🎶',
+        message: `${upcomingSongs.length} song${upcomingSongs.length > 1 ? 's' : ''} releasing soon`,
+        count: upcomingSongs.length
+      });
+    }
+    
+    // Budget exceeded check (if we have data)
+    const totalBudget = (data.settings?.totalBudget || 0);
+    if (totalBudget > 0 && stats.totalCost > totalBudget) {
+      alerts.push({
+        id: 'budget',
+        type: 'error',
+        icon: '💰',
+        message: `Budget exceeded by ${formatMoney(stats.totalCost - totalBudget)}`,
+        count: 1
+      });
+    }
+    
+    // Delayed tasks
+    const delayedTasks = allTasks.filter(t => t.status === 'Delayed');
+    if (delayedTasks.length > 0) {
+      alerts.push({
+        id: 'delayed',
+        type: 'warning',
+        icon: '🔴',
+        message: `${delayedTasks.length} task${delayedTasks.length > 1 ? 's' : ''} marked as delayed`,
+        count: delayedTasks.length
+      });
+    }
+    
+    return alerts;
+  }, [allTasks, data.releases, data.songs, data.settings?.totalBudget, stats.totalCost, today, nextWeek, nextMonth]);
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Done': return 'bg-green-200 text-green-800';
@@ -1718,6 +2012,37 @@ export const TaskDashboardView = () => {
           <div className="text-xs font-bold uppercase">Estimated Remaining</div>
         </div>
       </div>
+
+      {/* Phase 9: Notifications/Alerts Section */}
+      {notifications.length > 0 && (
+        <div className={cn("p-4 mb-6", THEME.punk.card)}>
+          <h3 className="font-black uppercase mb-3 border-b-2 border-black pb-2">🔔 Notifications</h3>
+          <div className="space-y-2">
+            {notifications.map(alert => (
+              <div 
+                key={alert.id}
+                className={cn(
+                  "flex items-center gap-3 p-3 border-l-4",
+                  alert.type === 'error' ? 'bg-red-50 border-red-500' :
+                  alert.type === 'warning' ? 'bg-yellow-50 border-yellow-500' :
+                  'bg-blue-50 border-blue-500'
+                )}
+              >
+                <span className="text-xl">{alert.icon}</span>
+                <span className="font-bold flex-1">{alert.message}</span>
+                <span className={cn(
+                  "px-2 py-1 text-xs font-bold rounded-full",
+                  alert.type === 'error' ? 'bg-red-200 text-red-800' :
+                  alert.type === 'warning' ? 'bg-yellow-200 text-yellow-800' :
+                  'bg-blue-200 text-blue-800'
+                )}>
+                  {alert.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {view === 'overview' ? (
         /* Overview by Category */
