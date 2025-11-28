@@ -1213,10 +1213,16 @@ export const CombinedTimelineView = () => {
   );
 };
 
-// Dedicated Videos workspace
+// Dedicated Videos workspace - Phase 2: Enhanced with auto-tasks and standalone videos
 export const VideosView = ({ onSelectSong }) => {
   const { data, actions } = useStore();
   const [drafts, setDrafts] = useState({});
+  const [showStandaloneForm, setShowStandaloneForm] = useState(false);
+  const [standaloneVideo, setStandaloneVideo] = useState({
+    title: 'New Standalone Video',
+    releaseDate: '',
+    types: { lyric: false, enhancedLyric: false, music: false, visualizer: false, custom: false, customLabel: '' }
+  });
 
   const songVersions = (song) => song.versions || [];
 
@@ -1228,14 +1234,93 @@ export const VideosView = ({ onSelectSong }) => {
     { key: 'custom', label: 'Custom' }
   ];
 
-  const baseSubtasks = ['Scripting', 'Shooting', 'Editing'];
+  const handleAddStandaloneVideo = async () => {
+    await actions.addStandaloneVideo(standaloneVideo);
+    setStandaloneVideo({
+      title: 'New Standalone Video',
+      releaseDate: '',
+      types: { lyric: false, enhancedLyric: false, music: false, visualizer: false, custom: false, customLabel: '' }
+    });
+    setShowStandaloneForm(false);
+  };
 
   return (
     <div className="p-6 pb-24 space-y-6">
-      <div className="flex items-center justify-between border-b-4 border-black pb-3">
+      <div className="flex flex-wrap items-center justify-between border-b-4 border-black pb-3 gap-3">
         <h2 className={THEME.punk.textStyle}>Videos</h2>
-        <p className="text-xs font-bold uppercase">Per song & version</p>
+        <div className="flex gap-2">
+          <button onClick={() => setShowStandaloneForm(!showStandaloneForm)} className={cn("px-4 py-2 text-xs", THEME.punk.btn, "bg-purple-600 text-white")}>
+            {showStandaloneForm ? 'Cancel' : '+ Standalone Video'}
+          </button>
+        </div>
       </div>
+
+      {/* Standalone Video Form */}
+      {showStandaloneForm && (
+        <div className={cn("p-4 bg-purple-50", THEME.punk.card)}>
+          <h3 className="font-black uppercase mb-3">New Standalone Video</h3>
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold uppercase mb-1">Title</label>
+              <input value={standaloneVideo.title} onChange={e => setStandaloneVideo(prev => ({ ...prev, title: e.target.value }))} className={cn("w-full", THEME.punk.input)} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase mb-1">Release Date</label>
+              <input type="date" value={standaloneVideo.releaseDate} onChange={e => setStandaloneVideo(prev => ({ ...prev, releaseDate: e.target.value }))} className={cn("w-full", THEME.punk.input)} />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold uppercase mb-1">Video Types</label>
+              <div className="flex flex-wrap gap-3 text-xs">
+                {videoTypes.map(type => (
+                  <label key={type.key} className="flex items-center gap-1">
+                    <input type="checkbox" checked={standaloneVideo.types?.[type.key] || false} onChange={e => setStandaloneVideo(prev => ({ ...prev, types: { ...(prev.types || {}), [type.key]: e.target.checked } }))} />
+                    {type.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <button onClick={handleAddStandaloneVideo} className={cn("px-4 py-2", THEME.punk.btn, "bg-purple-600 text-white")}>Create Standalone Video</button>
+          </div>
+        </div>
+      )}
+
+      {/* Standalone Videos List */}
+      {(data.standaloneVideos || []).length > 0 && (
+        <div className={cn("p-4", THEME.punk.card)}>
+          <h3 className="font-black uppercase mb-3 border-b-2 border-black pb-2">Standalone Videos</h3>
+          <div className="space-y-3">
+            {(data.standaloneVideos || []).map(video => (
+              <div key={video.id} className="border-2 border-purple-500 bg-white p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <span className="font-bold">{video.title}</span>
+                    <span className="ml-2 text-xs opacity-60">{video.releaseDate || 'No date'}</span>
+                  </div>
+                  <button onClick={() => actions.deleteStandaloneVideo(video.id)} className="text-red-500 text-xs">Delete</button>
+                </div>
+                <div className="flex flex-wrap gap-1 text-[11px] mb-2">
+                  {videoTypes.map(type => video.types?.[type.key] ? <span key={type.key} className="px-2 py-1 bg-purple-100 border-2 border-black font-bold">{type.label}</span> : null)}
+                </div>
+                {/* Auto-generated tasks */}
+                {(video.tasks || []).length > 0 && (
+                  <div className="mt-2 border-t border-gray-200 pt-2">
+                    <div className="text-xs font-bold uppercase mb-1">Auto Tasks</div>
+                    <div className="flex flex-wrap gap-1">
+                      {video.tasks.map(task => (
+                        <span key={task.id} className={cn("px-2 py-1 text-[10px] border font-bold", task.status === 'Done' ? 'bg-green-100 border-green-500' : 'bg-gray-100 border-gray-400')}>
+                          {task.type} ({task.date})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Song Videos */}
       {(data.songs || []).map(song => (
         <div key={song.id} className={cn("p-4", THEME.punk.card)}>
           <div className="flex justify-between items-center mb-3">
@@ -1248,14 +1333,14 @@ export const VideosView = ({ onSelectSong }) => {
           <div className="grid md:grid-cols-2 gap-3">
             {songVersions(song).map(v => {
               const key = `${song.id}-${v.id}`;
-              const draft = drafts[key] || { title: `${v.name} Video`, versionId: v.id };
+              const draft = drafts[key] || { title: `${v.name} Video`, versionId: v.id, types: {} };
               return (
                 <div key={v.id} className="border-2 border-black bg-white p-3 space-y-2">
                   <div className="flex justify-between items-center">
                     <div className="font-bold">{v.name}</div>
                     <button onClick={() => {
-                      actions.addSongVideo(song.id, { ...draft, subtasks: baseSubtasks.map(t => ({ label: t, done: false })) });
-                      setDrafts(prev => ({ ...prev, [key]: { title: `${v.name} Video`, versionId: v.id } }));
+                      actions.addSongVideo(song.id, { ...draft, releaseDate: v.releaseDate || song.releaseDate });
+                      setDrafts(prev => ({ ...prev, [key]: { title: `${v.name} Video`, versionId: v.id, types: {} } }));
                     }} className={cn("px-2 py-1 text-xs", THEME.punk.btn, "bg-pink-600 text-white")}>Add Video</button>
                   </div>
                   <input value={draft.title} onChange={e => setDrafts(prev => ({ ...prev, [key]: { ...(prev[key] || {}), title: e.target.value } }))} className={cn("w-full text-xs", THEME.punk.input)} />
@@ -1280,19 +1365,40 @@ export const VideosView = ({ onSelectSong }) => {
                         <div className="flex flex-wrap gap-1 text-[11px]">
                           {videoTypes.map(type => video.types?.[type.key] ? <span key={type.key} className="px-2 py-1 bg-blue-100 border-2 border-black font-bold">{type.label === 'Custom' ? (video.types?.customLabel || 'Custom') : type.label}</span> : null)}
                         </div>
-                        <div className="space-y-1 text-[12px]">
-                          {(video.subtasks || []).map((sub, idx) => (
-                            <label key={idx} className="flex items-center gap-2">
-                              <input type="checkbox" checked={sub.done || false} onChange={e => {
-                                const updated = [...(video.subtasks || [])];
-                                updated[idx] = { ...sub, done: e.target.checked };
-                                actions.updateSongVideo(song.id, video.id, { subtasks: updated });
-                              }} />
-                              {sub.label}
-                            </label>
-                          ))}
-                          {(video.subtasks || []).length === 0 && <div className="italic">No subtasks yet.</div>}
-                        </div>
+                        {/* Auto-generated video tasks */}
+                        {(video.tasks || []).length > 0 && (
+                          <div className="mt-2 border-t border-gray-200 pt-2">
+                            <div className="text-xs font-bold uppercase mb-1">Auto Tasks (Hire Crew/Film/Edit/Release)</div>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-[11px]">
+                                <thead>
+                                  <tr className="bg-gray-100">
+                                    <th className="p-1 text-left">Task</th>
+                                    <th className="p-1 text-left">Date</th>
+                                    <th className="p-1 text-left">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {video.tasks.map(task => (
+                                    <tr key={task.id} className="border-b border-gray-200">
+                                      <td className="p-1 font-bold">{task.type}</td>
+                                      <td className="p-1">
+                                        <input type="date" value={task.date || ''} onChange={e => actions.updateVideoTask(song.id, video.id, task.id, { date: e.target.value })} className="border border-black p-1 text-xs w-24" />
+                                      </td>
+                                      <td className="p-1">
+                                        <select value={task.status || 'Not Started'} onChange={e => actions.updateVideoTask(song.id, video.id, task.id, { status: e.target.value })} className="border border-black p-1 text-xs">
+                                          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                        {/* Custom tasks placeholder */}
+                        <div className="text-[10px] text-gray-500 mt-1">Custom tasks: {(video.customTasks || []).length}</div>
                       </div>
                     ))}
                   </div>

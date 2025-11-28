@@ -51,6 +51,15 @@ export const getEffectiveCost = (entity = {}) => {
 // Exclusivity options for availability windows
 export const EXCLUSIVITY_OPTIONS = ['None', 'Platform Exclusive', 'Website Only', 'Radio Only', 'Timed Exclusive'];
 
+// Video types available for selection
+export const VIDEO_TYPE_OPTIONS = [
+  { key: 'lyric', label: 'Lyric Video' },
+  { key: 'enhancedLyric', label: 'Enhanced Lyric' },
+  { key: 'music', label: 'Music Video' },
+  { key: 'visualizer', label: 'Visualizer' },
+  { key: 'custom', label: 'Custom' }
+];
+
 // Task types for songs - comprehensive list
 export const SONG_TASK_TYPES = [
   // Production Tasks
@@ -68,14 +77,43 @@ export const SONG_TASK_TYPES = [
   { type: 'Release', category: 'Distribution', daysBeforeRelease: 0, appliesTo: 'all' }
 ];
 
-// Video task types
+// Video task types - Phase 2 enhancement with auto-generated tasks
 export const VIDEO_TASK_TYPES = [
-  { type: 'Video Concept', category: 'Video', daysBeforeRelease: 45, videoTypes: ['Full'] },
-  { type: 'Video Shoot', category: 'Video', daysBeforeRelease: 35, videoTypes: ['Full'] },
-  { type: 'Video Edit', category: 'Video', daysBeforeRelease: 25, videoTypes: ['Full'] },
-  { type: 'Video Delivery', category: 'Video', daysBeforeRelease: 14, videoTypes: ['Lyric', 'Enhanced', 'Enhanced + Loop'] },
-  { type: 'Full Video Delivery', category: 'Video', daysBeforeRelease: 30, videoTypes: ['Full'] }
+  { type: 'Video Concept', category: 'Video', daysBeforeRelease: 45, videoTypes: ['music', 'Full'] },
+  { type: 'Hire Crew', category: 'Video', daysBeforeRelease: 40, videoTypes: ['music', 'Full'] },
+  { type: 'Video Shoot', category: 'Video', daysBeforeRelease: 35, videoTypes: ['music', 'Full'] },
+  { type: 'Video Edit', category: 'Video', daysBeforeRelease: 25, videoTypes: ['music', 'Full', 'lyric', 'enhancedLyric', 'visualizer', 'Lyric', 'Enhanced', 'Enhanced + Loop'] },
+  { type: 'Video Delivery', category: 'Video', daysBeforeRelease: 14, videoTypes: ['lyric', 'enhancedLyric', 'visualizer', 'Lyric', 'Enhanced', 'Enhanced + Loop'] },
+  { type: 'Full Video Delivery', category: 'Video', daysBeforeRelease: 30, videoTypes: ['music', 'Full'] },
+  { type: 'Video Release', category: 'Distribution', daysBeforeRelease: 0, videoTypes: ['lyric', 'enhancedLyric', 'music', 'visualizer', 'custom', 'Full', 'Lyric', 'Enhanced', 'Enhanced + Loop'] }
 ];
+
+// Generate tasks for a video based on its type
+export const generateVideoTasks = (releaseDate, videoTypeKey) => {
+  if (!releaseDate) return [];
+  
+  const release = new Date(releaseDate);
+  const tasks = [];
+  
+  VIDEO_TASK_TYPES.forEach(taskType => {
+    if (taskType.videoTypes.includes(videoTypeKey)) {
+      const taskDate = new Date(release);
+      taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+      
+      tasks.push(createUnifiedTask({
+        type: taskType.type,
+        category: taskType.category,
+        date: taskDate.toISOString().split('T')[0],
+        parentType: 'video'
+      }));
+    }
+  });
+  
+  // Sort by date
+  tasks.sort((a, b) => a.date.localeCompare(b.date));
+  
+  return tasks;
+};
 
 // Release task types - auto-spawn when release is created
 export const RELEASE_TASK_TYPES = [
@@ -245,7 +283,9 @@ export const StoreProvider = ({ children }) => {
     // New entities from spec
     songs: [],
     globalTasks: [],
-    releases: []
+    releases: [],
+    // Phase 2: Standalone videos
+    standaloneVideos: []
   });
   const [user, setUser] = useState(null);
   const [db, setDb] = useState(null);
@@ -1093,14 +1133,31 @@ export const StoreProvider = ({ children }) => {
       }
     },
 
+    // Phase 2: Enhanced video creation with auto-generated tasks
     addSongVideo: async (songId, video) => {
-      // Videos now include availability windows and cost layers
+      // Find the song to get the release date for task generation
+      const song = data.songs.find(s => s.id === songId);
+      const releaseDate = video.releaseDate || song?.releaseDate || '';
+      
+      // Determine the primary video type for task generation
+      const videoTypes = video.types || { lyric: false, enhancedLyric: false, music: false, visualizer: false, custom: false, customLabel: '' };
+      let primaryVideoType = null;
+      if (videoTypes.music) primaryVideoType = 'music';
+      else if (videoTypes.lyric) primaryVideoType = 'lyric';
+      else if (videoTypes.enhancedLyric) primaryVideoType = 'enhancedLyric';
+      else if (videoTypes.visualizer) primaryVideoType = 'visualizer';
+      else if (videoTypes.custom) primaryVideoType = 'custom';
+      
+      // Auto-generate video tasks based on video type
+      const autoTasks = primaryVideoType ? generateVideoTasks(releaseDate, primaryVideoType) : [];
+      
       const newVideo = {
         id: crypto.randomUUID(),
         title: video.title || 'New Video',
         versionId: video.versionId || 'core',
+        releaseDate: releaseDate,
         subtasks: video.subtasks || [],
-        types: video.types || { lyric: false, enhancedLyric: false, music: false, visualizer: false, custom: false, customLabel: '' },
+        types: videoTypes,
         // Availability windows
         exclusiveType: video.exclusiveType || 'None',
         exclusiveStartDate: video.exclusiveStartDate || '',
@@ -1110,7 +1167,9 @@ export const StoreProvider = ({ children }) => {
         estimatedCost: video.estimatedCost || 0,
         quotedCost: video.quotedCost || 0,
         paidCost: video.paidCost || 0,
-        // Tasks on videos
+        // Auto-generated tasks
+        tasks: autoTasks,
+        // Custom tasks on videos
         customTasks: video.customTasks || []
       };
       setData(prev => ({
@@ -1120,6 +1179,7 @@ export const StoreProvider = ({ children }) => {
           videos: [...(song.videos || []), newVideo]
         } : song)
       }));
+      return newVideo;
     },
 
     updateSongVideo: async (songId, videoId, updates) => {
@@ -1136,6 +1196,121 @@ export const StoreProvider = ({ children }) => {
       setData(prev => ({
         ...prev,
         songs: (prev.songs || []).map(song => song.id === songId ? { ...song, videos: (song.videos || []).filter(v => v.id !== videoId) } : song)
+      }));
+    },
+
+    // Update a task on a video
+    updateVideoTask: async (songId, videoId, taskId, updates) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => {
+          if (song.id !== songId) return song;
+          const updatedVideos = (song.videos || []).map(v => {
+            if (v.id !== videoId) return v;
+            const updatedTasks = (v.tasks || []).map(t => t.id === taskId ? { ...t, ...updates, isOverridden: true } : t);
+            return { ...v, tasks: updatedTasks };
+          });
+          return { ...song, videos: updatedVideos };
+        })
+      }));
+    },
+
+    // Add custom task to a video
+    addVideoCustomTask: async (songId, videoId, task) => {
+      const newTask = createUnifiedTask({
+        type: 'Custom',
+        title: task.title || 'New Task',
+        description: task.description || '',
+        date: task.date || '',
+        status: task.status || 'Not Started',
+        estimatedCost: task.estimatedCost || 0,
+        quotedCost: task.quotedCost || 0,
+        paidCost: task.paidCost || 0,
+        notes: task.notes || '',
+        parentType: 'video',
+        parentId: videoId
+      });
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => {
+          if (song.id !== songId) return song;
+          const updatedVideos = (song.videos || []).map(v => {
+            if (v.id !== videoId) return v;
+            return { ...v, customTasks: [...(v.customTasks || []), newTask] };
+          });
+          return { ...song, videos: updatedVideos };
+        })
+      }));
+      return newTask;
+    },
+
+    // Delete custom task from a video
+    deleteVideoCustomTask: async (songId, videoId, taskId) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(song => {
+          if (song.id !== songId) return song;
+          const updatedVideos = (song.videos || []).map(v => {
+            if (v.id !== videoId) return v;
+            return { ...v, customTasks: (v.customTasks || []).filter(t => t.id !== taskId) };
+          });
+          return { ...song, videos: updatedVideos };
+        })
+      }));
+    },
+
+    // Phase 2: Add standalone video (not tied to a song)
+    addStandaloneVideo: async (video) => {
+      const releaseDate = video.releaseDate || '';
+      const videoTypes = video.types || { lyric: false, enhancedLyric: false, music: false, visualizer: false, custom: false, customLabel: '' };
+      let primaryVideoType = null;
+      if (videoTypes.music) primaryVideoType = 'music';
+      else if (videoTypes.lyric) primaryVideoType = 'lyric';
+      else if (videoTypes.enhancedLyric) primaryVideoType = 'enhancedLyric';
+      else if (videoTypes.visualizer) primaryVideoType = 'visualizer';
+      else if (videoTypes.custom) primaryVideoType = 'custom';
+      
+      const autoTasks = primaryVideoType ? generateVideoTasks(releaseDate, primaryVideoType) : [];
+      
+      const newVideo = {
+        id: crypto.randomUUID(),
+        title: video.title || 'New Standalone Video',
+        isStandalone: true,
+        releaseDate: releaseDate,
+        types: videoTypes,
+        exclusiveType: video.exclusiveType || 'None',
+        exclusiveStartDate: video.exclusiveStartDate || '',
+        exclusiveEndDate: video.exclusiveEndDate || '',
+        exclusiveNotes: video.exclusiveNotes || '',
+        estimatedCost: video.estimatedCost || 0,
+        quotedCost: video.quotedCost || 0,
+        paidCost: video.paidCost || 0,
+        tasks: autoTasks,
+        customTasks: video.customTasks || [],
+        notes: video.notes || ''
+      };
+      
+      // Store standalone videos in a separate array
+      setData(prev => ({
+        ...prev,
+        standaloneVideos: [...(prev.standaloneVideos || []), newVideo]
+      }));
+      return newVideo;
+    },
+
+    // Update standalone video
+    updateStandaloneVideo: async (videoId, updates) => {
+      setData(prev => ({
+        ...prev,
+        standaloneVideos: (prev.standaloneVideos || []).map(v => v.id === videoId ? { ...v, ...updates } : v)
+      }));
+    },
+
+    // Delete standalone video
+    deleteStandaloneVideo: async (videoId) => {
+      setData(prev => ({
+        ...prev,
+        standaloneVideos: (prev.standaloneVideos || []).filter(v => v.id !== videoId)
       }));
     },
      
