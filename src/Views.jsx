@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate } from './Store';
+import { useState, useMemo, useEffect } from 'react';
+import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate, getEffectiveCost } from './Store';
 import { THEME, COLORS, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 import { DetailPane } from './ItemComponents';
