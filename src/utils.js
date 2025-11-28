@@ -14,16 +14,17 @@ export const formatMoney = (amount) => {
   }).format(amount);
 };
 
+// Phase 10: Dark mode variants
 export const THEME = {
   punk: {
     font: "font-mono",
-    border: "border-4 border-black",
+    border: "border-4 border-black dark:border-slate-600",
     rounded: "rounded-none",
-    shadow: "shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
+    shadow: "shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(100,116,139,1)]",
     textStyle: "uppercase font-black tracking-widest",
-    btn: "border-4 border-black font-black uppercase tracking-widest hover:-translate-y-1 active:translate-y-0 transition-transform bg-white hover:bg-pink-100",
-    input: "border-4 border-black font-bold p-3 focus:ring-0 outline-none bg-white",
-    card: "bg-pink-50 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+    btn: "border-4 border-black dark:border-slate-600 font-black uppercase tracking-widest hover:-translate-y-1 active:translate-y-0 transition-transform bg-white dark:bg-slate-700 dark:text-slate-50 hover:bg-pink-100 dark:hover:bg-slate-600",
+    input: "border-4 border-black dark:border-slate-600 font-bold p-3 focus:ring-0 outline-none bg-white dark:bg-slate-800 dark:text-slate-50",
+    card: "bg-pink-50 dark:bg-slate-800 border-4 border-black dark:border-slate-600 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(100,116,139,1)]"
   }
 };
 

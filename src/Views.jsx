@@ -59,68 +59,198 @@ export const CalendarView = ({ onEdit }) => {
     const { data, actions } = useStore();
     const [date, setDate] = useState(new Date());
     const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '' });
+    const [selectedItem, setSelectedItem] = useState(null);
     const year = date.getFullYear();
     const month = date.getMonth();
 
     const items = useMemo(() => {
         const map = {};
-        data.tasks.filter(t => t.dueDate && !t.archived).forEach(t => { map[t.dueDate] = map[t.dueDate] || []; map[t.dueDate].push({ ...t, _kind: 'task' }); });
-        data.events.forEach(e => { if (e.date) { map[e.date] = map[e.date] || []; map[e.date].push({ ...e, _kind: 'event' }); } });
-        (data.releases || []).forEach(r => {
-          if (r.releaseDate) {
-            map[r.releaseDate] = map[r.releaseDate] || [];
-            map[r.releaseDate].push({
-              id: `release-${r.id}`,
-              title: `${r.name} Release`,
-              date: r.releaseDate,
-              _kind: 'release',
-              releaseType: r.type
-            });
-          }
+        
+        // Legacy tasks
+        data.tasks.filter(t => t.dueDate && !t.archived).forEach(t => { 
+            map[t.dueDate] = map[t.dueDate] || []; 
+            map[t.dueDate].push({ ...t, _kind: 'task' }); 
         });
+        
+        // Events
+        data.events.forEach(e => { 
+            if (e.date) { 
+                map[e.date] = map[e.date] || []; 
+                map[e.date].push({ ...e, _kind: 'event' }); 
+            } 
+        });
+        
+        // Releases
+        (data.releases || []).forEach(r => {
+            if (r.releaseDate) {
+                map[r.releaseDate] = map[r.releaseDate] || [];
+                map[r.releaseDate].push({
+                    id: `release-${r.id}`,
+                    _releaseId: r.id,
+                    title: `${r.name} Release`,
+                    date: r.releaseDate,
+                    _kind: 'release',
+                    releaseType: r.type
+                });
+            }
+        });
+        
+        // Songs (release dates)
+        (data.songs || []).forEach(song => {
+            if (song.releaseDate) {
+                map[song.releaseDate] = map[song.releaseDate] || [];
+                map[song.releaseDate].push({
+                    id: `song-${song.id}`,
+                    _songId: song.id,
+                    title: `🎵 ${song.title}`,
+                    date: song.releaseDate,
+                    _kind: 'song'
+                });
+            }
+            
+            // Song tasks
+            (song.deadlines || []).forEach(task => {
+                if (task.date) {
+                    map[task.date] = map[task.date] || [];
+                    map[task.date].push({
+                        id: `song-task-${song.id}-${task.id}`,
+                        _songId: song.id,
+                        title: `${task.type} - ${song.title}`,
+                        date: task.date,
+                        status: task.status,
+                        _kind: 'song-task'
+                    });
+                }
+            });
+            
+            // Song versions (non-core versions with their own release dates)
+            (song.versions || []).filter(v => v.id !== 'core' && v.releaseDate).forEach(v => {
+                map[v.releaseDate] = map[v.releaseDate] || [];
+                map[v.releaseDate].push({
+                    id: `version-${song.id}-${v.id}`,
+                    _songId: song.id,
+                    _versionId: v.id,
+                    title: `🎵 ${v.name}`,
+                    date: v.releaseDate,
+                    _kind: 'version'
+                });
+            });
+            
+            // Videos
+            (song.videos || []).forEach(video => {
+                if (video.releaseDate) {
+                    map[video.releaseDate] = map[video.releaseDate] || [];
+                    map[video.releaseDate].push({
+                        id: `video-${song.id}-${video.id}`,
+                        _songId: song.id,
+                        _videoId: video.id,
+                        title: `📹 ${video.title}`,
+                        date: video.releaseDate,
+                        _kind: 'video'
+                    });
+                }
+            });
+        });
+        
+        // Global tasks
+        (data.globalTasks || []).filter(t => t.date && !t.isArchived).forEach(t => {
+            map[t.date] = map[t.date] || [];
+            map[t.date].push({
+                id: `global-${t.id}`,
+                _globalTaskId: t.id,
+                title: `📋 ${t.taskName}`,
+                date: t.date,
+                status: t.status,
+                _kind: 'global-task'
+            });
+        });
+        
         return map;
-    }, [data.tasks, data.events, data.releases]);
+    }, [data.tasks, data.events, data.releases, data.songs, data.globalTasks]);
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDay = new Date(year, month, 1).getDay();
     const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    
+    // Navigate to today
+    const goToToday = () => setDate(new Date());
+
+    const getItemColor = (kind) => {
+        switch (kind) {
+            case 'release': return 'bg-green-400 text-black';
+            case 'event': return 'bg-blue-500 text-white';
+            case 'task': return 'bg-pink-500 text-white';
+            case 'song': return 'bg-purple-500 text-white';
+            case 'song-task': return 'bg-pink-300 text-black';
+            case 'version': return 'bg-indigo-400 text-white';
+            case 'video': return 'bg-orange-500 text-white';
+            case 'global-task': return 'bg-yellow-400 text-black';
+            default: return 'bg-gray-400 text-white';
+        }
+    };
+
+    const handleItemClick = (item) => {
+        if (item._kind === 'task' && onEdit) {
+            onEdit(item);
+        } else {
+            setSelectedItem(item);
+        }
+    };
 
     return (
         <div className="h-full flex flex-col p-6 pb-24">
-      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-        <h2 className={THEME.punk.textStyle}>{monthNames[month]} {year}</h2>
-        <div className="flex gap-2 bg-pink-100 border-4 border-black p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-          <button onClick={() => setDate(new Date(year, month - 1, 1))} className={cn("p-2 w-10", THEME.punk.btn, "bg-pink-500 text-white hover:bg-pink-400")}><Icon name="ChevronLeft" /></button>
-          <button onClick={() => setDate(new Date(year, month + 1, 1))} className={cn("p-2 w-10", THEME.punk.btn, "bg-pink-500 text-white hover:bg-pink-400")}><Icon name="ChevronRight" /></button>
-        </div>
-      </div>
+            {/* Header with navigation */}
+            <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+                <h2 className={THEME.punk.textStyle}>{monthNames[month]} {year}</h2>
+                <div className="flex gap-2 bg-pink-100 border-4 border-black p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <button onClick={() => setDate(new Date(year - 1, month, 1))} className={cn("p-2 w-10 text-xs font-bold", THEME.punk.btn, "bg-pink-300 hover:bg-pink-200")} title="Previous Year">‹‹</button>
+                    <button onClick={() => setDate(new Date(year, month - 1, 1))} className={cn("p-2 w-10", THEME.punk.btn, "bg-pink-500 text-white hover:bg-pink-400")}><Icon name="ChevronLeft" /></button>
+                    <button onClick={goToToday} className={cn("px-3 py-2 text-xs font-bold", THEME.punk.btn, "bg-white hover:bg-gray-100")}>Today</button>
+                    <button onClick={() => setDate(new Date(year, month + 1, 1))} className={cn("p-2 w-10", THEME.punk.btn, "bg-pink-500 text-white hover:bg-pink-400")}><Icon name="ChevronRight" /></button>
+                    <button onClick={() => setDate(new Date(year + 1, month, 1))} className={cn("p-2 w-10 text-xs font-bold", THEME.punk.btn, "bg-pink-300 hover:bg-pink-200")} title="Next Year">››</button>
+                </div>
+            </div>
 
-      <div className={cn("mb-4 p-4 flex flex-col gap-3 md:flex-row md:items-end", THEME.punk.card)}>
-        <div className="flex-1 grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-bold uppercase mb-1">Title</label>
-            <input value={newEvent.title} onChange={e => setNewEvent(prev => ({ ...prev, title: e.target.value }))} placeholder="Event title" className={cn("w-full", THEME.punk.input)} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase mb-1">Date</label>
-            <input type="date" value={newEvent.date} onChange={e => setNewEvent(prev => ({ ...prev, date: e.target.value }))} className={cn("w-full", THEME.punk.input)} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase mb-1">Description</label>
-            <input value={newEvent.description} onChange={e => setNewEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Notes or location" className={cn("w-full", THEME.punk.input)} />
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            if (!newEvent.title || !newEvent.date) return;
-            actions.add('events', { ...newEvent, type: 'Standalone Event' });
-            setNewEvent({ title: '', date: '', description: '' });
-          }}
-          className={cn("px-4 py-2 w-full md:w-auto", THEME.punk.btn, "bg-black text-white")}
-        >
-          + Add Standalone Event
-        </button>
-      </div>
+            {/* Add Event Form */}
+            <div className={cn("mb-4 p-4 flex flex-col gap-3 md:flex-row md:items-end", THEME.punk.card)}>
+                <div className="flex-1 grid md:grid-cols-3 gap-3">
+                    <div>
+                        <label className="block text-xs font-bold uppercase mb-1">Title</label>
+                        <input value={newEvent.title} onChange={e => setNewEvent(prev => ({ ...prev, title: e.target.value }))} placeholder="Event title" className={cn("w-full", THEME.punk.input)} />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold uppercase mb-1">Date</label>
+                        <input type="date" value={newEvent.date} onChange={e => setNewEvent(prev => ({ ...prev, date: e.target.value }))} className={cn("w-full", THEME.punk.input)} />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold uppercase mb-1">Description</label>
+                        <input value={newEvent.description} onChange={e => setNewEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Notes or location" className={cn("w-full", THEME.punk.input)} />
+                    </div>
+                </div>
+                <button
+                    onClick={() => {
+                        if (!newEvent.title || !newEvent.date) return;
+                        actions.add('events', { ...newEvent, type: 'Standalone Event' });
+                        setNewEvent({ title: '', date: '', description: '' });
+                    }}
+                    className={cn("px-4 py-2 w-full md:w-auto", THEME.punk.btn, "bg-black text-white")}
+                >
+                    + Add Event
+                </button>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-2 mb-4 text-[10px] font-bold">
+                <span className="px-2 py-1 bg-green-400 border border-black">Release</span>
+                <span className="px-2 py-1 bg-blue-500 text-white border border-black">Event</span>
+                <span className="px-2 py-1 bg-pink-500 text-white border border-black">Task</span>
+                <span className="px-2 py-1 bg-purple-500 text-white border border-black">Song</span>
+                <span className="px-2 py-1 bg-indigo-400 text-white border border-black">Version</span>
+                <span className="px-2 py-1 bg-orange-500 text-white border border-black">Video</span>
+                <span className="px-2 py-1 bg-yellow-400 border border-black">Global Task</span>
+            </div>
+
+            {/* Calendar Grid */}
             <div className="grid grid-cols-7 gap-px bg-black border-4 border-black text-center font-black text-white mb-px">
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i} className="py-3">{d}</div>)}
             </div>
@@ -130,111 +260,415 @@ export const CalendarView = ({ onEdit }) => {
                     const d = i + 1;
                     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                     const list = items[dateStr] || [];
+                    const isToday = dateStr === new Date().toISOString().split('T')[0];
                     return (
-                        <div key={d} className="bg-white h-24 p-1 overflow-y-auto border-r border-b border-black hover:bg-yellow-50">
-                            <div className="text-xs font-bold mb-1">{d}</div>
+                        <div key={d} className={cn("bg-white h-24 p-1 overflow-y-auto border-r border-b border-black hover:bg-yellow-50", isToday && "ring-2 ring-inset ring-pink-500")}>
+                            <div className={cn("text-xs font-bold mb-1", isToday && "text-pink-600")}>{d}</div>
                             {list.map(t => (
                                 <div
-                                  key={t.id}
-                                  onClick={() => t._kind === 'task' && onEdit ? onEdit(t) : undefined}
-                                  className={cn(
-                                    "text-[10px] p-1 mb-1 font-bold uppercase truncate border border-black cursor-pointer",
-                                    t._kind === 'release' ? 'bg-green-400 text-black' : t._kind === 'event' ? 'bg-blue-500 text-white' : 'bg-pink-500 text-white'
-                                  )}
-                                  title={t._kind === 'release' ? `${t.title}${t.releaseType ? ` (${t.releaseType})` : ''}` : t.description || t.title}
+                                    key={t.id}
+                                    onClick={() => handleItemClick(t)}
+                                    className={cn(
+                                        "text-[10px] p-1 mb-1 font-bold uppercase truncate border border-black cursor-pointer hover:opacity-80",
+                                        getItemColor(t._kind)
+                                    )}
+                                    title={t.description || t.title}
                                 >
-                                  {t.title}
+                                    {t.title}
                                 </div>
                             ))}
                         </div>
                     );
                 })}
             </div>
+
+            {/* Detail Modal for clicked items */}
+            {selectedItem && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
+                    <div className={cn("w-full max-w-md p-6 bg-white", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-start mb-4">
+                            <h3 className="font-black uppercase">{selectedItem.title}</h3>
+                            <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-gray-200"><Icon name="X" size={16} /></button>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                            <div><span className="font-bold">Type:</span> {selectedItem._kind}</div>
+                            <div><span className="font-bold">Date:</span> {selectedItem.date}</div>
+                            {selectedItem.status && <div><span className="font-bold">Status:</span> {selectedItem.status}</div>}
+                            {selectedItem.description && <div><span className="font-bold">Description:</span> {selectedItem.description}</div>}
+                            {selectedItem.releaseType && <div><span className="font-bold">Release Type:</span> {selectedItem.releaseType}</div>}
+                        </div>
+                        {selectedItem._kind === 'event' && (
+                            <button 
+                                onClick={() => { actions.delete('events', selectedItem.id); setSelectedItem(null); }} 
+                                className={cn("mt-4 px-4 py-2 w-full", THEME.punk.btn, "bg-red-500 text-white")}
+                            >
+                                Delete Event
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 export const GalleryView = () => {
     const { data, actions } = useStore();
+    const [selectedPhoto, setSelectedPhoto] = useState(null);
+    const [editingPhoto, setEditingPhoto] = useState(null);
 
     const handleUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (ev) => {
-            actions.add('photos', { data: ev.target.result, name: file.name });
+            actions.add('photos', { 
+                data: ev.target.result, 
+                name: file.name,
+                title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+                description: '',
+                uploadedAt: new Date().toISOString()
+            });
         };
         reader.readAsDataURL(file);
     };
 
+    const handleDownload = (photo) => {
+        const link = document.createElement('a');
+        link.href = photo.data;
+        link.download = photo.name || 'photo.jpg';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleDownloadAll = () => {
+        data.photos.forEach((photo, index) => {
+            setTimeout(() => {
+                handleDownload(photo);
+            }, index * 300); // Stagger downloads
+        });
+    };
+
+    const handleUpdatePhoto = (photoId, updates) => {
+        actions.update('photos', photoId, updates);
+    };
+
     return (
         <div className="p-6 pb-24">
-             <div className="flex justify-between items-center mb-8 border-b-4 border-black pb-4">
+            <div className="flex flex-wrap justify-between items-center mb-8 border-b-4 border-black pb-4 gap-4">
                 <h2 className={cn("text-3xl flex items-center gap-2", THEME.punk.textStyle)}><Icon name="Image" /> Gallery</h2>
-                <label className={cn("px-4 py-2 cursor-pointer bg-white flex items-center gap-2", THEME.punk.btn)}>
-                    <Icon name="Upload" size={16}/> Upload
-                    <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                </label>
+                <div className="flex gap-2">
+                    {data.photos.length > 0 && (
+                        <button onClick={handleDownloadAll} className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-500 text-white")}>
+                            <Icon name="Download" size={16}/> Download All
+                        </button>
+                    )}
+                    <label className={cn("px-4 py-2 cursor-pointer bg-white flex items-center gap-2", THEME.punk.btn)}>
+                        <Icon name="Upload" size={16}/> Upload
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    </label>
+                </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {data.photos.map(p => (
-                    <div key={p.id} className={cn("relative aspect-square group overflow-hidden", THEME.punk.card)}>
-                        <img src={p.data} className="w-full h-full object-cover" />
-                        <button onClick={() => actions.delete('photos', p.id)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="Trash2" size={14} /></button>
-                        <div className="absolute bottom-0 left-0 right-0 bg-black text-white text-[10px] p-1 truncate">{p.taskId ? 'Task Photo' : 'General'}</div>
+                    <div key={p.id} className={cn("relative aspect-square group overflow-hidden cursor-pointer", THEME.punk.card)}>
+                        <img 
+                            src={p.data} 
+                            alt={p.title || p.name}
+                            className="w-full h-full object-cover"
+                            onClick={() => setSelectedPhoto(p)}
+                        />
+                        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleDownload(p)} className="bg-blue-500 text-white p-1 rounded" title="Download"><Icon name="Download" size={14} /></button>
+                            <button onClick={() => setEditingPhoto(p)} className="bg-yellow-500 text-white p-1 rounded" title="Edit"><Icon name="Settings" size={14} /></button>
+                            <button onClick={() => actions.delete('photos', p.id)} className="bg-red-500 text-white p-1 rounded" title="Delete"><Icon name="Trash2" size={14} /></button>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-[10px] p-1">
+                            <div className="truncate font-bold">{p.title || p.name}</div>
+                            {p.description && <div className="truncate opacity-80">{p.description}</div>}
+                        </div>
                     </div>
                 ))}
                 {data.photos.length === 0 && <div className="col-span-full py-20 text-center opacity-50">No photos yet.</div>}
             </div>
+
+            {/* Photo Enlargement Modal */}
+            {selectedPhoto && (
+                <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4" onClick={() => setSelectedPhoto(null)}>
+                    <div className="relative max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-2">
+                            <div className="text-white">
+                                <div className="font-bold text-lg">{selectedPhoto.title || selectedPhoto.name}</div>
+                                {selectedPhoto.description && <div className="text-sm opacity-80">{selectedPhoto.description}</div>}
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => handleDownload(selectedPhoto)} className="p-2 bg-blue-500 text-white rounded" title="Download"><Icon name="Download" size={20} /></button>
+                                <button onClick={() => { setEditingPhoto(selectedPhoto); setSelectedPhoto(null); }} className="p-2 bg-yellow-500 text-white rounded" title="Edit"><Icon name="Settings" size={20} /></button>
+                                <button onClick={() => setSelectedPhoto(null)} className="p-2 bg-gray-500 text-white rounded"><Icon name="X" size={20} /></button>
+                            </div>
+                        </div>
+                        <img 
+                            src={selectedPhoto.data} 
+                            alt={selectedPhoto.title || selectedPhoto.name}
+                            className="max-w-full max-h-[80vh] object-contain border-4 border-white"
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Photo Modal */}
+            {editingPhoto && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setEditingPhoto(null)}>
+                    <div className={cn("w-full max-w-md p-6 bg-white", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-black uppercase">Edit Photo</h3>
+                            <button onClick={() => setEditingPhoto(null)} className="p-1 hover:bg-gray-200"><Icon name="X" size={16} /></button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-1">Title</label>
+                                <input 
+                                    value={editingPhoto.title || ''} 
+                                    onChange={e => setEditingPhoto(prev => ({ ...prev, title: e.target.value }))} 
+                                    className={cn("w-full", THEME.punk.input)} 
+                                    placeholder="Photo title"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-1">Description</label>
+                                <textarea 
+                                    value={editingPhoto.description || ''} 
+                                    onChange={e => setEditingPhoto(prev => ({ ...prev, description: e.target.value }))} 
+                                    className={cn("w-full h-24", THEME.punk.input)} 
+                                    placeholder="Photo description"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => {
+                                        handleUpdatePhoto(editingPhoto.id, { title: editingPhoto.title, description: editingPhoto.description });
+                                        setEditingPhoto(null);
+                                    }} 
+                                    className={cn("flex-1 px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}
+                                >
+                                    Save
+                                </button>
+                                <button onClick={() => setEditingPhoto(null)} className={cn("flex-1 px-4 py-2 bg-gray-300", THEME.punk.btn)}>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 export const TeamView = () => {
     const { data, actions } = useStore();
-    const [newMember, setNewMember] = useState({ name: '', role: '', type: 'individual', phone: '', email: '', notes: '', companyId: '' });
+    const [newMember, setNewMember] = useState({ 
+        name: '', 
+        role: '', 
+        type: 'individual', 
+        phone: '', 
+        email: '', 
+        notes: '', 
+        companyId: '',
+        isMusician: false,
+        instruments: []
+    });
+    const [editingMember, setEditingMember] = useState(null);
+    const [filter, setFilter] = useState('all'); // 'all', 'musicians', 'individual', 'company'
     const companies = (data.teamMembers || []).filter(m => m.type === 'company');
 
     const handleAdd = async () => {
-      if (!newMember.name) return;
-      await actions.addTeamMember(newMember);
-      setNewMember({ name: '', role: '', type: 'individual', phone: '', email: '', notes: '', companyId: '' });
+        if (!newMember.name) return;
+        await actions.addTeamMember(newMember);
+        setNewMember({ name: '', role: '', type: 'individual', phone: '', email: '', notes: '', companyId: '', isMusician: false, instruments: [] });
     };
+
+    const handleUpdateMember = async () => {
+        if (editingMember) {
+            await actions.updateTeamMember(editingMember.id, editingMember);
+            setEditingMember(null);
+        }
+    };
+
+    const filteredMembers = useMemo(() => {
+        let members = data.teamMembers || [];
+        if (filter === 'musicians') {
+            members = members.filter(m => m.isMusician);
+        } else if (filter === 'individual') {
+            members = members.filter(m => m.type === 'individual');
+        } else if (filter === 'company') {
+            members = members.filter(m => m.type === 'company');
+        }
+        return members;
+    }, [data.teamMembers, filter]);
 
     return (
         <div className="p-6 pb-24">
-            <div className="flex justify-between mb-6"><h2 className={THEME.punk.textStyle}>Team</h2></div>
-            <div className={cn("p-4 mb-6 grid md:grid-cols-2 gap-4", THEME.punk.card)}>
-              <input value={newMember.name} onChange={e => setNewMember({ ...newMember, name: e.target.value })} placeholder="Name" className={cn("w-full", THEME.punk.input)} />
-              <input value={newMember.role} onChange={e => setNewMember({ ...newMember, role: e.target.value })} placeholder="Role" className={cn("w-full", THEME.punk.input)} />
-              <div className="flex gap-2 items-center">
-                <label className="text-xs font-bold uppercase">Type</label>
-                <select value={newMember.type} onChange={e => setNewMember({ ...newMember, type: e.target.value })} className={cn("w-full", THEME.punk.input)}>
-                  <option value="individual">Individual</option>
-                  <option value="company">Company</option>
-                </select>
-              </div>
-              <select value={newMember.companyId} onChange={e => setNewMember({ ...newMember, companyId: e.target.value })} className={cn("w-full", THEME.punk.input)}>
-                <option value="">Linked Company (optional)</option>
-                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <input value={newMember.phone} onChange={e => setNewMember({ ...newMember, phone: e.target.value })} placeholder="Phone" className={cn("w-full", THEME.punk.input)} />
-              <input value={newMember.email} onChange={e => setNewMember({ ...newMember, email: e.target.value })} placeholder="Email" className={cn("w-full", THEME.punk.input)} />
-              <textarea value={newMember.notes} onChange={e => setNewMember({ ...newMember, notes: e.target.value })} placeholder="Notes" className={cn("w-full h-20", THEME.punk.input)} />
-              <button onClick={handleAdd} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>
-                + Add Team Member
-              </button>
+            <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+                <h2 className={THEME.punk.textStyle}>Team</h2>
+                <div className="flex gap-2">
+                    <select value={filter} onChange={e => setFilter(e.target.value)} className={cn("px-3 py-2", THEME.punk.input)}>
+                        <option value="all">All Members</option>
+                        <option value="musicians">Musicians Only</option>
+                        <option value="individual">Individuals</option>
+                        <option value="company">Companies</option>
+                    </select>
+                </div>
             </div>
-            <div className="grid md:grid-cols-2 gap-4">{(data.teamMembers || []).map(v => (
-              <div key={v.id} className={cn("p-4 relative space-y-1", THEME.punk.card)}>
-                <h3 className="font-bold">{v.name}</h3>
-                <p className="text-sm opacity-80">{v.role || v.type}</p>
-                {v.companyId && <p className="text-xs font-bold">Linked: {companies.find(c => c.id === v.companyId)?.name || 'Company'}</p>}
-                <p className="text-xs">{v.email}</p>
-                <p className="text-xs">{v.phone}</p>
-                {v.notes && <p className="text-xs opacity-70">{v.notes}</p>}
-                <button onClick={()=>actions.deleteTeamMember(v.id)} className="absolute top-2 right-2 text-red-500"><Icon name="Trash2" size={16}/></button>
-              </div>))}</div>
+            
+            <div className={cn("p-4 mb-6", THEME.punk.card)}>
+                <h3 className="font-black uppercase mb-4 border-b-2 border-black pb-2">Add New Team Member</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <input value={newMember.name} onChange={e => setNewMember({ ...newMember, name: e.target.value })} placeholder="Name" className={cn("w-full", THEME.punk.input)} />
+                    <input value={newMember.role} onChange={e => setNewMember({ ...newMember, role: e.target.value })} placeholder="Role" className={cn("w-full", THEME.punk.input)} />
+                    <div className="flex gap-2 items-center">
+                        <label className="text-xs font-bold uppercase">Type</label>
+                        <select value={newMember.type} onChange={e => setNewMember({ ...newMember, type: e.target.value })} className={cn("w-full", THEME.punk.input)}>
+                            <option value="individual">Individual</option>
+                            <option value="company">Company</option>
+                        </select>
+                    </div>
+                    <select value={newMember.companyId} onChange={e => setNewMember({ ...newMember, companyId: e.target.value })} className={cn("w-full", THEME.punk.input)}>
+                        <option value="">Linked Company (optional)</option>
+                        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <input value={newMember.phone} onChange={e => setNewMember({ ...newMember, phone: e.target.value })} placeholder="Phone" className={cn("w-full", THEME.punk.input)} />
+                    <input value={newMember.email} onChange={e => setNewMember({ ...newMember, email: e.target.value })} placeholder="Email" className={cn("w-full", THEME.punk.input)} />
+                    
+                    {/* Phase 8: Musician flag and instruments */}
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 font-bold">
+                            <input 
+                                type="checkbox" 
+                                checked={newMember.isMusician || false} 
+                                onChange={e => setNewMember({ ...newMember, isMusician: e.target.checked })} 
+                                className="w-5 h-5" 
+                            />
+                            Is Musician
+                        </label>
+                    </div>
+                    {newMember.isMusician && (
+                        <div>
+                            <label className="block text-xs font-bold uppercase mb-1">Instruments (comma-separated)</label>
+                            <input 
+                                value={(newMember.instruments || []).join(', ')} 
+                                onChange={e => setNewMember({ ...newMember, instruments: e.target.value.split(',').map(i => i.trim()).filter(Boolean) })} 
+                                placeholder="guitar, piano, drums"
+                                className={cn("w-full", THEME.punk.input)} 
+                            />
+                        </div>
+                    )}
+                    
+                    <textarea value={newMember.notes} onChange={e => setNewMember({ ...newMember, notes: e.target.value })} placeholder="Notes" className={cn("w-full h-20", THEME.punk.input)} />
+                    <button onClick={handleAdd} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>
+                        + Add Team Member
+                    </button>
+                </div>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+                {filteredMembers.map(v => (
+                    <div key={v.id} className={cn("p-4 relative space-y-1", THEME.punk.card)}>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-lg">{v.name}</h3>
+                            {v.isMusician && <span className="px-2 py-1 bg-purple-200 text-purple-800 text-[10px] font-bold border border-purple-500">🎵 MUSICIAN</span>}
+                        </div>
+                        <p className="text-sm opacity-80">{v.role || v.type}</p>
+                        {v.companyId && <p className="text-xs font-bold">Linked: {companies.find(c => c.id === v.companyId)?.name || 'Company'}</p>}
+                        {v.email && <p className="text-xs">📧 {v.email}</p>}
+                        {v.phone && <p className="text-xs">📞 {v.phone}</p>}
+                        {v.isMusician && v.instruments && v.instruments.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                                {v.instruments.map(inst => (
+                                    <span key={inst} className="px-2 py-1 bg-indigo-100 text-indigo-800 text-[10px] font-bold border border-indigo-300">
+                                        {inst}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        {v.notes && <p className="text-xs opacity-70 mt-2">{v.notes}</p>}
+                        <div className="absolute top-2 right-2 flex gap-1">
+                            <button onClick={() => setEditingMember({...v})} className="text-blue-500 hover:bg-blue-100 p-1"><Icon name="Settings" size={16}/></button>
+                            <button onClick={() => actions.deleteTeamMember(v.id)} className="text-red-500 hover:bg-red-100 p-1"><Icon name="Trash2" size={16}/></button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            
+            {filteredMembers.length === 0 && (
+                <div className="text-center py-10 opacity-50">No team members found.</div>
+            )}
+
+            {/* Edit Member Modal */}
+            {editingMember && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setEditingMember(null)}>
+                    <div className={cn("w-full max-w-md p-6 bg-white max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-black uppercase">Edit Team Member</h3>
+                            <button onClick={() => setEditingMember(null)} className="p-1 hover:bg-gray-200"><Icon name="X" size={16} /></button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-1">Name</label>
+                                <input value={editingMember.name || ''} onChange={e => setEditingMember(prev => ({ ...prev, name: e.target.value }))} className={cn("w-full", THEME.punk.input)} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-1">Role</label>
+                                <input value={editingMember.role || ''} onChange={e => setEditingMember(prev => ({ ...prev, role: e.target.value }))} className={cn("w-full", THEME.punk.input)} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-1">Type</label>
+                                <select value={editingMember.type} onChange={e => setEditingMember(prev => ({ ...prev, type: e.target.value }))} className={cn("w-full", THEME.punk.input)}>
+                                    <option value="individual">Individual</option>
+                                    <option value="company">Company</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-1">Phone</label>
+                                <input value={editingMember.phone || ''} onChange={e => setEditingMember(prev => ({ ...prev, phone: e.target.value }))} className={cn("w-full", THEME.punk.input)} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-1">Email</label>
+                                <input value={editingMember.email || ''} onChange={e => setEditingMember(prev => ({ ...prev, email: e.target.value }))} className={cn("w-full", THEME.punk.input)} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="checkbox" 
+                                    checked={editingMember.isMusician || false} 
+                                    onChange={e => setEditingMember(prev => ({ ...prev, isMusician: e.target.checked }))} 
+                                    className="w-5 h-5" 
+                                />
+                                <label className="font-bold">Is Musician</label>
+                            </div>
+                            {editingMember.isMusician && (
+                                <div>
+                                    <label className="block text-xs font-bold uppercase mb-1">Instruments</label>
+                                    <input 
+                                        value={(editingMember.instruments || []).join(', ')} 
+                                        onChange={e => setEditingMember(prev => ({ ...prev, instruments: e.target.value.split(',').map(i => i.trim()).filter(Boolean) }))} 
+                                        placeholder="guitar, piano, drums"
+                                        className={cn("w-full", THEME.punk.input)} 
+                                    />
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-1">Notes</label>
+                                <textarea value={editingMember.notes || ''} onChange={e => setEditingMember(prev => ({ ...prev, notes: e.target.value }))} className={cn("w-full h-20", THEME.punk.input)} />
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={handleUpdateMember} className={cn("flex-1 px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Save</button>
+                                <button onClick={() => setEditingMember(null)} className={cn("flex-1 px-4 py-2 bg-gray-300", THEME.punk.btn)}>Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -1119,7 +1119,7 @@ export const ReleaseDetailView = ({ release, onBack }) => {
   );
 };
 
-// Combined Timeline View (Spec 2.6)
+// Combined Timeline View (Spec 2.6) - Phase 6: Enhanced with events, videos, exclusivity windows, and clickable entries
 export const CombinedTimelineView = () => {
   const { data } = useStore();
   const [filterSource, setFilterSource] = useState('all');
@@ -1127,6 +1127,8 @@ export const CombinedTimelineView = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // 'list', 'week', 'month'
+  const [selectedItem, setSelectedItem] = useState(null);
 
   const timelineItems = useMemo(() => {
     const items = [];
@@ -1145,9 +1147,11 @@ export const CombinedTimelineView = () => {
           status: task.status,
           estimatedCost: task.estimatedCost,
           notes: task.notes,
-          songId: song.id
+          songId: song.id,
+          clickable: true
         });
       });
+      
       // Song Custom Tasks
       const customTasks = song.customTasks || [];
       customTasks.forEach(task => {
@@ -1155,19 +1159,131 @@ export const CombinedTimelineView = () => {
           id: 'custom-' + task.id,
           date: task.date,
           sourceType: 'Song Custom',
-          label: 'Custom task',
+          label: task.title || 'Custom task',
           name: song.title,
           category: song.category,
           status: task.status,
           estimatedCost: task.estimatedCost,
           notes: task.description || task.notes,
-          songId: song.id
+          songId: song.id,
+          clickable: true
         });
       });
+      
+      // Version tasks
+      (song.versions || []).filter(v => v.id !== 'core').forEach(version => {
+        (version.tasks || []).forEach(task => {
+          items.push({
+            id: 'version-task-' + song.id + '-' + version.id + '-' + task.id,
+            date: task.date,
+            sourceType: 'Version Task',
+            label: task.type,
+            name: `${version.name} (${song.title})`,
+            category: task.category || 'Version',
+            status: task.status,
+            estimatedCost: task.estimatedCost,
+            notes: task.notes,
+            songId: song.id,
+            clickable: true
+          });
+        });
+      });
+      
+      // Video tasks
+      (song.videos || []).forEach(video => {
+        (video.tasks || []).forEach(task => {
+          items.push({
+            id: 'video-task-' + song.id + '-' + video.id + '-' + task.id,
+            date: task.date,
+            sourceType: 'Video Task',
+            label: task.type,
+            name: `${video.title} (${song.title})`,
+            category: 'Video',
+            status: task.status,
+            estimatedCost: task.estimatedCost,
+            notes: task.notes,
+            songId: song.id,
+            clickable: true
+          });
+        });
+        
+        // Video release date
+        if (video.releaseDate) {
+          items.push({
+            id: 'video-release-' + song.id + '-' + video.id,
+            date: video.releaseDate,
+            sourceType: 'Video',
+            label: 'Video Release',
+            name: video.title,
+            category: 'Video',
+            status: null,
+            estimatedCost: video.estimatedCost,
+            notes: null,
+            songId: song.id,
+            clickable: true
+          });
+        }
+      });
+      
+      // Exclusivity windows (start)
+      if (song.exclusiveType && song.exclusiveType !== 'None' && song.exclusiveStartDate) {
+        items.push({
+          id: 'excl-start-' + song.id,
+          date: song.exclusiveStartDate,
+          sourceType: 'Exclusivity',
+          label: `${song.exclusiveType} Start`,
+          name: song.title,
+          category: 'Exclusive',
+          status: null,
+          estimatedCost: 0,
+          notes: song.exclusiveNotes,
+          songId: song.id,
+          isExclusivityStart: true,
+          exclusiveEndDate: song.exclusiveEndDate,
+          clickable: true
+        });
+      }
+      
+      // Exclusivity windows (end)
+      if (song.exclusiveType && song.exclusiveType !== 'None' && song.exclusiveEndDate) {
+        items.push({
+          id: 'excl-end-' + song.id,
+          date: song.exclusiveEndDate,
+          sourceType: 'Exclusivity',
+          label: `${song.exclusiveType} End`,
+          name: song.title,
+          category: 'Exclusive',
+          status: null,
+          estimatedCost: 0,
+          notes: song.exclusiveNotes,
+          songId: song.id,
+          isExclusivityEnd: true,
+          clickable: true
+        });
+      }
+    });
+
+    // Events
+    (data.events || []).forEach(event => {
+      if (event.date) {
+        items.push({
+          id: 'event-' + event.id,
+          date: event.date,
+          sourceType: 'Event',
+          label: event.type || 'Event',
+          name: event.title,
+          category: 'Event',
+          status: null,
+          estimatedCost: event.estimatedCost || 0,
+          notes: event.description,
+          songId: null,
+          clickable: true
+        });
+      }
     });
 
     // Global Tasks
-    (data.globalTasks || []).forEach(task => {
+    (data.globalTasks || []).filter(t => !t.isArchived).forEach(task => {
       items.push({
         id: 'global-' + task.id,
         date: task.date,
@@ -1178,18 +1294,63 @@ export const CombinedTimelineView = () => {
         status: task.status,
         estimatedCost: task.estimatedCost,
         notes: task.description,
-        songId: null
+        songId: null,
+        clickable: true
       });
     });
 
     // Releases and their tasks
     (data.releases || []).forEach(release => {
       // Release date itself
-      items.push({ id: 'release-' + release.id, date: release.releaseDate, sourceType: 'Release', label: 'Release', name: release.name, category: release.type, status: null, estimatedCost: release.estimatedCost, notes: release.notes, songId: null });
+      items.push({ 
+        id: 'release-' + release.id, 
+        date: release.releaseDate, 
+        sourceType: 'Release', 
+        label: 'Release', 
+        name: release.name, 
+        category: release.type, 
+        status: null, 
+        estimatedCost: release.estimatedCost, 
+        notes: release.notes, 
+        songId: null,
+        clickable: true 
+      });
+      
       // Release tasks
       (release.tasks || []).forEach(task => {
-        items.push({ id: 'release-task-' + task.id, date: task.date, sourceType: 'Release Task', label: task.type, name: release.name, category: task.category, status: task.status, estimatedCost: task.estimatedCost, notes: task.notes, songId: null });
+        items.push({ 
+          id: 'release-task-' + task.id, 
+          date: task.date, 
+          sourceType: 'Release Task', 
+          label: task.type, 
+          name: release.name, 
+          category: task.category, 
+          status: task.status, 
+          estimatedCost: task.estimatedCost, 
+          notes: task.notes, 
+          songId: null,
+          clickable: true 
+        });
       });
+      
+      // Release exclusivity
+      if (release.exclusiveType && release.exclusiveType !== 'None' && release.exclusiveStartDate) {
+        items.push({
+          id: 'release-excl-start-' + release.id,
+          date: release.exclusiveStartDate,
+          sourceType: 'Exclusivity',
+          label: `${release.exclusiveType} Start`,
+          name: release.name,
+          category: 'Release Exclusive',
+          status: null,
+          estimatedCost: 0,
+          notes: release.exclusiveNotes,
+          songId: null,
+          isExclusivityStart: true,
+          exclusiveEndDate: release.exclusiveEndDate,
+          clickable: true
+        });
+      }
     });
 
     // Filter
@@ -1204,22 +1365,41 @@ export const CombinedTimelineView = () => {
     filtered.sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1);
 
     return filtered;
-  }, [data.songs, data.globalTasks, data.releases, filterSource, filterSong, filterStatus, dateFrom, dateTo]);
+  }, [data.songs, data.globalTasks, data.releases, data.events, filterSource, filterSong, filterStatus, dateFrom, dateTo]);
 
   const getSourceColor = (sourceType) => {
     switch (sourceType) {
-      case 'Song Task': return 'bg-blue-100 border-blue-500';
-      case 'Song Custom': return 'bg-purple-100 border-purple-500';
-      case 'Global': return 'bg-orange-100 border-orange-500';
-      case 'Release Task': return 'bg-teal-100 border-teal-500';
-      case 'Release': return 'bg-green-100 border-green-500';
+      case 'Song Task': return 'bg-blue-100 border-l-4 border-l-blue-500';
+      case 'Song Custom': return 'bg-purple-100 border-l-4 border-l-purple-500';
+      case 'Version Task': return 'bg-indigo-100 border-l-4 border-l-indigo-500';
+      case 'Video Task': return 'bg-orange-100 border-l-4 border-l-orange-500';
+      case 'Video': return 'bg-orange-200 border-l-4 border-l-orange-600';
+      case 'Global': return 'bg-yellow-100 border-l-4 border-l-yellow-500';
+      case 'Release Task': return 'bg-teal-100 border-l-4 border-l-teal-500';
+      case 'Release': return 'bg-green-100 border-l-4 border-l-green-500';
+      case 'Event': return 'bg-pink-100 border-l-4 border-l-pink-500';
+      case 'Exclusivity': return 'bg-red-100 border-l-4 border-l-red-500';
       default: return 'bg-gray-100';
     }
   };
 
+  const handleItemClick = (item) => {
+    setSelectedItem(item);
+  };
+
+  // Unique source types for filter
+  const sourceTypes = ['Song Task', 'Song Custom', 'Version Task', 'Video Task', 'Video', 'Global', 'Release', 'Release Task', 'Event', 'Exclusivity'];
+
   return (
     <div className="p-6 pb-24">
-      <h2 className={cn("mb-6", THEME.punk.textStyle)}>Combined Timeline</h2>
+      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <h2 className={THEME.punk.textStyle}>Combined Timeline</h2>
+        <div className="flex gap-2">
+          <button onClick={() => setViewMode('list')} className={cn("px-3 py-1 text-xs font-bold", THEME.punk.btn, viewMode === 'list' ? 'bg-black text-white' : 'bg-white')}>List</button>
+          <button onClick={() => setViewMode('week')} className={cn("px-3 py-1 text-xs font-bold", THEME.punk.btn, viewMode === 'week' ? 'bg-black text-white' : 'bg-white')}>Week</button>
+          <button onClick={() => setViewMode('month')} className={cn("px-3 py-1 text-xs font-bold", THEME.punk.btn, viewMode === 'month' ? 'bg-black text-white' : 'bg-white')}>Month</button>
+        </div>
+      </div>
 
       <div className={cn("p-4 mb-6 bg-gray-50", THEME.punk.card)}>
         <div className="grid md:grid-cols-5 gap-3">
@@ -1227,11 +1407,7 @@ export const CombinedTimelineView = () => {
             <label className="block text-xs font-bold uppercase mb-1">Source</label>
             <select value={filterSource} onChange={e => setFilterSource(e.target.value)} className={cn("w-full", THEME.punk.input)}>
               <option value="all">All Sources</option>
-              <option value="Song Task">Song Tasks</option>
-              <option value="Song Custom">Song Custom Tasks</option>
-              <option value="Global">Global Tasks</option>
-              <option value="Release">Releases</option>
-              <option value="Release Task">Release Tasks</option>
+              {sourceTypes.map(st => <option key={st} value={st}>{st}</option>)}
             </select>
           </div>
           <div>
@@ -1259,6 +1435,18 @@ export const CombinedTimelineView = () => {
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2 mb-4 text-[10px] font-bold">
+        <span className="px-2 py-1 bg-blue-100 border-l-4 border-l-blue-500 border border-black">Song Task</span>
+        <span className="px-2 py-1 bg-purple-100 border-l-4 border-l-purple-500 border border-black">Custom</span>
+        <span className="px-2 py-1 bg-indigo-100 border-l-4 border-l-indigo-500 border border-black">Version</span>
+        <span className="px-2 py-1 bg-orange-100 border-l-4 border-l-orange-500 border border-black">Video</span>
+        <span className="px-2 py-1 bg-yellow-100 border-l-4 border-l-yellow-500 border border-black">Global</span>
+        <span className="px-2 py-1 bg-green-100 border-l-4 border-l-green-500 border border-black">Release</span>
+        <span className="px-2 py-1 bg-pink-100 border-l-4 border-l-pink-500 border border-black">Event</span>
+        <span className="px-2 py-1 bg-red-100 border-l-4 border-l-red-500 border border-black">Exclusivity</span>
+      </div>
+
       <div className={cn("overflow-x-auto", THEME.punk.card)}>
         <table className="w-full text-sm">
           <thead>
@@ -1277,7 +1465,16 @@ export const CombinedTimelineView = () => {
             {timelineItems.length === 0 ? (
               <tr><td colSpan="8" className="p-10 text-center opacity-50">No timeline items found.</td></tr>
             ) : timelineItems.map(item => (
-              <tr key={item.id} className={cn("border-b border-gray-200", getSourceColor(item.sourceType))}>
+              <tr 
+                key={item.id} 
+                onClick={() => handleItemClick(item)}
+                className={cn(
+                  "border-b border-gray-200 cursor-pointer hover:opacity-80", 
+                  getSourceColor(item.sourceType),
+                  item.isExclusivityStart && "border-l-4 border-l-red-500 bg-red-50",
+                  item.isExclusivityEnd && "border-l-4 border-l-gray-500 bg-gray-50"
+                )}
+              >
                 <td className="p-3 font-bold">{item.date || '-'}</td>
                 <td className="p-3"><span className="px-2 py-1 text-xs font-bold bg-white border border-black">{item.sourceType}</span></td>
                 <td className="p-3">{item.label}</td>
@@ -1291,6 +1488,28 @@ export const CombinedTimelineView = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Detail Modal */}
+      {selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
+          <div className={cn("w-full max-w-md p-6 bg-white", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="font-black uppercase">{selectedItem.name}</h3>
+              <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-gray-200">×</button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div><span className="font-bold">Type:</span> {selectedItem.sourceType}</div>
+              <div><span className="font-bold">Label:</span> {selectedItem.label}</div>
+              <div><span className="font-bold">Date:</span> {selectedItem.date || '-'}</div>
+              <div><span className="font-bold">Category:</span> {selectedItem.category}</div>
+              {selectedItem.status && <div><span className="font-bold">Status:</span> {selectedItem.status}</div>}
+              {selectedItem.estimatedCost > 0 && <div><span className="font-bold">Est. Cost:</span> {formatMoney(selectedItem.estimatedCost)}</div>}
+              {selectedItem.notes && <div><span className="font-bold">Notes:</span> {selectedItem.notes}</div>}
+              {selectedItem.exclusiveEndDate && <div><span className="font-bold">Exclusivity Ends:</span> {selectedItem.exclusiveEndDate}</div>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
