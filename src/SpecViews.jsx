@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useStore, STATUS_OPTIONS, SONG_CATEGORIES, RELEASE_TYPES, VERSION_TYPES, GLOBAL_TASK_CATEGORIES, EXCLUSIVITY_OPTIONS, getEffectiveCost } from './Store';
+import { useStore, STATUS_OPTIONS, SONG_CATEGORIES, RELEASE_TYPES, VERSION_TYPES, GLOBAL_TASK_CATEGORIES, EXCLUSIVITY_OPTIONS, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence } from './Store';
 import { THEME, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 
@@ -10,6 +10,12 @@ export const SongListView = ({ onSelectSong }) => {
   const [sortDir, setSortDir] = useState('asc');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterSingles, setFilterSingles] = useState(false);
+
+  const songProgress = (song) => {
+    const versionTasks = (song.versions || []).flatMap(v => [...(v.tasks || []), ...(v.customTasks || [])]);
+    const tasks = [...(song.deadlines || []), ...(song.customTasks || []), ...versionTasks];
+    return calculateTaskProgress(tasks).progress;
+  };
 
   const songs = useMemo(() => {
     let filtered = [...(data.songs || [])];
@@ -67,6 +73,7 @@ export const SongListView = ({ onSelectSong }) => {
               <th className="p-3 text-center">Single?</th>
               <th className="p-3 text-left">Exclusive</th>
               <th className="p-3 text-center">Stems?</th>
+              <th className="p-3 text-right">Progress</th>
               <th className="p-3 text-right cursor-pointer" onClick={() => toggleSort('estimatedCost')}>Est. Cost <SortIcon field="estimatedCost" /></th>
             </tr>
           </thead>
@@ -82,6 +89,7 @@ export const SongListView = ({ onSelectSong }) => {
                   <td className="p-3 text-center">{song.isSingle ? 'Yes' : 'No'}</td>
                   <td className="p-3">{song.exclusiveType && song.exclusiveType !== 'None' ? song.exclusiveType : '-'}</td>
                   <td className="p-3 text-center">{song.stemsNeeded ? 'Yes' : 'No'}</td>
+                  <td className="p-3 text-right">{songProgress(song)}%</td>
                   <td className="p-3 text-right">{formatMoney(song.estimatedCost || 0)}</td>
                 </tr>
               ))
@@ -154,6 +162,12 @@ export const SongDetailView = ({ song, onBack }) => {
   const currentSong = data.songs.find(s => s.id === song.id) || song;
   const songTasks = currentSong.deadlines || [];
   const songCustomTasks = currentSong.customTasks || [];
+  const allSongTasks = [
+    ...songTasks,
+    ...songCustomTasks,
+    ...(currentSong.versions || []).flatMap(v => [...(v.tasks || []), ...(v.customTasks || [])])
+  ];
+  const { progress: songProgressValue } = calculateTaskProgress(allSongTasks);
   // Use getEffectiveCost for proper cost precedence (paid > quoted > estimated)
   const tasksCost = songTasks.reduce((sum, d) => sum + getEffectiveCost(d), 0);
   const customTasksCost = songCustomTasks.reduce((sum, t) => sum + getEffectiveCost(t), 0);
@@ -204,6 +218,7 @@ export const SongDetailView = ({ song, onBack }) => {
               <input type="checkbox" checked={form.stemsNeeded || false} onChange={e => { handleFieldChange('stemsNeeded', e.target.checked); setTimeout(handleSave, 0); }} className="w-5 h-5" />
               Stems Needed
             </label>
+            <span className="ml-auto px-3 py-2 text-xs font-black bg-yellow-200 border-2 border-black">Progress: {songProgressValue}%</span>
           </div>
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Exclusive Availability</label>
@@ -235,6 +250,10 @@ export const SongDetailView = ({ song, onBack }) => {
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Paid Cost</label>
             <input type="number" value={form.paidCost || 0} onChange={e => handleFieldChange('paidCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase mb-1">Partial Payment</label>
+            <input type="number" value={form.partially_paid || 0} onChange={e => handleFieldChange('partially_paid', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
           </div>
         <div className="md:col-span-2">
           <label className="block text-xs font-bold uppercase mb-1">Core Instruments</label>
@@ -748,7 +767,16 @@ export const GlobalTasksView = () => {
                     {taskBudget(task) > 0 && <span className="text-[10px] font-bold">Remaining: {formatMoney(taskBudget(task) - (task.assignedMembers || []).reduce((s, m) => s + (m.cost || 0), 0))}</span>}
                   </div>
                 </td>
-                <td className="p-3"><span className={cn("px-2 py-1 text-xs font-bold", task.status === 'Done' ? 'bg-green-200' : task.status === 'In Progress' ? 'bg-blue-200' : task.status === 'Delayed' ? 'bg-red-200' : 'bg-gray-200')}>{task.status}</span></td>
+                <td className="p-3"><span className={cn(
+                  "px-2 py-1 text-xs font-bold",
+                  task.status === 'Done'
+                    ? 'bg-green-200'
+                    : task.status === 'In Progress'
+                      ? 'bg-blue-200'
+                      : task.status === 'Delayed'
+                        ? 'bg-red-200'
+                        : 'bg-gray-200'
+                )}>{task.status}</span></td>
                 <td className="p-3 text-center">
                   <button onClick={() => setEditingTask({ ...task })} className="p-1 hover:bg-blue-100 text-blue-500 mr-1" title="Edit"><Icon name="Settings" size={14} /></button>
                   <button onClick={() => actions.updateGlobalTask(task.id, { isArchived: !task.isArchived })} className={cn("p-1 mr-1", task.isArchived ? "hover:bg-green-100 text-green-500" : "hover:bg-yellow-100 text-yellow-600")} title={task.isArchived ? "Restore" : "Archive"}><Icon name="Archive" size={14} /></button>
@@ -923,14 +951,18 @@ export const ReleaseDetailView = ({ release, onBack }) => {
             <label className="block text-xs font-bold uppercase mb-1">Quoted Cost</label>
             <input type="number" value={form.quotedCost || 0} onChange={e => handleFieldChange('quotedCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase mb-1">Paid Cost</label>
-            <input type="number" value={form.paidCost || 0} onChange={e => handleFieldChange('paidCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
-          </div>
-          <div className="flex items-center gap-2 font-bold">
-            <input type="checkbox" checked={form.hasPhysicalCopies || false} onChange={e => { handleFieldChange('hasPhysicalCopies', e.target.checked); setTimeout(handleSave, 0); }} className="w-5 h-5" />
-            Includes Physical Copies
-          </div>
+            <div>
+              <label className="block text-xs font-bold uppercase mb-1">Paid Cost</label>
+              <input type="number" value={form.paidCost || 0} onChange={e => handleFieldChange('paidCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase mb-1">Partial Payment</label>
+              <input type="number" value={form.partially_paid || 0} onChange={e => handleFieldChange('partially_paid', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+            </div>
+            <div className="flex items-center gap-2 font-bold">
+              <input type="checkbox" checked={form.hasPhysicalCopies || false} onChange={e => { handleFieldChange('hasPhysicalCopies', e.target.checked); setTimeout(handleSave, 0); }} className="w-5 h-5" />
+              Includes Physical Copies
+            </div>
           <div className="md:col-span-2">
             <label className="block text-xs font-bold uppercase mb-1">Notes</label>
             <textarea value={form.notes || ''} onChange={e => handleFieldChange('notes', e.target.value)} onBlur={handleSave} className={cn("w-full h-24", THEME.punk.input)} />
@@ -1501,7 +1533,16 @@ export const CombinedTimelineView = () => {
                 <td className="p-3">{item.label}</td>
                 <td className="p-3 font-bold">{item.name}</td>
                 <td className="p-3">{item.category}</td>
-                <td className="p-3">{item.status && <span className={cn("px-2 py-1 text-xs font-bold", item.status === 'Done' ? 'bg-green-200' : item.status === 'In Progress' ? 'bg-blue-200' : item.status === 'Delayed' ? 'bg-red-200' : 'bg-gray-200')}>{item.status}</span>}</td>
+                <td className="p-3">{item.status && <span className={cn(
+                  "px-2 py-1 text-xs font-bold",
+                  item.status === 'Done'
+                    ? 'bg-green-200'
+                    : item.status === 'In Progress'
+                      ? 'bg-blue-200'
+                      : item.status === 'Delayed'
+                        ? 'bg-red-200'
+                        : 'bg-gray-200'
+                )}>{item.status}</span>}</td>
                 <td className="p-3 text-right">{formatMoney(item.estimatedCost || 0)}</td>
                 <td className="p-3 max-w-xs truncate">{item.notes || '-'}</td>
               </tr>
@@ -1887,7 +1928,7 @@ export const TaskDashboardView = () => {
       );
       filtered.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     } else if (view === 'inProgress') {
-      // Tasks that are in progress
+      // Tasks that are actively in progress
       filtered = filtered.filter(t => t.status === 'In Progress');
       filtered.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     }
@@ -1903,11 +1944,15 @@ export const TaskDashboardView = () => {
     const delayed = allTasks.filter(t => t.status === 'Delayed').length;
     const dueSoon = allTasks.filter(t => t.date && t.date >= today && t.date <= nextWeek && t.status !== 'Done').length;
     const overdue = allTasks.filter(t => t.date && t.date < today && t.status !== 'Done').length;
-    const totalCost = allTasks.reduce((sum, t) => sum + (t.estimatedCost || 0), 0);
-    const totalPaid = allTasks.reduce((sum, t) => sum + (t.actualCost || t.paidCost || 0), 0);
+    const totalCost = allTasks.reduce((sum, t) => sum + getEffectiveCost(t), 0);
+    const totalPaid = allTasks.reduce((sum, t) => {
+      const { source, value } = resolveCostPrecedence(t);
+      return ['actual', 'paid', 'partially_paid'].includes(source) ? sum + value : sum;
+    }, 0);
     const remaining = allTasks.reduce((sum, t) => {
-      if (t.actualCost || t.paidCost) return sum;
-      return sum + (t.quotedCost || t.estimatedCost || 0);
+      const { source, value } = resolveCostPrecedence(t);
+      if (['actual', 'paid', 'partially_paid'].includes(source)) return sum;
+      return sum + value;
     }, 0);
 
     return { notStarted, inProgress, done, delayed, dueSoon, overdue, total: allTasks.length, totalCost, totalPaid, remaining };

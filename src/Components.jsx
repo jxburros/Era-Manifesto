@@ -270,9 +270,9 @@ export const UnifiedTaskEditor = ({
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase mb-1">Status</label>
-                            <select 
-                                value={form.status || 'Not Started'} 
-                                onChange={e => handleChange('status', e.target.value)} 
+                            <select
+                                value={form.status || 'Not Started'}
+                                onChange={e => handleChange('status', e.target.value)}
                                 className={cn("w-full", THEME.punk.input)}
                             >
                                 {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
