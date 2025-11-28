@@ -664,22 +664,66 @@ export const StoreProvider = ({ children }) => {
       }));
     },
 
-    // Version helpers
+    // Version helpers - Phase 1: Enhanced version management
     addSongVersion: async (songId, baseData = null) => {
       const song = data.songs.find(s => s.id === songId);
       if (!song) return null;
-      const template = baseData || song.versions?.find(v => v.id === 'core') || {};
+      const coreVersion = song.versions?.find(v => v.id === 'core') || {};
+      const template = baseData || coreVersion;
+      
+      // Generate version-specific tasks (arrangement, mix, master, release)
+      const generateVersionTasks = (releaseDate) => {
+        if (!releaseDate) return [];
+        const versionTaskTypes = [
+          { type: 'Arrangement', category: 'Production', daysBeforeRelease: 60 },
+          { type: 'Instrumentation', category: 'Production', daysBeforeRelease: 50 },
+          { type: 'Mix', category: 'Post-Production', daysBeforeRelease: 30 },
+          { type: 'Master', category: 'Post-Production', daysBeforeRelease: 14 },
+          { type: 'Release', category: 'Distribution', daysBeforeRelease: 0 }
+        ];
+        const release = new Date(releaseDate);
+        return versionTaskTypes.map(taskType => {
+          const taskDate = new Date(release);
+          taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+          return createUnifiedTask({
+            type: taskType.type,
+            category: taskType.category,
+            date: taskDate.toISOString().split('T')[0],
+            parentType: 'version'
+          });
+        });
+      };
+      
+      const versionReleaseDate = baseData?.releaseDate || song.releaseDate || '';
+      const versionTasks = generateVersionTasks(versionReleaseDate);
+      
       const newVersion = {
         id: crypto.randomUUID(),
         name: baseData?.name || `${song.title} Alt`,
+        // Multi-release linking
         releaseIds: [...(template.releaseIds || [])],
         releaseOverrides: { ...(template.releaseOverrides || {}) },
+        // Version-specific release date
+        releaseDate: versionReleaseDate,
+        // Availability windows
         exclusiveType: template.exclusiveType || 'None',
+        exclusiveStartDate: template.exclusiveStartDate || '',
+        exclusiveEndDate: template.exclusiveEndDate || '',
         exclusiveNotes: template.exclusiveNotes || '',
+        // Instruments and musicians
         instruments: [...(template.instruments || [])],
         musicians: [...(template.musicians || [])],
+        // Cost layers
         estimatedCost: template.estimatedCost || 0,
-        basedOnCore: true
+        quotedCost: template.quotedCost || 0,
+        paidCost: template.paidCost || 0,
+        // Core inheritance
+        basedOnCore: baseData?.basedOnCore !== undefined ? baseData.basedOnCore : true,
+        // Video type selections (copied from template)
+        videoTypes: { ...(template.videoTypes || { lyric: false, enhancedLyric: false, music: false, visualizer: false, custom: false }) },
+        // Version-specific tasks (auto-generated)
+        tasks: versionTasks,
+        customTasks: []
       };
 
       const saveVersions = (versions) => {
@@ -732,6 +776,73 @@ export const StoreProvider = ({ children }) => {
           songs: (p.songs || []).map(s => s.id === songId ? { ...s, versions: updatedVersions } : s)
         }));
       }
+    },
+
+    // Delete a song version (except core)
+    deleteSongVersion: async (songId, versionId) => {
+      if (versionId === 'core') return; // Cannot delete core version
+      const song = data.songs.find(s => s.id === songId);
+      if (!song) return;
+      const updatedVersions = (song.versions || []).filter(v => v.id !== versionId);
+      if (mode === 'cloud') {
+        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_songs', songId), { versions: updatedVersions });
+      } else {
+        setData(p => ({
+          ...p,
+          songs: (p.songs || []).map(s => s.id === songId ? { ...s, versions: updatedVersions } : s)
+        }));
+      }
+    },
+
+    // Update a task on a song version
+    updateVersionTask: async (songId, versionId, taskId, updates) => {
+      const song = data.songs.find(s => s.id === songId);
+      if (!song) return;
+      const updatedVersions = (song.versions || []).map(v => {
+        if (v.id !== versionId) return v;
+        const updatedTasks = (v.tasks || []).map(t => t.id === taskId ? { ...t, ...updates, isOverridden: true } : t);
+        return { ...v, tasks: updatedTasks };
+      });
+      if (mode === 'cloud') {
+        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_songs', songId), { versions: updatedVersions });
+      } else {
+        setData(p => ({
+          ...p,
+          songs: (p.songs || []).map(s => s.id === songId ? { ...s, versions: updatedVersions } : s)
+        }));
+      }
+    },
+
+    // Add custom task to a song version
+    addVersionCustomTask: async (songId, versionId, task) => {
+      const song = data.songs.find(s => s.id === songId);
+      if (!song) return;
+      const newTask = createUnifiedTask({
+        type: 'Custom',
+        title: task.title || 'New Task',
+        description: task.description || '',
+        date: task.date || '',
+        status: task.status || 'Not Started',
+        estimatedCost: task.estimatedCost || 0,
+        quotedCost: task.quotedCost || 0,
+        paidCost: task.paidCost || 0,
+        notes: task.notes || '',
+        parentType: 'version',
+        parentId: versionId
+      });
+      const updatedVersions = (song.versions || []).map(v => {
+        if (v.id !== versionId) return v;
+        return { ...v, customTasks: [...(v.customTasks || []), newTask] };
+      });
+      if (mode === 'cloud') {
+        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_songs', songId), { versions: updatedVersions });
+      } else {
+        setData(p => ({
+          ...p,
+          songs: (p.songs || []).map(s => s.id === songId ? { ...s, versions: updatedVersions } : s)
+        }));
+      }
+      return newTask;
     },
      
      // Update a song deadline

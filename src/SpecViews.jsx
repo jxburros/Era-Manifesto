@@ -280,26 +280,86 @@ export const SongDetailView = ({ song, onBack }) => {
       </div>
     </div>
 
-      {/* Versions */}
+      {/* Versions - Phase 1: Enhanced with video types, tasks, availability windows */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
           <h3 className="font-black uppercase">Versions & Releases</h3>
           <div className="flex gap-2">
             <input value={newVersionName} onChange={e => setNewVersionName(e.target.value)} className={cn("px-3 py-2 text-xs", THEME.punk.input)} />
-            <button onClick={() => actions.addSongVersion(song.id, { name: newVersionName })} className={cn("px-3 py-2 text-xs", THEME.punk.btn, "bg-black text-white")}>Create Template Version</button>
+            <button onClick={() => actions.addSongVersion(song.id, { name: newVersionName, releaseDate: currentSong.releaseDate })} className={cn("px-3 py-2 text-xs", THEME.punk.btn, "bg-black text-white")}>Generate Template Version</button>
           </div>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {(currentSong.versions || []).map(v => (
-            <div key={v.id} className="p-3 border-2 border-black bg-white">
-              <div className="flex flex-wrap gap-3 items-center mb-2">
-                <input value={v.name} onChange={e => actions.updateSongVersion(song.id, v.id, { name: e.target.value })} className={cn("px-2 py-1 text-sm", THEME.punk.input)} />
-                <select value={v.exclusiveType || 'None'} onChange={e => actions.updateSongVersion(song.id, v.id, { exclusiveType: e.target.value })} className={cn("px-2 py-1 text-sm", THEME.punk.input)}>
-                  {EXCLUSIVITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
-                <input value={(v.instruments || []).join(', ')} onChange={e => actions.updateSongVersion(song.id, v.id, { instruments: e.target.value.split(',').map(i => i.trim()).filter(Boolean) })} className={cn("px-2 py-1 text-sm", THEME.punk.input)} placeholder="Instruments" />
+            <div key={v.id} className={cn("p-4 border-2 border-black", v.id === 'core' ? 'bg-yellow-50' : 'bg-white')}>
+              <div className="flex flex-wrap gap-3 items-center mb-3">
+                <input value={v.name} onChange={e => actions.updateSongVersion(song.id, v.id, { name: e.target.value })} className={cn("px-2 py-1 text-sm font-bold", THEME.punk.input)} />
+                {v.id !== 'core' && (
+                  <button onClick={() => { if (confirm('Delete this version?')) actions.deleteSongVersion(song.id, v.id); }} className="p-1 text-red-500 hover:bg-red-100"><Icon name="Trash2" size={14} /></button>
+                )}
+                {v.id === 'core' && <span className="px-2 py-1 bg-yellow-200 text-xs font-bold border border-black">CORE</span>}
+                <label className="flex items-center gap-1 text-xs font-bold">
+                  <input type="checkbox" checked={v.basedOnCore || false} onChange={e => actions.updateSongVersion(song.id, v.id, { basedOnCore: e.target.checked })} className="w-4 h-4" />
+                  Inherits from Core
+                </label>
               </div>
-              <div className="flex flex-wrap gap-2 items-center text-xs">
+              
+              {/* Availability Windows */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3 text-xs">
+                <div>
+                  <label className="block font-bold uppercase mb-1">Release Date</label>
+                  <input type="date" value={v.releaseDate || ''} onChange={e => actions.updateSongVersion(song.id, v.id, { releaseDate: e.target.value })} className={cn("w-full px-2 py-1", THEME.punk.input)} />
+                </div>
+                <div>
+                  <label className="block font-bold uppercase mb-1">Exclusive Type</label>
+                  <select value={v.exclusiveType || 'None'} onChange={e => actions.updateSongVersion(song.id, v.id, { exclusiveType: e.target.value })} className={cn("w-full px-2 py-1", THEME.punk.input)}>
+                    {EXCLUSIVITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold uppercase mb-1">Excl. Start</label>
+                  <input type="date" value={v.exclusiveStartDate || ''} onChange={e => actions.updateSongVersion(song.id, v.id, { exclusiveStartDate: e.target.value })} className={cn("w-full px-2 py-1", THEME.punk.input)} />
+                </div>
+                <div>
+                  <label className="block font-bold uppercase mb-1">Excl. End</label>
+                  <input type="date" value={v.exclusiveEndDate || ''} onChange={e => actions.updateSongVersion(song.id, v.id, { exclusiveEndDate: e.target.value })} className={cn("w-full px-2 py-1", THEME.punk.input)} />
+                </div>
+              </div>
+              
+              {/* Video Type Checkboxes - Phase 1 */}
+              <div className="mb-3 p-2 bg-gray-50 border border-black">
+                <div className="text-xs font-bold uppercase mb-2">Video Types</div>
+                <div className="flex flex-wrap gap-3 text-xs">
+                  {[
+                    { key: 'lyric', label: 'Lyric Video' },
+                    { key: 'enhancedLyric', label: 'Enhanced Lyric' },
+                    { key: 'music', label: 'Music Video' },
+                    { key: 'visualizer', label: 'Visualizer' },
+                    { key: 'custom', label: 'Custom' }
+                  ].map(type => (
+                    <label key={type.key} className="flex items-center gap-1">
+                      <input 
+                        type="checkbox" 
+                        checked={v.videoTypes?.[type.key] || false} 
+                        onChange={e => actions.updateSongVersion(song.id, v.id, { 
+                          videoTypes: { ...(v.videoTypes || {}), [type.key]: e.target.checked } 
+                        })} 
+                        className="w-4 h-4"
+                      />
+                      {type.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Instruments */}
+              <div className="mb-3">
+                <label className="block text-xs font-bold uppercase mb-1">Instruments</label>
+                <input value={(v.instruments || []).join(', ')} onChange={e => actions.updateSongVersion(song.id, v.id, { instruments: e.target.value.split(',').map(i => i.trim()).filter(Boolean) })} className={cn("w-full px-2 py-1 text-sm", THEME.punk.input)} placeholder="guitar, synth, drums" />
+              </div>
+              
+              {/* Multi-release linking */}
+              <div className="flex flex-wrap gap-2 items-center text-xs mb-3">
                 <span className="font-bold">Releases:</span>
                 <select onChange={e => actions.attachVersionToRelease(song.id, v.id, e.target.value, data.releases.find(r => r.id === e.target.value)?.releaseDate)} className={cn("px-2 py-1 text-xs", THEME.punk.input)} value="">
                   <option value="">Attach to release...</option>
@@ -315,9 +375,11 @@ export const SongDetailView = ({ song, onBack }) => {
                   );
                 })}
               </div>
-              <div className="mt-2 space-y-2">
-                <div className="text-xs font-bold uppercase">Musicians</div>
-                <div className="flex flex-wrap gap-2">
+              
+              {/* Musicians */}
+              <div className="mb-3">
+                <div className="text-xs font-bold uppercase mb-2">Musicians</div>
+                <div className="flex flex-wrap gap-2 mb-2">
                   <select value={newVersionMusicians[v.id]?.memberId || ''} onChange={e => setNewVersionMusicians(prev => ({ ...prev, [v.id]: { ...(prev[v.id] || {}), memberId: e.target.value } }))} className={cn("px-2 py-1 text-xs", THEME.punk.input)}>
                     <option value="">Select Member</option>
                     {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -342,6 +404,43 @@ export const SongDetailView = ({ song, onBack }) => {
                   })}
                 </div>
               </div>
+              
+              {/* Version Tasks (for non-core versions) */}
+              {v.id !== 'core' && (v.tasks || []).length > 0 && (
+                <div className="mt-3 border-t border-black pt-3">
+                  <div className="text-xs font-bold uppercase mb-2">Version Tasks</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-gray-100">
+                          <th className="p-1 text-left">Type</th>
+                          <th className="p-1 text-left">Date</th>
+                          <th className="p-1 text-left">Status</th>
+                          <th className="p-1 text-right">Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(v.tasks || []).map(task => (
+                          <tr key={task.id} className="border-b border-gray-200">
+                            <td className="p-1 font-bold">{task.type}</td>
+                            <td className="p-1">
+                              <input type="date" value={task.date || ''} onChange={e => actions.updateVersionTask(song.id, v.id, task.id, { date: e.target.value })} className="border border-black p-1 text-xs w-28" />
+                            </td>
+                            <td className="p-1">
+                              <select value={task.status || 'Not Started'} onChange={e => actions.updateVersionTask(song.id, v.id, task.id, { status: e.target.value })} className="border border-black p-1 text-xs">
+                                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </td>
+                            <td className="p-1 text-right">
+                              <input type="number" value={task.estimatedCost || 0} onChange={e => actions.updateVersionTask(song.id, v.id, task.id, { estimatedCost: parseFloat(e.target.value) || 0 })} className="border border-black p-1 text-xs w-16 text-right" />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
