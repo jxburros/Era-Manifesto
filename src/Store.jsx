@@ -271,7 +271,7 @@ export const recalculateReleaseTasks = (existingTasks, releaseDate) => {
 
 export const StoreProvider = ({ children }) => {
   const [mode, setMode] = useState('loading');
-  const [data, setData] = useState({ 
+  const [data, setData] = useState({
     tasks: [],
     photos: [],
     vendors: [],
@@ -285,7 +285,9 @@ export const StoreProvider = ({ children }) => {
     globalTasks: [],
     releases: [],
     // Phase 2: Standalone videos
-    standaloneVideos: []
+    standaloneVideos: [],
+    templates: [],
+    auditLog: []
   });
   const [user, setUser] = useState(null);
   const [db, setDb] = useState(null);
@@ -426,6 +428,19 @@ export const StoreProvider = ({ children }) => {
   }, [data.tasks, data.misc, data.songs, data.globalTasks, data.releases]);
 
   const actions = {
+     logAudit: (action, entityType, entityId, metadata = {}) => {
+        const actor = data.settings?.artistName || 'System';
+        const entry = {
+          id: crypto.randomUUID(),
+          action,
+          entityType,
+          entityId,
+          actor,
+          timestamp: new Date().toISOString(),
+          ...metadata
+        };
+        setData(prev => ({ ...prev, auditLog: [entry, ...(prev.auditLog || [])].slice(0, 200) }));
+     },
      add: async (col, item) => {
         const colKey = col === 'misc_expenses' ? 'misc' : col;
         if (mode === 'cloud') await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, `album_${col}`), { ...item, createdAt: serverTimestamp() });
@@ -440,14 +455,48 @@ export const StoreProvider = ({ children }) => {
      },
      delete: async (col, id) => {
          const colKey = col === 'misc_expenses' ? 'misc' : col;
+         actions.logAudit('delete', colKey, id);
          if (mode === 'cloud') await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, `album_${col}`, id));
          else setData(p => {
              return {...p, [colKey]: (p[colKey] || []).filter(i => i.id !== id)};
          });
      },
+     archiveItem: async (col, id, reason = '') => {
+        const colKey = col === 'misc_expenses' ? 'misc' : col;
+        const actor = data.settings?.artistName || 'System';
+        const payload = { archived: true, isArchived: true, archivedAt: new Date().toISOString(), archivedBy: actor, archiveReason: reason };
+        actions.logAudit('archive', colKey, id, { reason });
+        if (mode === 'cloud') {
+          await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, `album_${col}`, id), { ...payload, archivedAt: serverTimestamp() });
+        } else {
+          setData(p => ({
+            ...p,
+            [colKey]: (p[colKey] || []).map(i => i.id === id ? { ...i, ...payload } : i)
+          }));
+        }
+     },
+     restoreItem: async (col, id) => {
+        const colKey = col === 'misc_expenses' ? 'misc' : col;
+        const payload = { archived: false, isArchived: false, restoredAt: new Date().toISOString() };
+        actions.logAudit('restore', colKey, id);
+        if (mode === 'cloud') {
+          await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, `album_${col}`, id), payload);
+        } else {
+          setData(p => ({
+            ...p,
+            [colKey]: (p[colKey] || []).map(i => i.id === id ? { ...i, ...payload } : i)
+          }));
+        }
+     },
      saveSettings: async (newSettings) => {
          if (mode === 'cloud') await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_tasks', 'settings'), newSettings, { merge: true });
          else setData(p => ({...p, settings: {...p.settings, ...newSettings}}));
+     },
+     runMigration: async (notes = '') => {
+        actions.logAudit('migration', 'system', 'onboarding', { notes });
+        const marker = { migrationRanAt: new Date().toISOString(), migrationNotes: notes, lastBackup: data.settings?.lastBackup || '' };
+        await actions.saveSettings(marker);
+        return marker;
      },
      connectCloud: (config) => { localStorage.setItem('at_firebase_config', JSON.stringify(config)); window.location.reload(); },
      disconnect: () => { localStorage.removeItem('at_firebase_config'); window.location.reload(); },
