@@ -178,7 +178,7 @@ export const SongDetailView = ({ song, onBack }) => {
         </button>
       </div>
 
-      {/* Basic Information Section (2.2.1) */}
+      {/* Basic Information Section (2.2.1) - Per APP ARCHITECTURE.txt Section 5.1 */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Basic Information</h3>
         <div className="grid md:grid-cols-2 gap-4">
@@ -191,6 +191,15 @@ export const SongDetailView = ({ song, onBack }) => {
             <select value={form.category || 'Album'} onChange={e => { handleFieldChange('category', e.target.value); }} onBlur={handleSave} className={cn("w-full", THEME.punk.input)}>
               {SONG_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+          </div>
+          {/* Writers and Composers per APP ARCHITECTURE.txt Section 5.1 */}
+          <div>
+            <label className="block text-xs font-bold uppercase mb-1">Writers</label>
+            <input value={(form.writers || []).join(', ')} onChange={e => handleFieldChange('writers', e.target.value.split(',').map(w => w.trim()).filter(Boolean))} onBlur={handleSave} placeholder="Writer names (comma-separated)" className={cn("w-full", THEME.punk.input)} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase mb-1">Composers</label>
+            <input value={(form.composers || []).join(', ')} onChange={e => handleFieldChange('composers', e.target.value.split(',').map(c => c.trim()).filter(Boolean))} onBlur={handleSave} placeholder="Composer names (comma-separated)" className={cn("w-full", THEME.punk.input)} />
           </div>
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Release Date</label>
