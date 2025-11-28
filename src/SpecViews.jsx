@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useStore, STATUS_OPTIONS, SONG_CATEGORIES, RELEASE_TYPES, VERSION_TYPES, GLOBAL_TASK_CATEGORIES, EXCLUSIVITY_OPTIONS, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence } from './Store';
+import { useStore, STATUS_OPTIONS, SONG_CATEGORIES, RELEASE_TYPES, VERSION_TYPES, GLOBAL_TASK_CATEGORIES, EXCLUSIVITY_OPTIONS, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence, getPrimaryDate, getTaskDueDate } from './Store';
 import { THEME, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 import { ItemCard, ItemRow, ItemTimelineEntry, DetailPane } from './ItemComponents';
@@ -11,6 +11,15 @@ export const SongListView = ({ onSelectSong }) => {
   const [sortDir, setSortDir] = useState('asc');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterSingles, setFilterSingles] = useState(false);
+
+  const toggleSort = (field) => {
+    if (sortBy === field) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(field); setSortDir('asc'); }
+  };
+
+  const SortIcon = ({ field }) => (
+    sortBy === field ? (sortDir === 'asc' ? '↑' : '↓') : ''
+  );
 
   const songProgress = (song) => {
     const versionTasks = (song.versions || []).flatMap(v => [...(v.tasks || []), ...(v.customTasks || [])]);
