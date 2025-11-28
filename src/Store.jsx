@@ -539,6 +539,7 @@ const propagateSongMetadata = (song) => {
 
 // Migration function for legacy data - returns data in expected format
 const migrateLegacyData = (data) => {
+  if (!data) return { items: [], tasks: [] };
   return {
     items: data.items || [],
     tasks: data.tasks || []

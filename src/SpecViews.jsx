@@ -18,7 +18,7 @@ export const SongListView = ({ onSelectSong }) => {
   };
 
   const SortIcon = ({ field }) => (
-    sortBy === field ? (sortDir === 'asc' ? '↑' : '↓') : ''
+    <span>{sortBy === field ? (sortDir === 'asc' ? '↑' : '↓') : ''}</span>
   );
 
   const songProgress = (song) => {
