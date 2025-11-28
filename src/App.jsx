@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from './Store';
 import { Sidebar, Editor, Icon } from './Components';
 import { ListView, CalendarView, GalleryView, TeamView, MiscView, ArchiveView, ActiveView, SettingsView } from './Views';
@@ -14,6 +14,15 @@ function AppInner() {
   const { data } = useStore();
   const settings = data.settings || {};
   const isDark = settings.themeMode === 'dark';
+
+  // Phase 10: Apply dark class to html element for Tailwind dark mode
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
 
   // Handle song selection
   const handleSelectSong = (song) => {
@@ -53,8 +62,8 @@ function AppInner() {
           <button
             onClick={() => setSidebarOpen(true)}
             className={cn(
-              "md:hidden fixed top-4 left-4 z-30 p-2 border-4 border-black shadow-lg",
-              isDark ? "bg-slate-900 text-slate-50" : "bg-white text-slate-900"
+              "md:hidden fixed top-4 left-4 z-30 p-2 border-4 shadow-lg",
+              isDark ? "bg-slate-800 text-slate-50 border-slate-600" : "bg-white text-slate-900 border-black"
             )}
           >
             <Icon name="Menu" />
