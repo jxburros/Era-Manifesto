@@ -10,6 +10,28 @@ export const useStore = () => useContext(StoreContext);
 // Status enum for consistency across all entities
 export const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Done', 'Delayed'];
 
+export const STATUS_POINTS = {
+  'Done': 1,
+  'In Progress': 0.5,
+  'Delayed': 0,
+  'Not Started': 0,
+  default: 0
+};
+
+export const getStatusPoints = (status) => {
+  if (!status) return 0;
+  return STATUS_POINTS[status] ?? STATUS_POINTS.default;
+};
+
+export const calculateTaskProgress = (tasks = []) => {
+  if (!tasks.length) return { pointsEarned: 0, totalTasks: 0, progress: 0 };
+
+  const pointsEarned = tasks.reduce((sum, task) => sum + getStatusPoints(task.status), 0);
+  const progress = Math.round((pointsEarned / tasks.length) * 100);
+
+  return { pointsEarned, totalTasks: tasks.length, progress };
+};
+
 // Song categories - DEPRECATED: Phase 0 removes category-based filtering
 // Keeping for backwards compatibility but not used in new features
 export const SONG_CATEGORIES = ['Album', 'Bonus', 'Christmas EP', 'EP', 'Other'];
@@ -124,18 +146,21 @@ export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = []) =
 };
 
 // Compute effective cost with precedence: paid > quoted > estimated
-export const getEffectiveCost = (entity = {}) => {
-  if (entity.paidCost !== undefined && entity.paidCost > 0) return entity.paidCost;
-  if (entity.quotedCost !== undefined && entity.quotedCost > 0) return entity.quotedCost;
-  return entity.estimatedCost || 0;
+export const resolveCostPrecedence = (entity = {}) => {
+  const actual = entity.actualCost || 0;
+  const paid = entity.paidCost || 0;
+  const partial = entity.partially_paid || entity.partiallyPaidAmount || entity.partialPaidCost || 0;
+  const quoted = entity.quotedCost || 0;
+  const estimated = entity.estimatedCost || 0;
+
+  if (actual > 0) return { value: actual, source: 'actual' };
+  if (paid > 0) return { value: paid, source: 'paid' };
+  if (partial > 0) return { value: partial, source: 'partially_paid' };
+  if (quoted > 0) return { value: quoted, source: 'quoted' };
+  return { value: estimated, source: 'estimated' };
 };
 
-// Normalize legacy cost fields into the Item/Task cost envelope
-const summarizeLegacyCost = (entity = {}, amountKey = 'amount') => ({
-  estimated: entity.estimatedCost || 0,
-  quoted: entity.quotedCost || 0,
-  paid: entity.paidCost || entity.actualCost || (amountKey && entity[amountKey]) || 0
-});
+export const getEffectiveCost = (entity = {}) => resolveCostPrecedence(entity).value;
 
 // Exclusivity options for availability windows
 export const EXCLUSIVITY_OPTIONS = ['None', 'Platform Exclusive', 'Website Only', 'Radio Only', 'Timed Exclusive'];
