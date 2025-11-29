@@ -3172,6 +3172,29 @@ export const FinancialsView = () => {
       }
     });
     
+    // Per APP ARCHITECTURE.txt Section 1.2: Expenses as Item type
+    (data.expenses || []).forEach(expense => {
+      if (expense.isArchived) return;
+      if (filterItemType !== 'all' && filterItemType !== 'expense') return;
+      const expenseCost = getCostValue(expense);
+      if (expenseCost > 0 || (costMode === 'effective' && getEffectiveCost(expense) > 0)) {
+        items.push({
+          id: `expense-${expense.id}`,
+          name: expense.name,
+          source: 'Expense',
+          sourceId: expense.id,
+          itemType: 'expense',
+          estimatedCost: expense.estimatedCost || 0,
+          quotedCost: expense.quotedCost || 0,
+          paidCost: expense.paidCost || 0,
+          effectiveCost: getEffectiveCost(expense),
+          date: expense.date,
+          eraIds: expense.eraIds,
+          stageIds: expense.stageIds
+        });
+      }
+    });
+    
     return items.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   }, [data, filterStage, filterEra, filterRelease, filterSong, filterItemType, costMode, getCostValue]);
   
@@ -3256,6 +3279,7 @@ export const FinancialsView = () => {
               <option value="release">Releases</option>
               <option value="global">Global Tasks</option>
               <option value="event">Events</option>
+              <option value="expense">Expenses</option>
               <option value="task">Tasks</option>
             </select>
           </div>
@@ -3353,6 +3377,7 @@ export const FinancialsView = () => {
                     item.source.includes('Video') ? "bg-orange-100" :
                     item.source.includes('Global') ? "bg-yellow-100" :
                     item.source.includes('Event') ? "bg-pink-100" :
+                    item.source.includes('Expense') ? "bg-purple-100" :
                     "bg-gray-100"
                   )}>
                     {item.source}
