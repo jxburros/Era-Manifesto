@@ -1832,6 +1832,18 @@ export const StoreProvider = ({ children }) => {
          setData(p => ({...p, globalTasks: (p.globalTasks || []).filter(t => t.id !== taskId)}));
        }
      },
+
+     // Archive global task - Following unified Item/Page architecture
+     archiveGlobalTask: async (taskId) => {
+       if (mode === 'cloud') {
+         await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_globalTasks', taskId), { isArchived: true });
+       } else {
+         setData(p => ({
+           ...p,
+           globalTasks: (p.globalTasks || []).map(t => t.id === taskId ? { ...t, isArchived: true } : t)
+         }));
+       }
+     },
      
      // Per APP ARCHITECTURE.txt Section 5.5: Shortcut to create Standalone Task with Team Member pre-filled
      createTaskForTeamMember: async (memberId, taskData = {}) => {
@@ -2484,6 +2496,68 @@ export const StoreProvider = ({ children }) => {
       setData(prev => ({
         ...prev,
         standaloneVideos: (prev.standaloneVideos || []).filter(v => v.id !== videoId)
+      }));
+    },
+
+    // Add custom task to standalone video - Following unified Task system
+    addStandaloneVideoCustomTask: async (videoId, task) => {
+      const newTask = {
+        id: crypto.randomUUID(),
+        ...task,
+        status: task.status || 'Not Started'
+      };
+      setData(prev => ({
+        ...prev,
+        standaloneVideos: (prev.standaloneVideos || []).map(v =>
+          v.id === videoId ? { ...v, customTasks: [...(v.customTasks || []), newTask] } : v
+        )
+      }));
+      return newTask;
+    },
+
+    // Delete custom task from standalone video
+    deleteStandaloneVideoCustomTask: async (videoId, taskId) => {
+      setData(prev => ({
+        ...prev,
+        standaloneVideos: (prev.standaloneVideos || []).map(v =>
+          v.id === videoId ? { ...v, customTasks: (v.customTasks || []).filter(t => t.id !== taskId) } : v
+        )
+      }));
+    },
+
+    // Add custom task to song video - Following unified Task system
+    addSongVideoCustomTask: async (songId, videoId, task) => {
+      const newTask = {
+        id: crypto.randomUUID(),
+        ...task,
+        status: task.status || 'Not Started'
+      };
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(s =>
+          s.id === songId ? {
+            ...s,
+            videos: (s.videos || []).map(v =>
+              v.id === videoId ? { ...v, customTasks: [...(v.customTasks || []), newTask] } : v
+            )
+          } : s
+        )
+      }));
+      return newTask;
+    },
+
+    // Delete custom task from song video
+    deleteSongVideoCustomTask: async (songId, videoId, taskId) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(s =>
+          s.id === songId ? {
+            ...s,
+            videos: (s.videos || []).map(v =>
+              v.id === videoId ? { ...v, customTasks: (v.customTasks || []).filter(t => t.id !== taskId) } : v
+            )
+          } : s
+        )
       }));
     },
      

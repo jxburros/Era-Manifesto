@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from './Store';
 import { Sidebar, Editor, Icon } from './Components';
 import { ListView, CalendarView, GalleryView, TeamView, MiscView, ArchiveView, ActiveView, SettingsView } from './Views';
-import { SongListView, SongDetailView, GlobalTasksView, ReleasesListView, ReleaseDetailView, CombinedTimelineView, TaskDashboardView, VideosView, FinancialsView, ProgressView } from './SpecViews';
+import { SongListView, SongDetailView, ReleasesListView, ReleaseDetailView, CombinedTimelineView, TaskDashboardView, FinancialsView, ProgressView, EventsListView, EventDetailView, ExpensesListView, ExpenseDetailView, VideosListView, VideoDetailView, GlobalTasksListView, GlobalTaskDetailView } from './SpecViews';
 import { THEME, cn } from './utils';
 
 function AppInner() {
@@ -11,6 +11,10 @@ function AppInner() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedSong, setSelectedSong] = useState(null);
   const [selectedRelease, setSelectedRelease] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [selectedGlobalTask, setSelectedGlobalTask] = useState(null);
   const { data } = useStore();
   const settings = data.settings || {};
   const isDark = settings.themeMode === 'dark';
@@ -36,6 +40,30 @@ function AppInner() {
     setTab('releaseDetail');
   };
 
+  // Handle event selection
+  const handleSelectEvent = (event) => {
+    setSelectedEvent(event);
+    setTab('eventDetail');
+  };
+
+  // Handle expense selection
+  const handleSelectExpense = (expense) => {
+    setSelectedExpense(expense);
+    setTab('expenseDetail');
+  };
+
+  // Handle video selection - Following unified Item/Page architecture
+  const handleSelectVideo = (video) => {
+    setSelectedVideo(video);
+    setTab('videoDetail');
+  };
+
+  // Handle global task selection - Following unified Item/Page architecture
+  const handleSelectGlobalTask = (task) => {
+    setSelectedGlobalTask(task);
+    setTab('globalTaskDetail');
+  };
+
   return (
     <div
       className={cn(
@@ -48,7 +76,7 @@ function AppInner() {
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
         activeTab={tab}
-        setActiveTab={(t) => { setTab(t); setSelectedSong(null); setSelectedRelease(null); }}
+        setActiveTab={(t) => { setTab(t); setSelectedSong(null); setSelectedRelease(null); setSelectedEvent(null); setSelectedExpense(null); setSelectedVideo(null); setSelectedGlobalTask(null); }}
       />
 
       <main
@@ -71,14 +99,31 @@ function AppInner() {
         )}
 
         <div className="flex-1 overflow-y-auto pt-16 md:pt-0">
-          {/* New Spec Views */}
+          {/* Songs - Following unified Item/Page architecture */}
           {tab === 'songs' && <SongListView onSelectSong={handleSelectSong} />}
           {tab === 'songDetail' && selectedSong && <SongDetailView song={selectedSong} onBack={() => { setSelectedSong(null); setTab('songs'); }} />}
-          {tab === 'videos' && <VideosView onSelectSong={handleSelectSong} />}
-          {tab === 'globalTasks' && <GlobalTasksView />}
+          
+          {/* Videos - Following unified Item/Page architecture */}
+          {tab === 'videos' && <VideosListView onSelectVideo={handleSelectVideo} />}
+          {tab === 'videoDetail' && selectedVideo && <VideoDetailView video={selectedVideo} onBack={() => { setSelectedVideo(null); setTab('videos'); }} />}
+          
+          {/* Global Tasks - Following unified Item/Page architecture */}
+          {tab === 'globalTasks' && <GlobalTasksListView onSelectTask={handleSelectGlobalTask} />}
+          {tab === 'globalTaskDetail' && selectedGlobalTask && <GlobalTaskDetailView task={selectedGlobalTask} onBack={() => { setSelectedGlobalTask(null); setTab('globalTasks'); }} />}
+          
+          {/* Releases - Following unified Item/Page architecture */}
           {tab === 'releases' && <ReleasesListView onSelectRelease={handleSelectRelease} />}
           {tab === 'releaseDetail' && selectedRelease && <ReleaseDetailView release={selectedRelease} onBack={() => { setSelectedRelease(null); setTab('releases'); }} />}
+          
           {tab === 'timeline' && <CombinedTimelineView />}
+          
+          {/* Events - Following unified Item/Page architecture */}
+          {tab === 'events' && <EventsListView onSelectEvent={handleSelectEvent} />}
+          {tab === 'eventDetail' && selectedEvent && <EventDetailView event={selectedEvent} onBack={() => { setSelectedEvent(null); setTab('events'); }} />}
+          
+          {/* Expenses - Following unified Item/Page architecture */}
+          {tab === 'expenses' && <ExpensesListView onSelectExpense={handleSelectExpense} />}
+          {tab === 'expenseDetail' && selectedExpense && <ExpenseDetailView expense={selectedExpense} onBack={() => { setSelectedExpense(null); setTab('expenses'); }} />}
           
           {/* Task Dashboard - replaces confusing Plan view */}
           {tab === 'dashboard' && <TaskDashboardView />}
