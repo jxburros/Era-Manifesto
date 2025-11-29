@@ -59,28 +59,36 @@ export const VIDEO_TYPES = ['None', 'Lyric', 'Enhanced', 'Enhanced + Loop', 'Ful
 
 // Unified Item schema - per APP ARCHITECTURE.txt Section 6
 // All Items (Song, Version, Video, Release, Event, Standalone Task Category, Global Task Item) share this base
+// Unified Item schema - per APP ARCHITECTURE.txt Section 6
+// All Items (Song, Version, Video, Release, Event, Standalone Task Category, Global Task Item) share this base
+// Legacy aliases are maintained for backward compatibility with existing UI code
 export const createUnifiedItem = (overrides = {}) => ({
   // Core properties per Section 6: Item (base)
   id: overrides.id || crypto.randomUUID(),
   type: overrides.type || 'generic', // 'song', 'version', 'video', 'release', 'event', 'category', 'globalTask'
   name: overrides.name || overrides.title || '', // name/title
   description: overrides.description || overrides.notes || '',
+  // Primary date - unified field name, with legacy alias fallbacks for input
   primary_date: overrides.primary_date || overrides.primaryDate || overrides.releaseDate || overrides.date || '',
-  // Metadata arrays per Section 6
+  // Metadata arrays per Section 6 - underscore_case as primary
   era_ids: overrides.era_ids || overrides.eraIds || [],
   tag_ids: overrides.tag_ids || overrides.tagIds || [],
   stage_ids: overrides.stage_ids || overrides.stageIds || [],
   team_member_ids: overrides.team_member_ids || overrides.teamMemberIds || [],
-  // Cost summary (computed from tasks, but can be set directly)
-  estimatedCost: overrides.estimatedCost || 0,
-  quotedCost: overrides.quotedCost || 0,
-  paidCost: overrides.paidCost || 0,
-  // Legacy aliases for backwards compatibility
+  // Cost fields - using underscore_case as primary per unified schema
+  estimated_cost: overrides.estimated_cost ?? overrides.estimatedCost ?? 0,
+  quoted_cost: overrides.quoted_cost ?? overrides.quotedCost ?? 0,
+  amount_paid: overrides.amount_paid ?? overrides.paidCost ?? overrides.amountPaid ?? 0,
+  // Legacy camelCase aliases - required for backward compatibility with existing UI components
+  // (Views.jsx, SpecViews.jsx, ItemComponents.jsx all use camelCase field names)
   primaryDate: overrides.primaryDate || overrides.primary_date || overrides.releaseDate || overrides.date || '',
   eraIds: overrides.eraIds || overrides.era_ids || [],
   tagIds: overrides.tagIds || overrides.tag_ids || [],
   stageIds: overrides.stageIds || overrides.stage_ids || [],
   teamMemberIds: overrides.teamMemberIds || overrides.team_member_ids || [],
+  estimatedCost: overrides.estimatedCost ?? overrides.estimated_cost ?? 0,
+  quotedCost: overrides.quotedCost ?? overrides.quoted_cost ?? 0,
+  paidCost: overrides.paidCost ?? overrides.amount_paid ?? overrides.amountPaid ?? 0,
   // Extended metadata
   metadata: overrides.metadata || {},
   ...overrides
@@ -134,13 +142,13 @@ export const normalizeToUnifiedTask = (task = {}, parentType = null) => ({
   parentType: parentType || task.parentType || null,
   isOverridden: task.isOverridden || false,
   isArchived: task.isArchived || false,
-  // Legacy aliases
-  parentId: task.parentId || task.parent_item_id || task.parentItemId || null,
-  parentItemId: task.parentItemId || task.parent_item_id || task.parentId || null,
+  // Legacy aliases - parent_item_id is source of truth for parent reference
+  parentId: task.parent_item_id || task.parentItemId || task.parentId || null,
+  parentItemId: task.parent_item_id || task.parentItemId || task.parentId || null,
   title: task.title || task.name || task.type || task.taskName || '',
   description: task.description || task.notes || '',
-  date: task.date || task.due_date || task.dueDate || '',
-  dueDate: task.dueDate || task.due_date || task.date || '',
+  date: task.due_date || task.dueDate || task.date || '',
+  dueDate: task.due_date || task.dueDate || task.date || '',
   estimatedCost: task.estimatedCost ?? task.estimated_cost ?? 0,
   quotedCost: task.quotedCost ?? task.quoted_cost ?? 0,
   paidCost: task.paidCost ?? task.amount_paid ?? task.amountPaid ?? 0,
@@ -178,13 +186,14 @@ export const createUnifiedTask = (overrides = {}) => ({
   parentType: overrides.parentType || null,
   isOverridden: overrides.isOverridden || false,
   isArchived: overrides.isArchived || false,
-  // Legacy aliases for backwards compatibility
-  parentId: overrides.parentId || overrides.parent_item_id || overrides.parentItemId || null,
-  parentItemId: overrides.parentItemId || overrides.parent_item_id || overrides.parentId || null,
+  // Legacy aliases for backwards compatibility with existing UI
+  // parent_item_id is the source of truth for parent reference
+  parentId: overrides.parent_item_id || overrides.parentItemId || overrides.parentId || null,
+  parentItemId: overrides.parent_item_id || overrides.parentItemId || overrides.parentId || null,
   title: overrides.title || overrides.name || overrides.type || '',
   description: overrides.description || overrides.notes || '',
-  date: overrides.date || overrides.due_date || overrides.dueDate || '',
-  dueDate: overrides.dueDate || overrides.due_date || overrides.date || '',
+  date: overrides.due_date || overrides.dueDate || overrides.date || '',
+  dueDate: overrides.due_date || overrides.dueDate || overrides.date || '',
   estimatedCost: overrides.estimatedCost ?? overrides.estimated_cost ?? 0,
   quotedCost: overrides.quotedCost ?? overrides.quoted_cost ?? 0,
   paidCost: overrides.paidCost ?? overrides.amount_paid ?? overrides.amountPaid ?? 0,
