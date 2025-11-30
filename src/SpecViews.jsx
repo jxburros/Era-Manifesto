@@ -7340,8 +7340,8 @@ export const GlobalTasksListView = ({ onSelectTask }) => {
                 <tr><td colSpan="6" className="p-10 text-center opacity-50">No tasks yet. Click Add Task to create one.</td></tr>
               ) : (
                 tasks.map(task => (
-                  <tr key={task.id} className={cn("border-b border-gray-200 hover:bg-yellow-50", task.isArchived && "opacity-50")}>
-                    <td className="p-3 font-bold cursor-pointer" onClick={() => onSelectTask && onSelectTask(task)}>{task.taskName}</td>
+                  <tr key={task.id} className={cn("border-b border-gray-200 hover:bg-yellow-50 cursor-pointer", task.isArchived && "opacity-50")} onClick={() => onSelectTask && onSelectTask(task)}>
+                    <td className="p-3 font-bold">{task.taskName}</td>
                     <td className="p-3">{task.category || '-'}</td>
                     <td className="p-3">{task.date || '-'}</td>
                     <td className="p-3">{task.status}</td>
