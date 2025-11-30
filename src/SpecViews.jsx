@@ -1064,7 +1064,44 @@ export const SongDetailView = ({ song, onBack }) => {
                       </div>
                     </div>
                     
-                    {/* Notes */}
+                    {/* Era per spec Section C */}
+                    <div className="mb-4">
+                      <label className="block text-xs font-bold uppercase mb-1">Era</label>
+                      <select 
+                        value={(v.eraIds || [])[0] || ''} 
+                        onChange={e => actions.updateSongVersion(song.id, v.id, { eraIds: e.target.value ? [e.target.value] : [] })}
+                        className={cn("w-full", THEME.punk.input)}
+                      >
+                        <option value="">No Era</option>
+                        {(data.eras || []).map(era => <option key={era.id} value={era.id}>{era.name}</option>)}
+                      </select>
+                    </div>
+                    
+                    {/* Stage per spec Section C */}
+                    <div className="mb-4">
+                      <label className="block text-xs font-bold uppercase mb-1">Stage</label>
+                      <select 
+                        value={(v.stageIds || [])[0] || ''} 
+                        onChange={e => actions.updateSongVersion(song.id, v.id, { stageIds: e.target.value ? [e.target.value] : [] })}
+                        className={cn("w-full", THEME.punk.input)}
+                      >
+                        <option value="">No Stage</option>
+                        {(data.stages || []).map(stage => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
+                      </select>
+                    </div>
+                    
+                    {/* Tags per spec Section C */}
+                    <div className="mb-4">
+                      <label className="block text-xs font-bold uppercase mb-1">Tags</label>
+                      <input 
+                        value={(v.tags || []).join(', ')} 
+                        onChange={e => actions.updateSongVersion(song.id, v.id, { tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} 
+                        placeholder="comma-separated tags" 
+                        className={cn("w-full", THEME.punk.input)} 
+                      />
+                    </div>
+                    
+                    {/* Notes per spec Section C */}
                     <div>
                       <label className="block text-xs font-bold uppercase mb-1">Notes</label>
                       <textarea value={v.notes || ''} onChange={e => actions.updateSongVersion(song.id, v.id, { notes: e.target.value })} className={cn("w-full h-16", THEME.punk.input)} placeholder="Mix differences, edits, era..." />
@@ -1291,6 +1328,7 @@ export const SongDetailView = ({ song, onBack }) => {
                     </div>
                   </div>
                 </div>
+                <button onClick={() => handleOpenTaskEdit(task, { type: 'custom' })} className={cn("p-2", THEME.punk.btn, "bg-gray-700 text-white")} title="Edit Task"><Icon name="Edit" size={16} /></button>
                 <button onClick={() => handleDeleteCustomTask(task.id)} className="p-2 text-red-500 hover:bg-red-100"><Icon name="Trash2" size={16} /></button>
               </div>
             ))}
