@@ -2591,23 +2591,6 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
               {(data.tags || []).length === 0 && <span className="text-xs opacity-50">No tags available</span>}
             </div>
           </div>
-          {/* Cost fields */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-1">Estimated Cost</label>
-            <input type="number" value={form.estimatedCost || 0} onChange={e => handleFieldChange('estimatedCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase mb-1">Quoted Cost</label>
-            <input type="number" value={form.quotedCost || 0} onChange={e => handleFieldChange('quotedCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase mb-1">Paid Cost</label>
-            <input type="number" value={form.paidCost || 0} onChange={e => handleFieldChange('paidCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase mb-1">Partial Payment</label>
-            <input type="number" value={form.partially_paid || 0} onChange={e => handleFieldChange('partially_paid', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
-          </div>
           <div className="md:col-span-2">
             <label className="block text-xs font-bold uppercase mb-1">Notes</label>
             <textarea value={form.notes || ''} onChange={e => handleFieldChange('notes', e.target.value)} onBlur={handleSave} className={cn("w-full h-24", THEME.punk.input)} />
@@ -5362,10 +5345,6 @@ export const EventDetailView = ({ event, onBack }) => {
           <div className="md:col-span-2">
             <label className="block text-xs font-bold uppercase mb-1">Notes</label>
             <textarea value={form.notes || ''} onChange={e => handleFieldChange('notes', e.target.value)} onBlur={handleSave} className={cn("w-full h-24", THEME.punk.input)} placeholder="Event notes..." />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs font-bold uppercase mb-1">Description</label>
-            <textarea value={form.description || ''} onChange={e => handleFieldChange('description', e.target.value)} onBlur={handleSave} className={cn("w-full h-24", THEME.punk.input)} placeholder="Public description..." />
           </div>
         </div>
       </div>
