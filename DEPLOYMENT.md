@@ -1,10 +1,10 @@
-# Deployment Guide for Album Tracker
+# Deployment Guide for Era Manifesto
 
-This guide explains how to deploy Album Tracker to various hosting platforms.
+This guide explains how to deploy Era Manifesto to various hosting platforms.
 
 ## Quick Deploy Options
 
-Album Tracker is a static web application built with Vite + React. You can deploy it to:
+Era Manifesto is a static web application built with Vite + React. You can deploy it to:
 
 1. **Firebase Hosting** (Recommended - easy integration with Firebase sync)
 2. **Netlify** (Simple, free, automatic deployments)
@@ -133,7 +133,7 @@ firebase deploy --only hosting
    Add to `package.json`:
    ```json
    {
-     "homepage": "https://YOUR-USERNAME.github.io/AlbumTracker",
+     "homepage": "https://YOUR-USERNAME.github.io/era-manifesto",
      "scripts": {
        "predeploy": "npm run build",
        "deploy": "gh-pages -d dist"
@@ -146,7 +146,7 @@ firebase deploy --only hosting
    Add base path:
    ```javascript
    export default {
-     base: '/AlbumTracker/',
+     base: '/era-manifesto/',
      // ... rest of config
    }
    ```
@@ -176,8 +176,8 @@ A special `deploy` branch has been created with only the essential files needed 
 
 1. **Clone the deploy branch**
    ```bash
-   git clone -b deploy https://github.com/YOUR-USERNAME/AlbumTracker.git album-tracker-deploy
-   cd album-tracker-deploy
+   git clone -b deploy https://github.com/YOUR-USERNAME/era-manifesto.git era-manifesto-deploy
+   cd era-manifesto-deploy
    ```
 
 2. **Install production dependencies only**

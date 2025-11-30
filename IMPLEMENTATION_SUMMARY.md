@@ -144,7 +144,7 @@ Push to main → GitHub Actions → Merge into deploy → Remove dev files → P
 ## File Structure After PR
 
 ```
-AlbumTracker/
+era-manifesto/
 ├── .github/
 │   └── workflows/
 │       └── sync-deploy-branch.yml    # Auto-sync workflow

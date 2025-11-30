@@ -1,17 +1,17 @@
 # Mobile Quick Start Guide 📱
 
-## Access Album Tracker on Your Android Phone
+## Access Era Manifesto on Your Android Phone
 
 ### Method 1: Open in Browser
 1. Open Chrome, Firefox, or your preferred browser on your Android device
-2. Navigate to your deployed Album Tracker URL
+2. Navigate to your deployed Era Manifesto URL
 3. The app is fully responsive and works great on mobile!
 
 ### Method 2: Add to Home Screen (Recommended)
-1. Open the Album Tracker URL in Chrome on your Android device
+1. Open the Era Manifesto URL in Chrome on your Android device
 2. Tap the **menu button** (⋮) in the top-right corner
 3. Select **"Add to Home screen"**
-4. Name it "Album Tracker" or your preferred name
+4. Name it "Era Manifesto" or your preferred name
 5. Tap **"Add"**
 6. The app icon will appear on your home screen like a native app!
 
@@ -20,7 +20,7 @@
 ### First Time Setup
 
 #### On Your PC:
-1. Open Album Tracker
+1. Open Era Manifesto
 2. Go to **Settings** (gear icon in sidebar)
 3. Scroll to **"Cloud Sync (Optional)"**
 4. Click **"Connect Cloud"**
@@ -28,7 +28,7 @@
 6. Click OK
 
 #### On Your Android Phone:
-1. Open Album Tracker (from home screen or browser)
+1. Open Era Manifesto (from home screen or browser)
 2. Tap the **menu** (☰) button to open the sidebar
 3. Tap **Settings**
 4. Scroll to **"Cloud Sync (Optional)"**
@@ -114,4 +114,4 @@ If you encounter issues:
 
 ---
 
-**Enjoy Album Tracker on the go!** 🎵📱
+**Enjoy Era Manifesto on the go!** 🎵📱
