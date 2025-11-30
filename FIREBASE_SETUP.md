@@ -1,6 +1,6 @@
-# Firebase Setup Guide for Album Tracker
+# Firebase Setup Guide for Era Manifesto
 
-This guide will help you set up Firebase to sync your Album Tracker data across multiple devices (PC and Android phone).
+This guide will help you set up Firebase to sync your Era Manifesto data across multiple devices (PC and Android phone).
 
 ## Why Firebase?
 
@@ -19,7 +19,7 @@ Firebase provides real-time cloud synchronization, allowing you to:
 
 1. Go to the [Firebase Console](https://console.firebase.google.com/)
 2. Click "Add project" or "Create a project"
-3. Enter a project name (e.g., "Album Tracker")
+3. Enter a project name (e.g., "Era Manifesto")
 4. (Optional) Enable Google Analytics if you want usage tracking
 5. Click "Create project"
 
@@ -70,7 +70,7 @@ service cloud.firestore {
 2. Click "Project settings"
 3. Scroll down to "Your apps" section
 4. Click the web icon (`</>`) to add a web app
-5. Enter an app nickname (e.g., "Album Tracker Web")
+5. Enter an app nickname (e.g., "Era Manifesto Web")
 6. (Optional) Check "Also set up Firebase Hosting" if you want to deploy online
 7. Click "Register app"
 8. Copy the Firebase configuration object that looks like this:
@@ -86,11 +86,11 @@ service cloud.firestore {
 }
 ```
 
-## Step 6: Connect Album Tracker to Firebase
+## Step 6: Connect Era Manifesto to Firebase
 
 ### On Your PC:
 
-1. Open Album Tracker in your web browser
+1. Open Era Manifesto in your web browser
 2. Click on "Settings" in the sidebar
 3. Scroll down to the "Cloud Sync (Optional)" section
 4. Click "Connect Cloud"
@@ -99,7 +99,7 @@ service cloud.firestore {
 
 ### On Your Android Phone:
 
-1. Open Album Tracker on your phone's web browser
+1. Open Era Manifesto on your phone's web browser
 2. Follow the same steps as above (Settings → Cloud Sync → Connect Cloud)
 3. Paste the same Firebase configuration JSON
 4. Click OK
@@ -159,7 +159,7 @@ If you encounter issues:
 
 ## Mobile-Friendly Tips
 
-The Album Tracker is fully responsive and works great on mobile browsers:
+Era Manifesto is fully responsive and works great on mobile browsers:
 - Use Chrome, Firefox, or Safari on your Android phone
 - Add to Home Screen for a native app experience
 - Works offline with local storage
@@ -167,4 +167,4 @@ The Album Tracker is fully responsive and works great on mobile browsers:
 
 ---
 
-**That's it!** Your Album Tracker is now set up for cross-platform access. Enjoy tracking your album progress from anywhere! 🎵
+**That's it!** Your Era Manifesto is now set up for cross-platform access. Enjoy tracking your album progress from anywhere! 🎵

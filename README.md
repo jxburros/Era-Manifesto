@@ -1,4 +1,4 @@
-# AlbumTracker 🎵
+# Era Manifesto 🎵
 
 A comprehensive web application for tracking album creation and campaign progress. Keep tabs on tasks, budgets, photos, team members, and more—all in one place!
 
@@ -20,8 +20,8 @@ A comprehensive web application for tracking album creation and campaign progres
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/jxburros/AlbumTracker.git
-   cd AlbumTracker
+   git clone https://github.com/jxburros/era-manifesto.git
+   cd era-manifesto
    ```
 
 2. **Install dependencies**
@@ -47,7 +47,7 @@ The built files will be in the `dist/` directory.
 
 ## 📱 Cross-Platform Access
 
-Album Tracker works seamlessly across devices:
+Era Manifesto works seamlessly across devices:
 
 - **Desktop**: Any modern web browser (Chrome, Firefox, Safari, Edge)
 - **Mobile**: Android and iOS browsers
@@ -66,7 +66,7 @@ To access your data across multiple devices:
 
 ## 🌐 Deployment
 
-You can deploy Album Tracker to various platforms:
+You can deploy Era Manifesto to various platforms:
 
 - **Firebase Hosting** (Recommended)
 - **Netlify**
@@ -153,7 +153,7 @@ If you encounter any issues or have questions:
 
 ## 🎵 Made for Musicians
 
-Whether you're tracking an EP, LP, or full album campaign, Album Tracker helps you stay organized and on budget. Focus on making great music while we help you track the details!
+Whether you're tracking an EP, LP, or full album campaign, Era Manifesto helps you stay organized and on budget. Focus on making great music while we help you track the details!
 
 ---
 

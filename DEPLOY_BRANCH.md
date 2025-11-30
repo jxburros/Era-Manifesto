@@ -2,7 +2,7 @@
 
 ## What is the Deploy Branch?
 
-The `deploy` branch is a special branch designed specifically for deployment. It contains only the essential files needed to deploy and run Album Tracker in production, excluding development files and configurations.
+The `deploy` branch is a special branch designed specifically for deployment. It contains only the essential files needed to deploy and run Era Manifesto in production, excluding development files and configurations.
 
 ## How It Works
 
@@ -70,8 +70,8 @@ Many hosting platforms can deploy directly from a GitHub branch:
 
 ```bash
 # Clone only the deploy branch
-git clone -b deploy https://github.com/YOUR-USERNAME/AlbumTracker.git album-tracker-deploy
-cd album-tracker-deploy
+git clone -b deploy https://github.com/YOUR-USERNAME/era-manifesto.git era-manifesto-deploy
+cd era-manifesto-deploy
 
 # Install dependencies
 npm install --production
