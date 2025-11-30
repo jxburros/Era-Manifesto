@@ -1,4 +1,4 @@
-# Album Tracker Roadmap Implementation Plan
+# Era Manifesto Roadmap Implementation Plan
 
 Order check: current phase ordering already aligns with dependencies (data foundations → core functions → visualization → global systems → polish). Proceed sequentially from Phase 0 through Phase 10.
 
