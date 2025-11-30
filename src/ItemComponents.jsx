@@ -133,9 +133,13 @@ export const UniversalTagsPicker = ({ value = [], onChange, tags = [], onCreateT
   
   const handleCreateNew = async () => {
     if (inputValue.trim() && onCreateTag) {
-      const newTag = await onCreateTag({ name: inputValue.trim() });
-      if (newTag) {
-        onChange([...value, newTag.id]);
+      try {
+        const newTag = await onCreateTag({ name: inputValue.trim() });
+        if (newTag) {
+          onChange([...value, newTag.id]);
+        }
+      } catch (error) {
+        console.error('Failed to create tag:', error);
       }
       setInputValue('');
       setShowSuggestions(false);
