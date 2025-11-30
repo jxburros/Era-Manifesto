@@ -2,19 +2,51 @@
 
 This directory contains custom GitHub Agents configured for the Album Tracker project. Each agent is specialized for specific tasks and can collaborate with other agents.
 
+Each agent file uses the `.agent.md` extension and includes YAML frontmatter with configuration options like `name`, `description`, and `tools`.
+
 ## Agent Overview
 
-| Agent | Specialty | When to Use |
-|-------|-----------|-------------|
-| [React Component Expert](react-component-expert.md) | React components, hooks, state | Component creation/modification |
-| [CSS/Tailwind Styling Expert](tailwind-styling-expert.md) | TailwindCSS, theming, responsive | Styling changes, dark mode, responsive design |
-| [Firebase/Backend Expert](firebase-backend-expert.md) | Firebase, data sync, offline-first | Data operations, sync, schema changes |
-| [Testing & Quality Agent](testing-quality-agent.md) | Linting, testing, code quality | Before commits, quality checks |
-| [Documentation Expert](documentation-expert.md) | Docs, comments, READMEs | Documentation updates, code comments |
-| [Architecture Advisor](architecture-advisor.md) | System design, patterns | Major decisions, new features |
-| [Bug Fixer](bug-fixer.md) | Debugging, minimal fixes | Bug reports, issue diagnosis |
-| [Feature Implementation](feature-implementation.md) | Full feature delivery | New feature development |
-| [UI/UX Reviewer](ui-ux-reviewer.md) | Usability, consistency | UI reviews, design feedback |
+| Agent | File | Specialty | When to Use |
+|-------|------|-----------|-------------|
+| React Component Expert | `react-component-expert.agent.md` | React components, hooks, state | Component creation/modification |
+| CSS/Tailwind Styling Expert | `tailwind-styling-expert.agent.md` | TailwindCSS, theming, responsive | Styling changes, dark mode, responsive design |
+| Firebase/Backend Expert | `firebase-backend-expert.agent.md` | Firebase, data sync, offline-first | Data operations, sync, schema changes |
+| Testing & Quality Agent | `testing-quality.agent.md` | Linting, testing, code quality | Before commits, quality checks |
+| Documentation Expert | `documentation-expert.agent.md` | Docs, comments, READMEs | Documentation updates, code comments |
+| Architecture Advisor | `architecture-advisor.agent.md` | System design, patterns | Major decisions, new features |
+| Bug Fixer | `bug-fixer.agent.md` | Debugging, minimal fixes | Bug reports, issue diagnosis |
+| Feature Implementation | `feature-implementation.agent.md` | Full feature delivery | New feature development |
+| UI/UX Reviewer | `ui-ux-reviewer.agent.md` | Usability, consistency | UI reviews, design feedback |
+
+## Agent File Format
+
+Each agent file follows this structure:
+
+```markdown
+---
+name: agent_name
+description: Brief description of the agent's expertise and purpose
+tools:
+  - read
+  - edit
+  - search
+---
+
+# Persona
+[Agent's role and personality]
+
+# Project Context
+[Project-specific information]
+
+# Key Resources
+[Files and documentation to consult]
+
+# Boundaries
+[What the agent should not do]
+
+# Task Approach
+[How the agent should complete tasks]
+```
 
 ## Collaboration Patterns
 
