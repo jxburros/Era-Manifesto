@@ -558,13 +558,12 @@ export const GalleryView = () => {
     const handleDownloadAll = () => {
         const photoCount = data.photos.length;
         data.photos.forEach((photo, index) => {
-            setTimeout(() => {
-                handleDownload(photo);
-                if (index === photoCount - 1) {
-                    alert(`Downloaded ${photoCount} photo${photoCount === 1 ? '' : 's'}`);
-                }
-            }, index * 300); // Stagger downloads
+            setTimeout(() => handleDownload(photo), index * 300); // Stagger downloads
         });
+        // Show confirmation after all downloads are initiated
+        setTimeout(() => {
+            alert(`Downloaded ${photoCount} photo${photoCount === 1 ? '' : 's'}`);
+        }, photoCount * 300);
     };
 
     const handleUpdatePhoto = (photoId, updates) => {
@@ -772,13 +771,12 @@ export const FilesView = () => {
     const handleDownloadAll = () => {
         const fileCount = data.files.length;
         data.files.forEach((file, index) => {
-            setTimeout(() => {
-                handleDownload(file);
-                if (index === fileCount - 1) {
-                    alert(`Downloaded ${fileCount} file${fileCount === 1 ? '' : 's'}`);
-                }
-            }, index * 300); // Stagger downloads
+            setTimeout(() => handleDownload(file), index * 300); // Stagger downloads
         });
+        // Show confirmation after all downloads are initiated
+        setTimeout(() => {
+            alert(`Downloaded ${fileCount} file${fileCount === 1 ? '' : 's'}`);
+        }, fileCount * 300);
     };
 
     const handleUpdateFile = (fileId, updates) => {
