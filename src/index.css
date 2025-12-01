@@ -14,6 +14,23 @@
   --paper: #f8fafc;
 }
 
+.view-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 16px 18px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .view-shell {
+    padding: 20px 24px 72px;
+    gap: 20px;
+  }
+}
+
 body {
   background-color: var(--paper);
   color: var(--ink);

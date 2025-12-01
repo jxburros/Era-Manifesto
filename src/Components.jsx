@@ -52,11 +52,11 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
   const isViewsActive = viewsMenu.some(v => v.id === activeTab);
 
   const MenuButton = ({ item, compact = false }) => (
-    <button 
+    <button
       onClick={() => { setActiveTab(item.id); setIsOpen(false); }}
       className={cn(
-        "w-full flex items-center gap-3 px-4 text-left font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5",
-        compact ? "py-2 text-sm" : "py-3",
+        "w-full flex items-center gap-2 px-3 text-left font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5",
+        compact ? "py-1.5 text-sm" : "py-2.5",
         isDark ? "border-slate-600" : "border-black",
         activeTab === item.id
           ? "bg-[var(--accent)] text-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.35)]"
@@ -89,11 +89,11 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
       <div className="p-4 pb-2">
         <div className="grid grid-cols-2 gap-2">
           {topButtons.map(item => (
-            <button 
+            <button
               key={item.id}
               onClick={() => { setActiveTab(item.id); setIsOpen(false); }}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 p-3 font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5 text-xs",
+                "flex flex-col items-center justify-center gap-1 p-2.5 font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5 text-xs",
                 isDark ? "border-slate-600" : "border-black",
                 activeTab === item.id
                   ? "bg-[var(--accent)] text-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.35)]"
