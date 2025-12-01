@@ -468,6 +468,53 @@ export const SongDetailView = ({ song, onBack }) => {
     return Array.from(categories);
   }, [songTasks]);
 
+  // Calculate overdue tasks for Display Section
+  const overdueTasks = useMemo(() => 
+    allSongTasks.filter(t => t.date && new Date(t.date) < new Date() && t.status !== 'Complete' && t.status !== 'Done'), 
+    [allSongTasks]
+  );
+  const openTasks = useMemo(() => 
+    allSongTasks.filter(t => t.status !== 'Complete' && t.status !== 'Done'), 
+    [allSongTasks]
+  );
+  const costPaidValue = useMemo(() => 
+    allSongTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0), 
+    [allSongTasks]
+  );
+
+  // Display Section - using DisplayInfoSection for consistency
+  const displaySection = (
+    <DisplayInfoSection
+      item={{ ...currentSong, name: currentSong.title }}
+      fields={[
+        { key: 'progress', label: 'Task Progress', bgClass: 'bg-yellow-100', render: () => `${songProgressValue}%` },
+        { key: 'releaseDate', label: 'Release Date', bgClass: 'bg-blue-100', render: () => earliestReleaseDate || form.releaseDate || 'Not Set' },
+        { key: 'versions', label: 'Versions', bgClass: 'bg-gray-100', render: () => (currentSong.versions || []).filter(v => v.id !== 'core').length },
+        { key: 'openTasks', label: 'Open Tasks', bgClass: 'bg-gray-100', render: () => openTasks.length },
+        { key: 'videos', label: 'Videos', bgClass: 'bg-gray-100', render: () => (currentSong.videos || []).length },
+        { key: 'overdueTasks', label: 'Overdue Tasks', bgClass: overdueTasks.length > 0 ? 'bg-red-200' : 'bg-green-100', render: () => overdueTasks.length },
+        { key: 'costPaid', label: 'Cost Paid', bgClass: 'bg-green-100', render: () => formatMoney(costPaidValue) },
+        { key: 'estimatedCost', label: 'Estimated Cost', bgClass: 'bg-yellow-100', render: () => formatMoney(totalCost) },
+        { 
+          key: 'teamMembers',
+          label: 'Team Members on Tasks',
+          colSpan: 4,
+          render: () => assignedTeamMembers.length === 0 ? (
+            <span className="opacity-50">No team members assigned</span>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {assignedTeamMembers.map(m => (
+                <span key={m.id} className="px-2 py-1 bg-purple-100 border-2 border-black text-xs font-bold">
+                  {m.name} {m.isMusician && '🎵'}
+                </span>
+              ))}
+            </div>
+          )
+        }
+      ]}
+    />
+  );
+
   return (
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
@@ -479,96 +526,8 @@ export const SongDetailView = ({ song, onBack }) => {
         </button>
       </div>
 
-      {/* SECTION A: Display-Only Section (per spec order: Song Title, Task Progress, Core Version Release Date, 
-           Number of Versions, Number of Open Tasks, Number of Videos, Overdue Task Indicator, Cost Paid, 
-           Estimated Total Cost, Team Members) */}
-      <div className={cn("p-6 mb-6 bg-gray-50", THEME.punk.card)}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Display Information</h3>
-        
-        {/* Song Title - prominent at top */}
-        <div className="text-2xl font-black mb-4 pb-2 border-b-2 border-gray-300">{currentSong.title || 'Untitled Song'}</div>
-        
-        <div className="grid md:grid-cols-4 gap-4">
-          {/* Task Progress */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Task Progress</label>
-            <div className="px-3 py-2 bg-yellow-100 border-2 border-black text-lg font-black">{songProgressValue}%</div>
-          </div>
-          
-          {/* Core Version Release Date */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Release Date</label>
-            <div className="px-3 py-2 bg-blue-100 border-2 border-black text-sm font-bold">
-              {earliestReleaseDate || form.releaseDate || 'Not Set'}
-            </div>
-          </div>
-          
-          {/* Number of Versions */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Versions</label>
-            <div className="px-3 py-2 bg-gray-100 border-2 border-black text-lg font-black">
-              {(currentSong.versions || []).filter(v => v.id !== 'core').length}
-            </div>
-          </div>
-          
-          {/* Number of Open Tasks */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Open Tasks</label>
-            <div className="px-3 py-2 bg-gray-100 border-2 border-black text-lg font-black">
-              {allSongTasks.filter(t => t.status !== 'Complete' && t.status !== 'Done').length}
-            </div>
-          </div>
-          
-          {/* Number of Videos */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Videos</label>
-            <div className="px-3 py-2 bg-gray-100 border-2 border-black text-lg font-black">
-              {(currentSong.videos || []).length}
-            </div>
-          </div>
-          
-          {/* Overdue Task Indicator */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Overdue Tasks</label>
-            <div className={cn("px-3 py-2 border-2 border-black text-lg font-black", 
-              allSongTasks.filter(t => t.date && new Date(t.date) < new Date() && t.status !== 'Complete' && t.status !== 'Done').length > 0 
-                ? "bg-red-200" : "bg-green-100"
-            )}>
-              {allSongTasks.filter(t => t.date && new Date(t.date) < new Date() && t.status !== 'Complete' && t.status !== 'Done').length}
-            </div>
-          </div>
-          
-          {/* Cost Paid */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Cost Paid</label>
-            <div className="px-3 py-2 bg-green-100 border-2 border-black text-sm font-bold">
-              {formatMoney(allSongTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0))}
-            </div>
-          </div>
-          
-          {/* Estimated Total Cost */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Estimated Cost</label>
-            <div className="px-3 py-2 bg-yellow-100 border-2 border-black text-sm font-bold">
-              {formatMoney(totalCost)}
-            </div>
-          </div>
-          
-          {/* Team Members */}
-          <div className="md:col-span-4">
-            <label className="block text-xs font-bold uppercase mb-2">Team Members on Tasks</label>
-            <div className="flex flex-wrap gap-2">
-              {assignedTeamMembers.length === 0 ? (
-                <span className="text-xs opacity-50">No team members assigned</span>
-              ) : assignedTeamMembers.map(m => (
-                <div key={m.id} className="px-2 py-1 bg-purple-100 border-2 border-black text-xs font-bold">
-                  {m.name} {m.isMusician && '🎵'}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Display Section */}
+      {displaySection}
 
       {/* SECTION B: Song Information - Per spec order:
            1. Basic Song Fields (Title, Writers, Composers)
@@ -2190,6 +2149,48 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
     }).filter(Boolean);
   };
 
+  // Display Section - using DisplayInfoSection for consistency
+  const displaySection = (
+    <DisplayInfoSection
+      item={{ ...currentRelease, name: currentRelease.name }}
+      fields={[
+        { key: 'tracks', label: 'Number of Tracks', bgClass: 'bg-blue-100', render: () => getTrackStats.total },
+        { key: 'completed', label: 'Tracks Completed', bgClass: 'bg-green-100', render: () => getTrackStats.completed },
+        { key: 'remaining', label: 'Tracks Remaining', bgClass: 'bg-orange-100', render: () => getTrackStats.remaining },
+        { key: 'trackProgress', label: 'Track Progress', bgClass: 'bg-purple-100', render: () => `${getTrackStats.progress}%` },
+        { key: 'hasPhysical', label: 'Has Physical Copies?', bgClass: currentRelease.hasPhysicalCopies ? 'bg-green-200' : 'bg-gray-100', render: () => currentRelease.hasPhysicalCopies ? 'YES' : 'NO' },
+        { key: 'progress', label: 'Task Progress', bgClass: 'bg-yellow-100', render: () => `${releaseProgressValue}%` },
+        { key: 'releaseDate', label: 'Release Date', bgClass: 'bg-blue-100', default: 'Not Set' },
+        { key: 'openTasks', label: 'Open Tasks', bgClass: 'bg-gray-100', render: () => openTasks.length },
+        { key: 'overdueTasks', label: 'Overdue Tasks', bgClass: overdueTasks.length > 0 ? 'bg-red-200' : 'bg-green-100', render: () => overdueTasks.length },
+        { key: 'costPaid', label: 'Cost Paid', bgClass: 'bg-green-100', render: () => formatMoney(costPaid) },
+        { key: 'estimatedCost', label: 'Estimated Cost', bgClass: 'bg-yellow-100', render: () => formatMoney(estimatedCost) },
+        { key: 'type', label: 'Release Type', bgClass: 'bg-gray-100', render: () => (
+          <>
+            {currentRelease.type}
+            {currentRelease.type === 'Other' && currentRelease.typeDetails && ` (${currentRelease.typeDetails})`}
+          </>
+        )},
+        { 
+          key: 'teamMembers',
+          label: 'Team Members on Tasks',
+          colSpan: 4,
+          render: () => assignedTeamMembers.length === 0 ? (
+            <span className="opacity-50">No team members assigned</span>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {assignedTeamMembers.map(m => (
+                <span key={m.id} className="px-2 py-1 bg-purple-100 border-2 border-black text-xs font-bold">
+                  {m.name} {m.isMusician && '🎵'}
+                </span>
+              ))}
+            </div>
+          )
+        }
+      ]}
+    />
+  );
+
   return (
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
@@ -2197,117 +2198,8 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
         <button onClick={handleDeleteRelease} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}><Icon name="Trash2" size={16} /></button>
       </div>
 
-      {/* SECTION A: Display Information - Phase 3.1 Enhanced with Track Stats */}
-      <div className={cn("p-6 mb-6 bg-gray-50", THEME.punk.card)}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Display Information</h3>
-        
-        {/* Release Title - prominent at top */}
-        <div className="text-2xl font-black mb-4 pb-2 border-b-2 border-gray-300">{currentRelease.name || 'Untitled Release'}</div>
-        
-        <div className="grid md:grid-cols-4 gap-4">
-          {/* Phase 3.1: Number of Tracks */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Number of Tracks</label>
-            <div className="px-3 py-2 bg-blue-100 border-2 border-black text-lg font-black">{getTrackStats.total}</div>
-          </div>
-          
-          {/* Phase 3.1: Number of Tracks Completed */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Tracks Completed</label>
-            <div className="px-3 py-2 bg-green-100 border-2 border-black text-lg font-black">{getTrackStats.completed}</div>
-          </div>
-          
-          {/* Phase 3.1: Number of Tracks Remaining */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Tracks Remaining</label>
-            <div className="px-3 py-2 bg-orange-100 border-2 border-black text-lg font-black">{getTrackStats.remaining}</div>
-          </div>
-          
-          {/* Phase 3.1: Track Progress % */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Track Progress</label>
-            <div className="px-3 py-2 bg-purple-100 border-2 border-black text-lg font-black">{getTrackStats.progress}%</div>
-          </div>
-          
-          {/* Phase 3.1: Has Physical Copies YES/NO */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Has Physical Copies?</label>
-            <div className={cn("px-3 py-2 border-2 border-black text-lg font-black", currentRelease.hasPhysicalCopies ? "bg-green-200" : "bg-gray-100")}>
-              {currentRelease.hasPhysicalCopies ? 'YES' : 'NO'}
-            </div>
-          </div>
-          
-          {/* Task Progress */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Task Progress</label>
-            <div className="px-3 py-2 bg-yellow-100 border-2 border-black text-lg font-black">{releaseProgressValue}%</div>
-          </div>
-          
-          {/* Release Date */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Release Date</label>
-            <div className="px-3 py-2 bg-blue-100 border-2 border-black text-sm font-bold">
-              {currentRelease.releaseDate || 'Not Set'}
-            </div>
-          </div>
-          
-          {/* Number of Open Tasks */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Open Tasks</label>
-            <div className="px-3 py-2 bg-gray-100 border-2 border-black text-lg font-black">
-              {openTasks.length}
-            </div>
-          </div>
-          
-          {/* Overdue Task Indicator */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Overdue Tasks</label>
-            <div className={cn("px-3 py-2 border-2 border-black text-lg font-black", 
-              overdueTasks.length > 0 ? "bg-red-200" : "bg-green-100"
-            )}>
-              {overdueTasks.length}
-            </div>
-          </div>
-          
-          {/* Cost Paid */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Cost Paid</label>
-            <div className="px-3 py-2 bg-green-100 border-2 border-black text-sm font-bold">
-              {formatMoney(costPaid)}
-            </div>
-          </div>
-          
-          {/* Estimated Total Cost */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Estimated Cost</label>
-            <div className="px-3 py-2 bg-yellow-100 border-2 border-black text-sm font-bold">
-              {formatMoney(estimatedCost)}
-            </div>
-          </div>
-          
-          {/* Release Type */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Release Type</label>
-            <div className="px-3 py-2 bg-purple-100 border-2 border-black text-sm font-bold">
-              {currentRelease.type || 'Album'}
-            </div>
-          </div>
-          
-          {/* Team Members */}
-          <div className="md:col-span-4">
-            <label className="block text-xs font-bold uppercase mb-2">Team Members on Tasks</label>
-            <div className="flex flex-wrap gap-2">
-              {assignedTeamMembers.length === 0 ? (
-                <span className="text-xs opacity-50">No team members assigned</span>
-              ) : assignedTeamMembers.map(m => (
-                <div key={m.id} className="px-2 py-1 bg-purple-100 border-2 border-black text-xs font-bold">
-                  {m.name} {m.isMusician && '🎵'}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Display Section */}
+      {displaySection}
 
       {/* SECTION B: Release Information (editable) - Phase 3 Enhanced */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
@@ -4995,7 +4887,7 @@ export const EventsListView = ({ onSelectEvent }) => {
   );
 };
 
-// Event Detail View - Following same pattern as SongDetailView and ReleaseDetailView
+// Event Detail View - Using StandardDetailPage pattern
 export const EventDetailView = ({ event, onBack }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...event });
@@ -5008,8 +4900,8 @@ export const EventDetailView = ({ event, onBack }) => {
 
   const teamMembers = useMemo(() => data.teamMembers || [], [data.teamMembers]);
 
-  const handleSave = async () => { await actions.updateEvent(event.id, form); };
-  const handleFieldChange = (field, value) => { setForm(prev => ({ ...prev, [field]: value })); };
+  const handleSave = useCallback(async () => { await actions.updateEvent(event.id, form); }, [actions, event.id, form]);
+  const handleFieldChange = useCallback((field, value) => { setForm(prev => ({ ...prev, [field]: value })); }, []);
 
   // Handle opening the Task Edit Modal - Unified Task Handling Architecture
   const handleOpenTaskEdit = (task, context) => {
@@ -5049,10 +4941,6 @@ export const EventDetailView = ({ event, onBack }) => {
     
     setEditingTask(null);
     setEditingTaskContext(null);
-  };
-
-  const handleDeleteEvent = async () => {
-    if (confirm('Delete this event?')) { await actions.deleteEvent(event.id); onBack(); }
   };
 
   const currentEvent = useMemo(() => data.events.find(e => e.id === event.id) || event, [data.events, event]);
@@ -5097,106 +4985,42 @@ export const EventDetailView = ({ event, onBack }) => {
     return filtered;
   }, [eventTasks, eventCustomTasks, taskFilterStatus, taskSortBy, taskSortDir]);
 
-  return (
-    <div className="p-6 pb-24">
-      <div className="flex justify-between items-center mb-6">
-        <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
-          <Icon name="ChevronLeft" size={16} /> Back to Events
-        </button>
-        <button onClick={handleDeleteEvent} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
-          <Icon name="Trash2" size={16} />
-        </button>
-      </div>
-
-      {/* SECTION A: Display Information (read-only) - Following SongDetailView pattern */}
-      <div className={cn("p-6 mb-6 bg-gray-50", THEME.punk.card)}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Display Information</h3>
-        
-        {/* Event Title - prominent at top */}
-        <div className="text-2xl font-black mb-4 pb-2 border-b-2 border-gray-300">{currentEvent.title || 'Untitled Event'}</div>
-        
-        <div className="grid md:grid-cols-4 gap-4">
-          {/* Task Progress */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Task Progress</label>
-            <div className="px-3 py-2 bg-yellow-100 border-2 border-black text-lg font-black">{eventProgressValue}%</div>
-          </div>
-          
-          {/* Event Date/Time */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Event Date</label>
-            <div className="px-3 py-2 bg-blue-100 border-2 border-black text-sm font-bold">
-              {currentEvent.date || 'Not Set'} {currentEvent.time && `@ ${currentEvent.time}`}
-            </div>
-          </div>
-          
-          {/* Location */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Location</label>
-            <div className="px-3 py-2 bg-gray-100 border-2 border-black text-sm font-bold">
-              {currentEvent.location || 'TBD'}
-            </div>
-          </div>
-          
-          {/* Number of Open Tasks */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Open Tasks</label>
-            <div className="px-3 py-2 bg-gray-100 border-2 border-black text-lg font-black">
-              {openTasks.length}
-            </div>
-          </div>
-          
-          {/* Overdue Task Indicator */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Overdue Tasks</label>
-            <div className={cn("px-3 py-2 border-2 border-black text-lg font-black", 
-              overdueTasks.length > 0 ? "bg-red-200" : "bg-green-100"
-            )}>
-              {overdueTasks.length}
-            </div>
-          </div>
-          
-          {/* Entry Cost */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Entry Cost</label>
-            <div className="px-3 py-2 bg-purple-100 border-2 border-black text-sm font-bold">
-              {formatMoney(currentEvent.entryCost || 0)}
-            </div>
-          </div>
-          
-          {/* Phase 2: Cost from Tasks - derived, not direct input */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Task Cost Paid</label>
-            <div className="px-3 py-2 bg-green-100 border-2 border-black text-sm font-bold">
-              {formatMoney(costPaid)}
-            </div>
-          </div>
-          
-          {/* Phase 2: Total cost derived from tasks */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Total Task Cost</label>
-            <div className="px-3 py-2 bg-yellow-100 border-2 border-black text-sm font-bold">
-              {formatMoney(estimatedCost)}
-            </div>
-          </div>
-          
-          {/* Team Members */}
-          <div className="md:col-span-4">
-            <label className="block text-xs font-bold uppercase mb-2">Team Members on Tasks</label>
+  // Display Section - using DisplayInfoSection for consistency
+  const displaySection = (
+    <DisplayInfoSection
+      item={{ ...currentEvent, name: currentEvent.title }}
+      fields={[
+        { key: 'progress', label: 'Task Progress', bgClass: 'bg-yellow-100', render: () => `${eventProgressValue}%` },
+        { key: 'date', label: 'Event Date', bgClass: 'bg-blue-100', render: (item) => `${item.date || 'Not Set'}${item.time ? ` @ ${item.time}` : ''}` },
+        { key: 'location', label: 'Location', bgClass: 'bg-gray-100', default: 'TBD' },
+        { key: 'openTasks', label: 'Open Tasks', bgClass: 'bg-gray-100', render: () => openTasks.length },
+        { key: 'overdueTasks', label: 'Overdue Tasks', bgClass: overdueTasks.length > 0 ? 'bg-red-200' : 'bg-green-100', render: () => overdueTasks.length },
+        { key: 'entryCost', label: 'Entry Cost', bgClass: 'bg-purple-100', render: (item) => formatMoney(item.entryCost || 0) },
+        { key: 'costPaid', label: 'Task Cost Paid', bgClass: 'bg-green-100', render: () => formatMoney(costPaid) },
+        { key: 'estimatedCost', label: 'Total Task Cost', bgClass: 'bg-yellow-100', render: () => formatMoney(estimatedCost) },
+        { 
+          key: 'teamMembers',
+          label: 'Team Members on Tasks',
+          colSpan: 4,
+          render: () => assignedTeamMembers.length === 0 ? (
+            <span className="opacity-50">No team members assigned</span>
+          ) : (
             <div className="flex flex-wrap gap-2">
-              {assignedTeamMembers.length === 0 ? (
-                <span className="text-xs opacity-50">No team members assigned</span>
-              ) : assignedTeamMembers.map(m => (
-                <div key={m.id} className="px-2 py-1 bg-purple-100 border-2 border-black text-xs font-bold">
+              {assignedTeamMembers.map(m => (
+                <span key={m.id} className="px-2 py-1 bg-purple-100 border-2 border-black text-xs font-bold">
                   {m.name} {m.isMusician && '🎵'}
-                </div>
+                </span>
               ))}
             </div>
-          </div>
-        </div>
-      </div>
+          )
+        }
+      ]}
+    />
+  );
 
-      {/* SECTION B: Basic Information (editable) */}
+  // Edit Section - Event Information and Attendees
+  const editSection = (
+    <>
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Event Information</h3>
         <div className="grid md:grid-cols-2 gap-4">
@@ -5220,7 +5044,6 @@ export const EventDetailView = ({ event, onBack }) => {
             <label className="block text-xs font-bold uppercase mb-1">Location</label>
             <div className="flex gap-2">
               <input value={form.location || ''} onChange={e => handleFieldChange('location', e.target.value)} onBlur={handleSave} placeholder="Venue, City" className={cn("flex-1", THEME.punk.input)} />
-              {/* Phase 2.4: Map Button */}
               {form.location && (
                 <button 
                   onClick={() => {
@@ -5239,7 +5062,6 @@ export const EventDetailView = ({ event, onBack }) => {
             <label className="block text-xs font-bold uppercase mb-1">Entry Cost</label>
             <input type="number" value={form.entryCost || 0} onChange={e => handleFieldChange('entryCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
           </div>
-          {/* Phase 2.3: Stage/Era/Tags for Events */}
           <div className="md:col-span-2">
             <EraStageTagsPicker
               value={{
@@ -5264,7 +5086,7 @@ export const EventDetailView = ({ event, onBack }) => {
         </div>
       </div>
 
-      {/* Phase 2.1: Attendees Module - Simple name-only list */}
+      {/* Attendees Module */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Attendees</h3>
         <div className="space-y-2">
@@ -5463,8 +5285,12 @@ export const EventDetailView = ({ event, onBack }) => {
           </div>
         </div>
       </div>
+    </>
+  );
 
-      {/* Unified Tasks Module - combines auto-generated and custom tasks */}
+  // Tasks Section - Unified Tasks Module
+  const tasksSection = (
+    <>
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
         <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black pb-2 gap-2">
           <h3 className="font-black uppercase">Tasks</h3>
@@ -5481,7 +5307,6 @@ export const EventDetailView = ({ event, onBack }) => {
             <button onClick={() => setTaskSortDir(taskSortDir === 'asc' ? 'desc' : 'asc')} className={cn("px-2 py-1 text-xs", THEME.punk.btn)}>
               {taskSortDir === 'asc' ? '↑' : '↓'}
             </button>
-            {/* Phase 2.7: Recalculate auto-tasks for event */}
             <button 
               onClick={async () => {
                 if (currentEvent.date) {
@@ -5741,7 +5566,19 @@ export const EventDetailView = ({ event, onBack }) => {
           </div>
         </div>
       )}
-    </div>
+    </>
+  );
+
+  return (
+    <StandardDetailPage
+      item={currentEvent}
+      onBack={onBack}
+      backText="Back to Events"
+      onDelete={async () => { await actions.deleteEvent(event.id); onBack(); }}
+      displaySection={displaySection}
+      editSection={editSection}
+      tasksSection={tasksSection}
+    />
   );
 };
 
@@ -6397,6 +6234,50 @@ export const VideoDetailView = ({ video, onBack }) => {
     return filtered;
   }, [videoTasks, videoCustomTasks, taskFilterStatus, taskSortBy, taskSortDir]);
 
+  // Display Section - using DisplayInfoSection for consistency
+  const displaySection = (
+    <DisplayInfoSection
+      item={{ ...currentVideo, name: currentVideo.title }}
+      fields={[
+        { key: 'progress', label: 'Task Progress', bgClass: 'bg-yellow-100', render: () => `${videoProgressValue}%` },
+        { key: 'releaseDate', label: 'Release Date', bgClass: 'bg-blue-100', default: 'Not Set' },
+        { key: 'videoType', label: 'Video Type', bgClass: 'bg-purple-100', render: () => (
+          <>
+            {getVideoTypeLabel(getCurrentVideoType)}
+            {currentVideo.isAutogenerated && <span className="ml-2 text-[10px] text-gray-500">(Auto)</span>}
+          </>
+        )},
+        { key: 'openTasks', label: 'Open Tasks', bgClass: 'bg-gray-100', render: () => openTasks.length },
+        { key: 'overdueTasks', label: 'Overdue Tasks', bgClass: overdueTasks.length > 0 ? 'bg-red-200' : 'bg-green-100', render: () => overdueTasks.length },
+        { key: 'estimatedCost', label: 'Est. Cost (Tasks)', bgClass: isOverBudget ? 'bg-red-200' : 'bg-yellow-100', render: () => (
+          <>
+            {formatMoney(totalEstimatedCost)}
+            {isOverBudget && <span className="ml-1 text-red-600 text-[10px] font-bold">OVER</span>}
+          </>
+        )},
+        { key: 'budgetedCost', label: 'Budgeted Cost', bgClass: 'bg-blue-100', render: () => formatMoney(budgetedCost) },
+        { key: 'costPaid', label: 'Cost Paid', bgClass: 'bg-green-100', render: () => formatMoney(costPaid) },
+        { key: 'source', label: 'Source', bgClass: 'bg-gray-100', render: () => video._source === 'song' ? video._songTitle : 'Standalone' },
+        { 
+          key: 'teamMembers',
+          label: 'Team Members on Tasks',
+          colSpan: 4,
+          render: () => assignedTeamMembers.length === 0 ? (
+            <span className="opacity-50">No team members assigned</span>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {assignedTeamMembers.map(m => (
+                <span key={m.id} className="px-2 py-1 bg-purple-100 border-2 border-black text-xs font-bold">
+                  {m.name} {m.isMusician && '🎵'}
+                </span>
+              ))}
+            </div>
+          )
+        }
+      ]}
+    />
+  );
+
   return (
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
@@ -6408,103 +6289,8 @@ export const VideoDetailView = ({ video, onBack }) => {
         </button>
       </div>
 
-      {/* SECTION A: Display Information (read-only) - Following SongDetailView pattern */}
-      <div className={cn("p-6 mb-6 bg-gray-50", THEME.punk.card)}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Display Information</h3>
-        
-        {/* Video Title - prominent at top */}
-        <div className="text-2xl font-black mb-4 pb-2 border-b-2 border-gray-300">{currentVideo.title || 'Untitled Video'}</div>
-        
-        <div className="grid md:grid-cols-4 gap-4">
-          {/* Task Progress */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Task Progress</label>
-            <div className="px-3 py-2 bg-yellow-100 border-2 border-black text-lg font-black">{videoProgressValue}%</div>
-          </div>
-          
-          {/* Release Date */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Release Date</label>
-            <div className="px-3 py-2 bg-blue-100 border-2 border-black text-sm font-bold">
-              {currentVideo.releaseDate || 'Not Set'}
-            </div>
-          </div>
-          
-          {/* Phase 1.1: Video Type (single type) */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Video Type</label>
-            <div className="px-3 py-2 bg-purple-100 border-2 border-black text-sm font-bold">
-              {getVideoTypeLabel(getCurrentVideoType)}
-              {currentVideo.isAutogenerated && <span className="ml-2 text-[10px] text-gray-500">(Auto)</span>}
-            </div>
-          </div>
-          
-          {/* Number of Open Tasks */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Open Tasks</label>
-            <div className="px-3 py-2 bg-gray-100 border-2 border-black text-lg font-black">
-              {openTasks.length}
-            </div>
-          </div>
-          
-          {/* Overdue Task Indicator */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Overdue Tasks</label>
-            <div className={cn("px-3 py-2 border-2 border-black text-lg font-black", 
-              overdueTasks.length > 0 ? "bg-red-200" : "bg-green-100"
-            )}>
-              {overdueTasks.length}
-            </div>
-          </div>
-          
-          {/* Phase 1.5: Total Estimated Cost (from tasks) with Over Budget indicator */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Est. Cost (Tasks)</label>
-            <div className={cn("px-3 py-2 border-2 border-black text-sm font-bold", isOverBudget ? "bg-red-200" : "bg-yellow-100")}>
-              {formatMoney(totalEstimatedCost)}
-              {isOverBudget && <span className="ml-1 text-red-600 text-[10px] font-bold">OVER</span>}
-            </div>
-          </div>
-          
-          {/* Phase 1.5: Budgeted Cost */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Budgeted Cost</label>
-            <div className="px-3 py-2 bg-blue-100 border-2 border-black text-sm font-bold">
-              {formatMoney(budgetedCost)}
-            </div>
-          </div>
-          
-          {/* Cost Paid */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Cost Paid</label>
-            <div className="px-3 py-2 bg-green-100 border-2 border-black text-sm font-bold">
-              {formatMoney(costPaid)}
-            </div>
-          </div>
-          
-          {/* Source */}
-          <div>
-            <label className="block text-xs font-bold uppercase mb-2">Source</label>
-            <div className="px-3 py-2 bg-gray-100 border-2 border-black text-sm font-bold">
-              {video._source === 'song' ? video._songTitle : 'Standalone'}
-            </div>
-          </div>
-          
-          {/* Team Members */}
-          <div className="md:col-span-4">
-            <label className="block text-xs font-bold uppercase mb-2">Team Members on Tasks</label>
-            <div className="flex flex-wrap gap-2">
-              {assignedTeamMembers.length === 0 ? (
-                <span className="text-xs opacity-50">No team members assigned</span>
-              ) : assignedTeamMembers.map(m => (
-                <div key={m.id} className="px-2 py-1 bg-purple-100 border-2 border-black text-xs font-bold">
-                  {m.name} {m.isMusician && '🎵'}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Display Section */}
+      {displaySection}
 
       {/* SECTION B: Video Information (editable) - Phase 1 Updates */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
