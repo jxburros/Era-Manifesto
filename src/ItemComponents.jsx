@@ -416,7 +416,7 @@ export const TaskEditModal = ({
   const { data } = useStore();
   const teamMembers = data.teamMembers || [];
   const [form, setForm] = useState({ ...task });
-  const [newAssignment, setNewAssignment] = useState({ memberId: '', cost: '' });
+  const [newAssignment, setNewAssignment] = useState({ memberId: '', cost: 0 });
 
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -429,7 +429,7 @@ export const TaskEditModal = ({
       { memberId: newAssignment.memberId, cost: parseFloat(newAssignment.cost) || 0 }
     ];
     handleChange('assignedMembers', updatedMembers);
-    setNewAssignment({ memberId: '', cost: '' });
+    setNewAssignment({ memberId: '', cost: 0 });
   };
 
   const removeTeamMemberAssignment = (index) => {
