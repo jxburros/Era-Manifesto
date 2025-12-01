@@ -243,19 +243,6 @@ export const SongDetailView = ({ song, onBack }) => {
     await actions.updateSongDeadline(song.id, deadlineId, { [field]: value });
   };
 
-  // Issue #8: Custom tasks can be attached to a specific Version or the Song
-  const handleAddCustomTask = async () => {
-    if (newTask.versionId && newTask.versionId !== '') {
-      // Attach to specific version
-      await actions.addVersionCustomTask(song.id, newTask.versionId, { ...newTask, isAutoTask: false });
-    } else {
-      // Attach to song (default)
-      await actions.addSongCustomTask(song.id, { ...newTask, isAutoTask: false });
-    }
-    setNewTask({ title: '', date: '', description: '', estimatedCost: 0, status: 'Not Started', notes: '', versionId: '' });
-    setShowAddTask(false);
-  };
-
   // Handler for deleting custom tasks (used in task management UI)
   // eslint-disable-next-line no-unused-vars
   const handleDeleteCustomTask = async (taskId) => {
