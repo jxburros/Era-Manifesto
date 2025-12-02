@@ -3001,13 +3001,31 @@ export const StoreProvider = ({ children }) => {
          }
          
          if (mode === 'cloud' && db && user) {
-           // For cloud mode, we need to clear and re-add all documents
-           // This is a simplified approach - just update local state
-           // Cloud sync will happen automatically via existing listeners
+           // For cloud mode: delete existing documents then add imported ones
+           // Note: This uses setDoc which will create or overwrite documents by ID.
+           // Existing documents with IDs not in the import will remain.
+           // For a true "replace all", you would need to query and delete all first,
+           // but that's expensive. This approach effectively merges by ID while
+           // replacing document contents.
            for (const col of collections) {
              const colData = importedData[col] || [];
+             const colName = col === 'misc' ? 'misc_expenses' : col;
+             
+             // Delete existing items that are not in the import
+             const existingItems = data[col] || [];
+             const importedIds = new Set(colData.map(item => item.id));
+             for (const existing of existingItems) {
+               if (!importedIds.has(existing.id)) {
+                 try {
+                   await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, `album_${colName}`, existing.id));
+                 } catch (e) {
+                   console.error(`Failed to delete ${col} item during replace`, existing.id, e);
+                 }
+               }
+             }
+             
+             // Add/update imported items
              for (const item of colData) {
-               const colName = col === 'misc' ? 'misc_expenses' : col;
                try {
                  await setDoc(
                    doc(db, 'artifacts', appId, 'users', user.uid, `album_${colName}`, item.id),
@@ -3027,7 +3045,7 @@ export const StoreProvider = ({ children }) => {
              );
            }
          } else {
-           // Local mode: just update state
+           // Local mode: directly update state with imported data
            setData(prev => ({
              ...prev,
              ...newData

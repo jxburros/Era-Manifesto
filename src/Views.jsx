@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate, getEffectiveCost, EXPORT_VERSION, APP_VERSION } from './Store';
+import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate, getEffectiveCost, EXPORT_VERSION } from './Store';
 import { THEME, COLORS, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 import { DetailPane } from './ItemComponents';
@@ -1638,7 +1638,6 @@ export const SettingsView = () => {
     const [modStatus, setModStatus] = useState('');
 
     // Data import/export state
-    const [importFile, setImportFile] = useState(null);
     const [importPreview, setImportPreview] = useState(null);
     const [importMode, setImportMode] = useState('replace');
     const [importStatus, setImportStatus] = useState('');
@@ -1738,9 +1737,12 @@ export const SettingsView = () => {
 
     // Enhanced export with version metadata
     const exportAllData = () => {
-      const payload = actions.getExportPayload();
-      // Also include current template drafts in settings
-      payload.settings = { ...payload.settings, templates: templateDrafts };
+      const basePayload = actions.getExportPayload();
+      // Clone the payload to avoid mutating internal state
+      const payload = {
+        ...basePayload,
+        settings: { ...basePayload.settings, templates: templateDrafts }
+      };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1761,7 +1763,6 @@ export const SettingsView = () => {
       const file = e.target.files?.[0];
       if (!file) return;
       
-      setImportFile(file);
       setImportStatus('');
       
       const reader = new FileReader();
@@ -1798,7 +1799,14 @@ export const SettingsView = () => {
               templates: (parsed.settings?.templates || parsed.templates || []).length
             },
             rawData: parsed,
-            isCompatible: !parsed.exportVersion || parsed.exportVersion === EXPORT_VERSION
+            // Version compatibility: same major version is compatible
+            // Legacy exports (no version) are treated as 1.0.0
+            isCompatible: (() => {
+              const importedVersion = parsed.exportVersion || '1.0.0';
+              const currentMajor = EXPORT_VERSION.split('.')[0];
+              const importedMajor = importedVersion.split('.')[0];
+              return currentMajor === importedMajor;
+            })()
           };
           
           setImportPreview(preview);
@@ -1821,7 +1829,6 @@ export const SettingsView = () => {
         await actions.importData(importPreview.rawData, importMode);
         setImportStatus(`Success! Data ${importMode === 'replace' ? 'replaced' : 'merged'} successfully.`);
         setImportPreview(null);
-        setImportFile(null);
         // Reset the file input
         const fileInput = document.getElementById('import-file-input');
         if (fileInput) fileInput.value = '';
@@ -1835,7 +1842,6 @@ export const SettingsView = () => {
     // Cancel import
     const handleImportCancel = () => {
       setImportPreview(null);
-      setImportFile(null);
       setImportStatus('');
       const fileInput = document.getElementById('import-file-input');
       if (fileInput) fileInput.value = '';
