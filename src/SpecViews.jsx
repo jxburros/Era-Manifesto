@@ -559,7 +559,7 @@ export const SongDetailView = ({ song, onBack }) => {
         <div className="grid md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Attached Releases (Core Version)</label>
-            <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white h-10 overflow-y-auto items-center">
+            <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white min-h-[40px] max-h-24 overflow-y-auto items-center">
               {(data.releases || []).length === 0 ? (
                 <span className="text-xs opacity-50">No releases available</span>
               ) : (data.releases || []).map(r => (
@@ -623,7 +623,7 @@ export const SongDetailView = ({ song, onBack }) => {
           </div>
           <div className="md:col-span-2">
             <label className="block text-xs font-bold uppercase mb-1">Videos (Core Version)</label>
-            <div className="flex flex-wrap gap-3 p-2 border-4 border-black bg-white h-10 items-center overflow-x-auto">
+            <div className="flex flex-wrap gap-3 p-2 border-4 border-black bg-white min-h-[40px] items-center">
               {[
                 { key: 'music', label: 'Music' },
                 { key: 'lyric', label: 'Lyric' },
@@ -3433,13 +3433,13 @@ export const TaskDashboardView = () => {
   const [stageFilter, setStageFilter] = useState('all');
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   
-  // Photo carousel rotation - every 3.5 seconds
+  // Photo carousel rotation - every 4 seconds
   const photos = data.photos || [];
   useEffect(() => {
     if (photos.length <= 1) return;
     const timer = setInterval(() => {
       setCurrentPhotoIndex(prev => (prev + 1) % photos.length);
-    }, 3500);
+    }, 4000);
     return () => clearInterval(timer);
   }, [photos.length]);
   
