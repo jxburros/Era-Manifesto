@@ -3,6 +3,7 @@ import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate, getEffectiveC
 import { THEME, COLORS, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 import { DetailPane } from './ItemComponents';
+import { exportEraPDF } from './pdfExport';
 
 export const ListView = ({ onEdit }) => {
     const { data, actions } = useStore();
@@ -496,37 +497,88 @@ export const CalendarView = ({ onEdit, onSelectEvent }) => {
 };
 
 export const GalleryView = () => {
-    const { data, actions } = useStore();
+    const { data, actions, mode } = useStore();
     const [selectedPhoto, setSelectedPhoto] = useState(null);
     const [editingPhoto, setEditingPhoto] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState(null);
+    // Temporary photos for offline mode (session-only, not persisted)
+    const [tempPhotos, setTempPhotos] = useState([]);
 
-    const handleUpload = (e) => {
+    const handleUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            actions.add('photos', { 
-                data: ev.target.result, 
+        
+        // Reset file input so same file can be selected again
+        e.target.value = '';
+        
+        if (mode === 'cloud') {
+            // Cloud mode: Upload to Firebase Storage
+            setIsUploading(true);
+            setUploadError(null);
+            try {
+                await actions.uploadPhoto(file, {
+                    title: file.name.replace(/\.[^/.]+$/, ''),
+                    description: ''
+                });
+            } catch (error) {
+                console.error('Photo upload failed:', error);
+                setUploadError('Upload failed. Please try again.');
+            } finally {
+                setIsUploading(false);
+            }
+        } else {
+            // Local/offline mode: Use temporary object URL (session-only)
+            const tempUrl = URL.createObjectURL(file);
+            const tempPhoto = {
+                id: crypto.randomUUID(),
+                data: tempUrl,
                 name: file.name,
-                title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+                title: file.name.replace(/\.[^/.]+$/, ''),
                 description: '',
-                uploadedAt: new Date().toISOString()
-            });
-        };
-        reader.readAsDataURL(file);
+                uploadedAt: new Date().toISOString(),
+                isTemporary: true // Flag for temporary photos
+            };
+            setTempPhotos(prev => [...prev, tempPhoto]);
+        }
     };
 
-    const handleDownload = (photo) => {
-        const link = document.createElement('a');
-        link.href = photo.data;
-        link.download = photo.name || 'photo.jpg';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    // Combine persisted photos with temporary session photos
+    const allPhotos = [...(data.photos || []), ...tempPhotos];
+
+    const handleDownload = async (photo) => {
+        // For cloud photos (Firebase Storage URLs), we need to fetch and convert to blob
+        // to properly trigger download instead of opening in new tab
+        if (photo.isCloudPhoto && photo.data.startsWith('http')) {
+            try {
+                const response = await fetch(photo.data);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = photo.name || 'photo.jpg';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                console.error('Download failed:', error);
+                // Fallback: open in new tab
+                window.open(photo.data, '_blank');
+            }
+        } else {
+            // For blob URLs and base64, direct download works
+            const link = document.createElement('a');
+            link.href = photo.data;
+            link.download = photo.name || 'photo.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     };
 
     const handleDownloadAll = () => {
-        data.photos.forEach((photo, index) => {
+        allPhotos.forEach((photo, index) => {
             setTimeout(() => {
                 handleDownload(photo);
             }, index * 300); // Stagger downloads
@@ -534,38 +586,97 @@ export const GalleryView = () => {
     };
 
     const handleUpdatePhoto = (photoId, updates) => {
-        actions.update('photos', photoId, updates);
+        // Check if it's a temporary photo
+        const isTempPhoto = tempPhotos.some(p => p.id === photoId);
+        if (isTempPhoto) {
+            setTempPhotos(prev => prev.map(p => p.id === photoId ? { ...p, ...updates } : p));
+        } else {
+            actions.update('photos', photoId, updates);
+        }
     };
+
+    const handleDeletePhoto = (photoId) => {
+        // Check if it's a temporary photo
+        const tempPhoto = tempPhotos.find(p => p.id === photoId);
+        if (tempPhoto) {
+            // Revoke the object URL to free memory
+            URL.revokeObjectURL(tempPhoto.data);
+            setTempPhotos(prev => prev.filter(p => p.id !== photoId));
+        } else {
+            actions.delete('photos', photoId);
+        }
+    };
+
+    const isCloudMode = mode === 'cloud';
 
     return (
         <div className="p-6 pb-24">
             <div className="flex flex-wrap justify-between items-center mb-8 border-b-4 border-black pb-4 gap-4">
                 <h2 className={cn("text-3xl flex items-center gap-2", THEME.punk.textStyle)}><Icon name="Image" /> Gallery</h2>
                 <div className="flex gap-2">
-                    {data.photos.length > 0 && (
+                    {allPhotos.length > 0 && (
                         <button onClick={handleDownloadAll} className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-500 text-white")}>
                             <Icon name="Download" size={16}/> Download All
                         </button>
                     )}
-                    <label className={cn("px-4 py-2 cursor-pointer bg-white flex items-center gap-2", THEME.punk.btn)}>
-                        <Icon name="Upload" size={16}/> Upload
-                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                    </label>
+                    {isCloudMode ? (
+                        <label className={cn("px-4 py-2 cursor-pointer bg-white flex items-center gap-2", THEME.punk.btn, isUploading && "opacity-50 cursor-not-allowed")}>
+                            <Icon name="Upload" size={16}/> {isUploading ? 'Uploading...' : 'Upload'}
+                            <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={isUploading} />
+                        </label>
+                    ) : (
+                        <div className="flex flex-col items-end gap-1">
+                            <label className={cn("px-4 py-2 cursor-pointer bg-yellow-100 flex items-center gap-2", THEME.punk.btn, "border-yellow-500")}>
+                                <Icon name="Upload" size={16}/> Upload (Session Only)
+                                <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                            </label>
+                        </div>
+                    )}
                 </div>
             </div>
+            
+            {/* Warning message for local mode */}
+            {!isCloudMode && (
+                <div className={cn("mb-4 p-3 bg-yellow-100 border-4 border-yellow-500 text-yellow-800")}>
+                    <div className="flex items-center gap-2 font-bold">
+                        <Icon name="AlertTriangle" size={16} />
+                        Connect Cloud to Upload Photos
+                    </div>
+                    <p className="text-xs mt-1">
+                        Photos uploaded in local mode are temporary and will be lost when you close or refresh the page. 
+                        Connect to Firebase in Settings to permanently store photos.
+                    </p>
+                </div>
+            )}
+            
+            {/* Upload error message */}
+            {uploadError && (
+                <div className={cn("mb-4 p-3 bg-red-100 border-4 border-red-500 text-red-800")}>
+                    <div className="flex items-center gap-2 font-bold">
+                        <Icon name="AlertCircle" size={16} />
+                        {uploadError}
+                    </div>
+                </div>
+            )}
+            
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {data.photos.map(p => (
-                    <div key={p.id} className={cn("relative aspect-square group overflow-hidden cursor-pointer", THEME.punk.card)}>
+                {allPhotos.map(p => (
+                    <div key={p.id} className={cn("relative aspect-square group overflow-hidden cursor-pointer", THEME.punk.card, p.isTemporary && "ring-2 ring-yellow-500")}>
                         <img 
                             src={p.data} 
                             alt={p.title || p.name}
                             className="w-full h-full object-cover"
                             onClick={() => setSelectedPhoto(p)}
                         />
+                        {p.isTemporary && (
+                            <div className="absolute top-1 left-1 bg-yellow-500 text-black text-[8px] px-1 font-bold uppercase">
+                                Session Only
+                            </div>
+                        )}
                         <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => handleDownload(p)} className="bg-blue-500 text-white p-1 rounded" title="Download"><Icon name="Download" size={14} /></button>
                             <button onClick={() => setEditingPhoto(p)} className="bg-yellow-500 text-white p-1 rounded" title="Edit"><Icon name="Settings" size={14} /></button>
-                            <button onClick={() => actions.delete('photos', p.id)} className="bg-red-500 text-white p-1 rounded" title="Delete"><Icon name="Trash2" size={14} /></button>
+                            <button onClick={() => handleDeletePhoto(p.id)} className="bg-red-500 text-white p-1 rounded" title="Delete"><Icon name="Trash2" size={14} /></button>
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-[10px] p-1">
                             <div className="truncate font-bold">{p.title || p.name}</div>
@@ -573,7 +684,7 @@ export const GalleryView = () => {
                         </div>
                     </div>
                 ))}
-                {data.photos.length === 0 && <div className="col-span-full py-20 text-center opacity-50">No photos yet.</div>}
+                {allPhotos.length === 0 && <div className="col-span-full py-20 text-center opacity-50">No photos yet.</div>}
             </div>
 
             {/* Photo Enlargement Modal */}
@@ -2336,6 +2447,13 @@ export const SettingsView = () => {
                       <div key={era.id} className="flex items-center gap-2">
                         <input value={era.name} onChange={e => actions.updateEra(era.id, { name: e.target.value })} className={cn("flex-1", THEME.punk.input)} />
                         <input type="color" value={era.color || '#000000'} onChange={e => actions.updateEra(era.id, { color: e.target.value })} className="w-16 h-10 border-4 border-black" />
+                        <button 
+                          onClick={() => exportEraPDF(era, data.releases || [], data.songs || [])} 
+                          className={cn("px-2 py-1 text-xs", THEME.punk.btn, "bg-blue-600 text-white")}
+                          title="Export Era Report to PDF"
+                        >
+                          <Icon name="FileText" size={14} />
+                        </button>
                         <button onClick={() => actions.deleteEra(era.id)} className="text-red-500 font-bold text-xs">Delete</button>
                       </div>
                     ))}

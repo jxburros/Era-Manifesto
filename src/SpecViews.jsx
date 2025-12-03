@@ -3,7 +3,8 @@ import { useStore, STATUS_OPTIONS, RELEASE_TYPES, getEffectiveCost, calculateTas
 import { THEME, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 import { DetailPane, EraStageTagsModule, StandardListPage, StandardDetailPage, DisplayInfoSection, AutocompleteInput } from './ItemComponents';
-
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { exportSongPDF, exportVideoPDF, exportReleasePDF } from './pdfExport';
 // Helper to calculate minimum end date (one day after start date)
 const getMinEndDate = (startDate) => {
   if (!startDate) return '';
@@ -589,9 +590,18 @@ export const SongDetailView = ({ song, onBack }) => {
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
           <Icon name="ChevronLeft" size={16} /> Back to Songs
         </button>
-        <button onClick={handleDeleteSong} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
-          <Icon name="Trash2" size={16} />
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => exportSongPDF(currentSong, teamMembers, data.eras || [])} 
+            className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-600 text-white")}
+            title="Export to PDF"
+          >
+            <Icon name="FileText" size={16} /> Export PDF
+          </button>
+          <button onClick={handleDeleteSong} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
+            <Icon name="Trash2" size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Display Section */}
@@ -2230,7 +2240,16 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}><Icon name="ChevronLeft" size={16} /> Back to Releases</button>
-        <button onClick={handleDeleteRelease} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}><Icon name="Trash2" size={16} /></button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => exportReleasePDF(currentRelease, data.songs || [], teamMembers)} 
+            className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-600 text-white")}
+            title="Export to PDF"
+          >
+            <Icon name="FileText" size={16} /> Export PDF
+          </button>
+          <button onClick={handleDeleteRelease} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}><Icon name="Trash2" size={16} /></button>
+        </div>
       </div>
 
       {/* Display Section */}
@@ -4125,6 +4144,10 @@ export const FinancialsView = () => {
   const [filterSong, setFilterSong] = useState('all');
   const [filterItemType, setFilterItemType] = useState('all');
   const [costMode, setCostMode] = useState('effective'); // 'paid', 'quoted', 'estimated', 'effective'
+  const [showVisualize, setShowVisualize] = useState(false);
+  
+  // Chart colors for brutalist theme
+  const CHART_COLORS = ['#f472b6', '#facc15', '#22d3ee', '#a78bfa', '#fb923c', '#4ade80', '#f87171'];
   
   // Get cost value based on selected mode
   const getCostValue = useCallback((item) => {
@@ -4418,11 +4441,37 @@ export const FinancialsView = () => {
     return groups;
   }, [costItems]);
 
+  // Pie chart data: Cost distribution by source
+  const pieChartData = useMemo(() => {
+    return Object.entries(sourceGroups)
+      .filter(([, data]) => data.effective > 0)
+      .map(([source, data]) => ({
+        name: source,
+        value: data.effective
+      }));
+  }, [sourceGroups]);
+
+  // Bar chart data: Estimated vs Quoted vs Paid totals
+  const barChartData = useMemo(() => {
+    return [
+      { name: 'Estimated', value: totals.estimated, fill: '#9ca3af' },
+      { name: 'Quoted', value: totals.quoted, fill: '#3b82f6' },
+      { name: 'Paid', value: totals.paid, fill: '#22c55e' }
+    ];
+  }, [totals]);
+
   return (
     <div className="p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className={THEME.punk.textStyle}>Financials</h2>
         <div className="flex gap-2">
+          <button 
+            onClick={() => setShowVisualize(!showVisualize)} 
+            className={cn("px-4 py-2", THEME.punk.btn, showVisualize ? "bg-pink-500 text-white" : "bg-white")}
+          >
+            <Icon name="BarChart2" size={16} className="inline mr-2" />
+            {showVisualize ? 'Hide Charts' : 'Visualize'}
+          </button>
           <select value={costMode} onChange={e => setCostMode(e.target.value)} className={cn("px-3 py-2", THEME.punk.input)}>
             <option value="effective">Effective Cost (Paid → Quoted → Estimated)</option>
             <option value="paid">Paid Only</option>
@@ -4431,6 +4480,64 @@ export const FinancialsView = () => {
           </select>
         </div>
       </div>
+
+      {/* Charts Section - Visible when Visualize is toggled ON */}
+      {showVisualize && (
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
+          {/* Pie Chart - Cost Distribution by Source */}
+          <div className={cn("p-4", THEME.punk.card)}>
+            <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Cost Distribution by Source</h3>
+            {pieChartData.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-sm opacity-50">No cost data available</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    stroke="#000"
+                    strokeWidth={2}
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatMoney(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Bar Chart - Estimated vs Quoted vs Paid */}
+          <div className={cn("p-4", THEME.punk.card)}>
+            <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Estimated vs Quoted vs Paid</h3>
+            {totals.estimated === 0 && totals.quoted === 0 && totals.paid === 0 ? (
+              <div className="h-64 flex items-center justify-center text-sm opacity-50">No cost data available</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={barChartData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#000" strokeOpacity={0.2} />
+                  <XAxis type="number" tickFormatter={(value) => formatMoney(value)} stroke="#000" strokeWidth={2} />
+                  <YAxis type="category" dataKey="name" stroke="#000" strokeWidth={2} tick={{ fontWeight: 'bold' }} />
+                  <Tooltip formatter={(value) => formatMoney(value)} />
+                  <Bar dataKey="value" stroke="#000" strokeWidth={2}>
+                    {barChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Filter Panel - Per Section 5 of implementation plan */}
       <div className={cn("p-4 mb-6 bg-gray-50", THEME.punk.card)}>
@@ -6360,9 +6467,18 @@ export const VideoDetailView = ({ video, onBack }) => {
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
           <Icon name="ChevronLeft" size={16} /> Back to Videos
         </button>
-        <button onClick={handleDeleteVideo} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
-          <Icon name="Trash2" size={16} />
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => exportVideoPDF(currentVideo, teamMembers)} 
+            className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-600 text-white")}
+            title="Export to PDF"
+          >
+            <Icon name="FileText" size={16} /> Export PDF
+          </button>
+          <button onClick={handleDeleteVideo} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
+            <Icon name="Trash2" size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Display Section */}

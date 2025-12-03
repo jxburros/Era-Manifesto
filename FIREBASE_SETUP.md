@@ -33,6 +33,35 @@ Firebase provides real-time cloud synchronization, allowing you to:
 4. Choose a Firestore location close to you (e.g., `us-central` for US)
 5. Click "Enable"
 
+## Step 2.5: Set Up Firebase Storage (For Photos)
+
+1. Click on "Storage" in the left sidebar
+2. Click "Get started"
+3. Choose "Start in production mode" or "Start in test mode"
+4. Choose a storage location close to you (same region as Firestore recommended)
+5. Click "Done"
+
+### Storage Security Rules
+
+After enabling Storage, set up security rules:
+
+1. Go to "Storage" → "Rules" tab
+2. Replace the existing rules with:
+
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to read/write their own photos
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+3. Click "Publish"
+
 ## Step 3: Set Up Authentication
 
 1. Click on "Authentication" in the left sidebar

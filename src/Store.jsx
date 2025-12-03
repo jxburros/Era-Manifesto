@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, setDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const StoreContext = createContext();
 
@@ -696,6 +697,7 @@ export const StoreProvider = ({ children }) => {
   });
   const [user, setUser] = useState(null);
   const [db, setDb] = useState(null);
+  const [storage, setStorage] = useState(null);
   const appId = "album-tracker-v2";
 
   useEffect(() => {
@@ -707,9 +709,11 @@ export const StoreProvider = ({ children }) => {
           const app = initializeApp(config);
           const auth = getAuth(app);
           const firestore = getFirestore(app);
+          const storageInstance = getStorage(app);
           await signInAnonymously(auth);
           setUser(auth.currentUser);
           setDb(firestore);
+          setStorage(storageInstance);
           setMode('cloud');
           return;
         } catch (e) { console.error("Cloud Error", e); }
@@ -910,6 +914,44 @@ export const StoreProvider = ({ children }) => {
          else setData(p => {
              return {...p, [colKey]: (p[colKey] || []).filter(i => i.id !== id)};
          });
+     },
+     // Upload photo to Firebase Storage and store download URL in Firestore
+     // Returns the photo object with the download URL as 'data' field
+     uploadPhoto: async (file, metadata = {}) => {
+       if (mode !== 'cloud' || !storage || !user) {
+         throw new Error('Cloud mode required for photo upload');
+       }
+       
+       const photoId = crypto.randomUUID();
+       const fileExtension = file.name.split('.').pop() || 'jpg';
+       const storagePath = `users/${user.uid}/photos/${photoId}.${fileExtension}`;
+       const storageRef = ref(storage, storagePath);
+       
+       // Upload the file to Firebase Storage
+       await uploadBytes(storageRef, file);
+       
+       // Get the download URL
+       const downloadURL = await getDownloadURL(storageRef);
+       
+       // Create photo document with download URL instead of Base64
+       const photoDoc = {
+         id: photoId,
+         data: downloadURL, // Store URL instead of Base64
+         storagePath: storagePath, // Keep reference for deletion
+         name: file.name,
+         title: metadata.title || file.name.replace(/\.[^/.]+$/, ''),
+         description: metadata.description || '',
+         uploadedAt: new Date().toISOString(),
+         isCloudPhoto: true // Flag to identify cloud-stored photos
+       };
+       
+       // Save to Firestore
+       await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'album_photos'), { 
+         ...photoDoc, 
+         createdAt: serverTimestamp() 
+       });
+       
+       return photoDoc;
      },
      archiveItem: async (col, id, reason = '') => {
         const colKey = col === 'misc_expenses' ? 'misc' : col;
