@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useStore, STATUS_OPTIONS, RELEASE_TYPES, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence, getPrimaryDate, getTaskDueDate, generateEventTasks, itemBelongsToEra } from './Store';
+import { useStore, STATUS_OPTIONS, RELEASE_TYPES, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence, getPrimaryDate, getTaskDueDate, generateEventTasks, itemBelongsToEra, isEraLocked } from './Store';
 import { THEME, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 import { DetailPane, EraStageTagsModule, StandardListPage, StandardDetailPage, DisplayInfoSection, AutocompleteInput } from './ItemComponents';
-
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { exportSongPDF, exportVideoPDF, exportReleasePDF } from './pdfExport';
 // Helper to calculate minimum end date (one day after start date)
 const getMinEndDate = (startDate) => {
   if (!startDate) return '';
@@ -57,6 +58,7 @@ export const SongListView = ({ onSelectSong }) => {
   ];
 
   // Filter options
+   
   const filterOptions = [];
 
   // Render grid card
@@ -266,6 +268,12 @@ export const SongDetailView = ({ song, onBack }) => {
   }, [form, data.releases, handleFieldChange, actions, song.id]);
 
   const currentSong = useMemo(() => data.songs.find(s => s.id === song.id) || song, [data.songs, song]);
+  
+  // Lock Era feature: check if this song belongs to a locked era
+  const isSongLocked = useMemo(() => 
+    isEraLocked(currentSong.eraIds || currentSong.era_ids || [], data.eras || []), 
+    [currentSong.eraIds, currentSong.era_ids, data.eras]
+  );
   
   // Helper function to check if a video type exists in currentSong.videos (Issue #1)
   // This ensures checkbox state reflects actual video items, not just form state
@@ -586,26 +594,56 @@ export const SongDetailView = ({ song, onBack }) => {
   return (
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
-        <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
-          <Icon name="ChevronLeft" size={16} /> Back to Songs
-        </button>
-        <button onClick={handleDeleteSong} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
-          <Icon name="Trash2" size={16} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
+            <Icon name="ChevronLeft" size={16} /> Back to Songs
+          </button>
+          {/* Lock Era indicator */}
+          {isSongLocked && (
+            <span className="px-3 py-2 bg-red-200 text-red-800 text-xs font-bold border-4 border-red-500 flex items-center gap-1">
+              <Icon name="Lock" size={14} /> ERA LOCKED
+            </span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => exportSongPDF(currentSong, teamMembers, data.eras || [])} 
+            className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-600 text-white")}
+            title="Export to PDF"
+          >
+            <Icon name="FileText" size={16} /> Export PDF
+          </button>
+          <button 
+            onClick={handleDeleteSong} 
+            disabled={isSongLocked}
+            className={cn("px-4 py-2", THEME.punk.btn, isSongLocked ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-red-500 text-white")}
+            title={isSongLocked ? "Cannot delete: Era is locked" : "Delete Song"}
+          >
+            <Icon name="Trash2" size={16} />
+          </button>
+        </div>
       </div>
+
+      {/* Locked Era Warning Banner */}
+      {isSongLocked && (
+        <div className={cn("mb-4 p-3 bg-red-100 border-4 border-red-500 flex items-center gap-2")}>
+          <Icon name="Lock" size={16} className="text-red-600" />
+          <span className="font-bold text-red-800">This song belongs to a locked era. Editing is disabled.</span>
+        </div>
+      )}
 
       {/* Display Section */}
       {displaySection}
 
       {/* SECTION B: Song Information - Consolidated per spec */}
-      <div className={cn("p-6 mb-6", THEME.punk.card)}>
+      <div className={cn("p-6 mb-6", THEME.punk.card, isSongLocked && "opacity-60 pointer-events-none")}>
         <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Song Information</h3>
         
         {/* Row 1: Title, Writers, Composers, Category */}
         <div className="grid md:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Song Title</label>
-            <input value={form.title || ''} onChange={e => handleFieldChange('title', e.target.value)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+            <input value={form.title || ''} onChange={e => handleFieldChange('title', e.target.value)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} disabled={isSongLocked} />
           </div>
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Writers</label>
@@ -1917,6 +1955,7 @@ export const ReleasesListView = ({ onSelectRelease }) => {
   ];
 
   // Filter options
+   
   const filterOptions = [
     { field: 'type', label: 'All Types', options: RELEASE_TYPES.map(t => ({ value: t, label: t })) }
   ];
@@ -1986,10 +2025,26 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
 
   const currentRelease = data.releases.find(r => r.id === release.id) || release;
 
-  const handleSave = async () => { await actions.updateRelease(release.id, form); };
+  // Lock Era feature: check if this release belongs to a locked era
+  const isReleaseLocked = useMemo(() => 
+    isEraLocked(currentRelease.eraIds || currentRelease.era_ids || [], data.eras || []), 
+    [currentRelease.eraIds, currentRelease.era_ids, data.eras]
+  );
+
+  const handleSave = async () => { 
+    if (isReleaseLocked) {
+      console.warn('Cannot save: release belongs to a locked era');
+      return;
+    }
+    await actions.updateRelease(release.id, form); 
+  };
   const handleFieldChange = (field, value) => { setForm(prev => ({ ...prev, [field]: value })); };
 
   const handleDeleteRelease = async () => {
+    if (isReleaseLocked) {
+      alert('Cannot delete: this release belongs to a locked era');
+      return;
+    }
     if (confirm('Delete this release?')) { await actions.deleteRelease(release.id); onBack(); }
   };
 
@@ -2229,25 +2284,57 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
   return (
     <div className="p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
-        <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}><Icon name="ChevronLeft" size={16} /> Back to Releases</button>
-        <button onClick={handleDeleteRelease} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}><Icon name="Trash2" size={16} /></button>
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}><Icon name="ChevronLeft" size={16} /> Back to Releases</button>
+          {/* Lock Era indicator */}
+          {isReleaseLocked && (
+            <span className="px-3 py-2 bg-red-200 text-red-800 text-xs font-bold border-4 border-red-500 flex items-center gap-1">
+              <Icon name="Lock" size={14} /> ERA LOCKED
+            </span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => exportReleasePDF(currentRelease, data.songs || [], teamMembers)} 
+            className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-600 text-white")}
+            title="Export to PDF"
+          >
+            <Icon name="FileText" size={16} /> Export PDF
+          </button>
+          <button 
+            onClick={handleDeleteRelease} 
+            disabled={isReleaseLocked}
+            className={cn("px-4 py-2", THEME.punk.btn, isReleaseLocked ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-red-500 text-white")}
+            title={isReleaseLocked ? "Cannot delete: Era is locked" : "Delete Release"}
+          >
+            <Icon name="Trash2" size={16} />
+          </button>
+        </div>
       </div>
+
+      {/* Locked Era Warning Banner */}
+      {isReleaseLocked && (
+        <div className={cn("mb-4 p-3 bg-red-100 border-4 border-red-500 flex items-center gap-2")}>
+          <Icon name="Lock" size={16} className="text-red-600" />
+          <span className="font-bold text-red-800">This release belongs to a locked era. Editing is disabled.</span>
+        </div>
+      )}
 
       {/* Display Section */}
       {displaySection}
 
       {/* SECTION B: Release Information (editable) - Phase 3 Enhanced */}
-      <div className={cn("p-6 mb-6", THEME.punk.card)}>
+      <div className={cn("p-6 mb-6", THEME.punk.card, isReleaseLocked && "opacity-60 pointer-events-none")}>
         <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Release Information</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Name</label>
-            <input value={form.name || ''} onChange={e => handleFieldChange('name', e.target.value)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+            <input value={form.name || ''} onChange={e => handleFieldChange('name', e.target.value)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} disabled={isReleaseLocked} />
           </div>
           {/* Phase 3.3: Release Type with expanded options */}
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Type</label>
-            <select value={form.type || 'Album'} onChange={e => { const newType = e.target.value; handleFieldChange('type', newType); actions.updateRelease(release.id, { ...form, type: newType }); }} className={cn("w-full", THEME.punk.input)}>
+            <select value={form.type || 'Album'} onChange={e => { const newType = e.target.value; handleFieldChange('type', newType); actions.updateRelease(release.id, { ...form, type: newType }); }} className={cn("w-full", THEME.punk.input)} disabled={isReleaseLocked}>
               {RELEASE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
@@ -2255,12 +2342,12 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
           {form.type === 'Other' && (
             <div className="md:col-span-2">
               <label className="block text-xs font-bold uppercase mb-1">Type Details (for &apos;Other&apos;)</label>
-              <input value={form.typeDetails || ''} onChange={e => handleFieldChange('typeDetails', e.target.value)} onBlur={handleSave} placeholder="Describe the release type" className={cn("w-full", THEME.punk.input)} />
+              <input value={form.typeDetails || ''} onChange={e => handleFieldChange('typeDetails', e.target.value)} onBlur={handleSave} placeholder="Describe the release type" className={cn("w-full", THEME.punk.input)} disabled={isReleaseLocked} />
             </div>
           )}
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Release Date</label>
-            <input type="date" value={form.releaseDate || ''} onChange={e => handleFieldChange('releaseDate', e.target.value)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+            <input type="date" value={form.releaseDate || ''} onChange={e => handleFieldChange('releaseDate', e.target.value)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} disabled={isReleaseLocked} />
           </div>
           {/* Phase 3.2: Exclusive YES/NO toggle pattern (like Songs/Versions/Videos) */}
           <div className="md:col-span-2">
@@ -2782,6 +2869,14 @@ export const CombinedTimelineView = () => {
   const [dateTo, setDateTo] = useState('');
   const [viewMode, setViewMode] = useState('list'); // 'list', 'week', 'month'
   const [selectedItem, setSelectedItem] = useState(null);
+  // New sorting options
+  const [sortBy, setSortBy] = useState('date'); // 'date', 'estimatedCost', 'duration'
+  const [sortDir, setSortDir] = useState('asc'); // 'asc', 'desc'
+  // New filtering options
+  const [filterTeamMembers, setFilterTeamMembers] = useState([]); // Multi-select team member IDs
+  const [filterCostStatus, setFilterCostStatus] = useState('all'); // 'all', 'unpaid'
+
+  const teamMembers = useMemo(() => data.teamMembers || [], [data.teamMembers]);
 
   const timelineItems = useMemo(() => {
     const items = [];
@@ -2816,7 +2911,10 @@ export const CombinedTimelineView = () => {
           name: song.title,
           category: task.category || song.category,
           status: task.status,
-          estimatedCost: task.estimatedCost,
+          estimatedCost: task.estimatedCost || 0,
+          quotedCost: task.quotedCost || 0,
+          paidCost: task.paidCost || 0,
+          assignedMembers: task.assignedMembers || [],
           notes: task.notes,
           songId: song.id,
           clickable: true
@@ -2834,7 +2932,10 @@ export const CombinedTimelineView = () => {
           name: song.title,
           category: song.category,
           status: task.status,
-          estimatedCost: task.estimatedCost,
+          estimatedCost: task.estimatedCost || 0,
+          quotedCost: task.quotedCost || 0,
+          paidCost: task.paidCost || 0,
+          assignedMembers: task.assignedMembers || [],
           notes: task.description || task.notes,
           songId: song.id,
           clickable: true
@@ -2853,7 +2954,10 @@ export const CombinedTimelineView = () => {
             name: `${version.name} (${song.title})`,
             category: task.category || 'Version',
             status: task.status,
-            estimatedCost: task.estimatedCost,
+            estimatedCost: task.estimatedCost || 0,
+            quotedCost: task.quotedCost || 0,
+            paidCost: task.paidCost || 0,
+            assignedMembers: task.assignedMembers || [],
             notes: task.notes,
             songId: song.id,
             clickable: true
@@ -2874,7 +2978,10 @@ export const CombinedTimelineView = () => {
             name: `${video.title} (${song.title})`,
             category: 'Video',
             status: task.status,
-            estimatedCost: task.estimatedCost,
+            estimatedCost: task.estimatedCost || 0,
+            quotedCost: task.quotedCost || 0,
+            paidCost: task.paidCost || 0,
+            assignedMembers: task.assignedMembers || [],
             notes: task.notes,
             songId: song.id,
             clickable: true
@@ -2892,7 +2999,10 @@ export const CombinedTimelineView = () => {
             name: video.title,
             category: 'Video',
             status: null,
-            estimatedCost: video.estimatedCost,
+            estimatedCost: video.estimatedCost || 0,
+            quotedCost: video.quotedCost || 0,
+            paidCost: video.paidCost || 0,
+            assignedMembers: [],
             notes: null,
             songId: song.id,
             clickable: true
@@ -2911,6 +3021,9 @@ export const CombinedTimelineView = () => {
           category: 'Exclusive',
           status: null,
           estimatedCost: 0,
+          quotedCost: 0,
+          paidCost: 0,
+          assignedMembers: [],
           notes: song.exclusiveNotes,
           songId: song.id,
           isExclusivityStart: true,
@@ -2930,6 +3043,9 @@ export const CombinedTimelineView = () => {
           category: 'Exclusive',
           status: null,
           estimatedCost: 0,
+          quotedCost: 0,
+          paidCost: 0,
+          assignedMembers: [],
           notes: song.exclusiveNotes,
           songId: song.id,
           isExclusivityEnd: true,
@@ -2952,7 +3068,10 @@ export const CombinedTimelineView = () => {
           name: `${video.title} (Standalone)`,
           category: 'Video',
           status: task.status,
-          estimatedCost: task.estimatedCost,
+          estimatedCost: task.estimatedCost || 0,
+          quotedCost: task.quotedCost || 0,
+          paidCost: task.paidCost || 0,
+          assignedMembers: task.assignedMembers || [],
           notes: task.notes,
           songId: null,
           clickable: true
@@ -2968,7 +3087,10 @@ export const CombinedTimelineView = () => {
           name: `${video.title} (Standalone)`,
           category: 'Video',
           status: null,
-          estimatedCost: video.estimatedCost,
+          estimatedCost: video.estimatedCost || 0,
+          quotedCost: video.quotedCost || 0,
+          paidCost: video.paidCost || 0,
+          assignedMembers: [],
           notes: video.notes,
           songId: null,
           clickable: true
@@ -2982,6 +3104,8 @@ export const CombinedTimelineView = () => {
       // Calculate cost from tasks
       const eventTasks = [...(event.tasks || []), ...(event.customTasks || [])];
       const taskCost = eventTasks.reduce((sum, t) => sum + getEffectiveCost(t), 0);
+      const taskQuotedCost = eventTasks.reduce((sum, t) => sum + (t.quotedCost || 0), 0);
+      const taskPaidCost = eventTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0);
       if (eventDate) {
         items.push({
           id: 'event-' + event.id,
@@ -2992,6 +3116,9 @@ export const CombinedTimelineView = () => {
           category: 'Event',
           status: null,
           estimatedCost: taskCost,
+          quotedCost: taskQuotedCost,
+          paidCost: taskPaidCost,
+          assignedMembers: [],
           notes: event.description,
           songId: null,
           clickable: true
@@ -3011,6 +3138,9 @@ export const CombinedTimelineView = () => {
             category: 'Event',
             status: task.status,
             estimatedCost: task.estimatedCost || 0,
+            quotedCost: task.quotedCost || 0,
+            paidCost: task.paidCost || 0,
+            assignedMembers: task.assignedMembers || [],
             notes: task.notes || task.description,
             songId: null,
             clickable: true
@@ -3031,6 +3161,9 @@ export const CombinedTimelineView = () => {
             category: 'Event',
             status: task.status,
             estimatedCost: task.estimatedCost || 0,
+            quotedCost: task.quotedCost || 0,
+            paidCost: task.paidCost || 0,
+            assignedMembers: task.assignedMembers || [],
             notes: task.notes || task.description,
             songId: null,
             clickable: true
@@ -3050,7 +3183,10 @@ export const CombinedTimelineView = () => {
         name: task.taskName,
         category: task.category,
         status: task.status,
-        estimatedCost: task.estimatedCost,
+        estimatedCost: task.estimatedCost || 0,
+        quotedCost: task.quotedCost || 0,
+        paidCost: task.paidCost || 0,
+        assignedMembers: task.assignedMembers || [],
         notes: task.description,
         songId: null,
         clickable: true
@@ -3069,7 +3205,10 @@ export const CombinedTimelineView = () => {
         name: release.name,
         category: release.type, 
         status: null, 
-        estimatedCost: release.estimatedCost, 
+        estimatedCost: release.estimatedCost || 0, 
+        quotedCost: release.quotedCost || 0,
+        paidCost: release.paidCost || 0,
+        assignedMembers: [],
         notes: release.notes, 
         songId: null,
         clickable: true 
@@ -3086,7 +3225,10 @@ export const CombinedTimelineView = () => {
           name: release.name,
           category: task.category, 
           status: task.status, 
-          estimatedCost: task.estimatedCost, 
+          estimatedCost: task.estimatedCost || 0, 
+          quotedCost: task.quotedCost || 0,
+          paidCost: task.paidCost || 0,
+          assignedMembers: task.assignedMembers || [],
           notes: task.notes, 
           songId: null,
           clickable: true 
@@ -3104,6 +3246,9 @@ export const CombinedTimelineView = () => {
           category: 'Release Exclusive',
           status: null,
           estimatedCost: 0,
+          quotedCost: 0,
+          paidCost: 0,
+          assignedMembers: [],
           notes: release.exclusiveNotes,
           songId: null,
           isExclusivityStart: true,
@@ -3120,12 +3265,53 @@ export const CombinedTimelineView = () => {
     if (filterStatus !== 'all') filtered = filtered.filter(i => i.status === filterStatus);
     if (dateFrom) filtered = filtered.filter(i => i.date >= dateFrom);
     if (dateTo) filtered = filtered.filter(i => i.date <= dateTo);
+    
+    // Team Member filter: Show only tasks assigned to specific team member(s)
+    if (filterTeamMembers.length > 0) {
+      filtered = filtered.filter(i => {
+        const memberIds = (i.assignedMembers || []).map(m => m.memberId);
+        return filterTeamMembers.some(filterId => memberIds.includes(filterId));
+      });
+    }
+    
+    // Cost Status filter: Show only unpaid tasks (has estimatedCost/quotedCost but paidCost is 0 or undefined)
+    if (filterCostStatus === 'unpaid') {
+      filtered = filtered.filter(i => {
+        const hasCost = (i.estimatedCost > 0) || (i.quotedCost > 0);
+        const isPaid = i.paidCost > 0;
+        return hasCost && !isPaid;
+      });
+    }
 
-    // Sort by date ascending
-    filtered.sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1);
+    // Sort by selected field
+    filtered.sort((a, b) => {
+      let valA, valB;
+      
+      if (sortBy === 'date') {
+        valA = a.date || '';
+        valB = b.date || '';
+      } else if (sortBy === 'estimatedCost') {
+        valA = a.estimatedCost || 0;
+        valB = b.estimatedCost || 0;
+      } else if (sortBy === 'duration') {
+        // Duration is not directly available on all items, use 0 as default
+        // For tasks, duration could be derived from start/end dates if available
+        valA = 0;
+        valB = 0;
+      } else {
+        valA = a.date || '';
+        valB = b.date || '';
+      }
+      
+      if (sortDir === 'asc') {
+        return valA < valB ? -1 : valA > valB ? 1 : 0;
+      } else {
+        return valA > valB ? -1 : valA < valB ? 1 : 0;
+      }
+    });
 
     return filtered;
-  }, [data.songs, data.globalTasks, data.releases, data.events, data.standaloneVideos, filterSource, filterSong, filterStatus, dateFrom, dateTo]);
+  }, [data.songs, data.globalTasks, data.releases, data.events, data.standaloneVideos, filterSource, filterSong, filterStatus, dateFrom, dateTo, filterTeamMembers, filterCostStatus, sortBy, sortDir]);
 
   const getSourceColor = (sourceType) => {
     switch (sourceType) {
@@ -3163,7 +3349,7 @@ export const CombinedTimelineView = () => {
       </div>
 
       <div className={cn("p-4 mb-6 bg-gray-50", THEME.punk.card)}>
-        <div className="grid md:grid-cols-5 gap-3">
+        <div className="grid md:grid-cols-5 gap-3 mb-3">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Source</label>
             <select value={filterSource} onChange={e => setFilterSource(e.target.value)} className={cn("w-full", THEME.punk.input)}>
@@ -3192,6 +3378,66 @@ export const CombinedTimelineView = () => {
           <div>
             <label className="block text-xs font-bold uppercase mb-1">To Date</label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={cn("w-full", THEME.punk.input)} />
+          </div>
+        </div>
+        
+        {/* New filter and sort row */}
+        <div className="grid md:grid-cols-4 gap-3 pt-3 border-t-2 border-gray-300">
+          <div>
+            <label className="block text-xs font-bold uppercase mb-1">Sort By</label>
+            <div className="flex gap-1">
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className={cn("flex-1", THEME.punk.input)}>
+                <option value="date">Date</option>
+                <option value="estimatedCost">Estimated Cost</option>
+                <option value="duration">Duration</option>
+              </select>
+              <button 
+                onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')} 
+                className={cn("px-2 py-1 text-xs font-bold", THEME.punk.btn)}
+                title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+              >
+                {sortDir === 'asc' ? '↑' : '↓'}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase mb-1">Cost Status</label>
+            <select value={filterCostStatus} onChange={e => setFilterCostStatus(e.target.value)} className={cn("w-full", THEME.punk.input)}>
+              <option value="all">All</option>
+              <option value="unpaid">Unpaid Only</option>
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-bold uppercase mb-1">Team Members</label>
+            <div className="flex flex-wrap gap-1 p-2 border-4 border-black bg-white max-h-20 overflow-y-auto">
+              {teamMembers.length === 0 ? (
+                <span className="text-xs opacity-50">No team members available</span>
+              ) : teamMembers.map(m => (
+                <label key={m.id} className="flex items-center gap-1 text-xs cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={filterTeamMembers.includes(m.id)} 
+                    onChange={e => {
+                      if (e.target.checked) {
+                        setFilterTeamMembers([...filterTeamMembers, m.id]);
+                      } else {
+                        setFilterTeamMembers(filterTeamMembers.filter(id => id !== m.id));
+                      }
+                    }}
+                    className="w-3 h-3" 
+                  />
+                  {m.name}
+                </label>
+              ))}
+              {filterTeamMembers.length > 0 && (
+                <button 
+                  onClick={() => setFilterTeamMembers([])} 
+                  className="text-xs text-red-600 font-bold px-1"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -4125,6 +4371,10 @@ export const FinancialsView = () => {
   const [filterSong, setFilterSong] = useState('all');
   const [filterItemType, setFilterItemType] = useState('all');
   const [costMode, setCostMode] = useState('effective'); // 'paid', 'quoted', 'estimated', 'effective'
+  const [showVisualize, setShowVisualize] = useState(false);
+  
+  // Chart colors for brutalist theme
+  const CHART_COLORS = ['#f472b6', '#facc15', '#22d3ee', '#a78bfa', '#fb923c', '#4ade80', '#f87171'];
   
   // Get cost value based on selected mode
   const getCostValue = useCallback((item) => {
@@ -4418,11 +4668,37 @@ export const FinancialsView = () => {
     return groups;
   }, [costItems]);
 
+  // Pie chart data: Cost distribution by source
+  const pieChartData = useMemo(() => {
+    return Object.entries(sourceGroups)
+      .filter(([, data]) => data.effective > 0)
+      .map(([source, data]) => ({
+        name: source,
+        value: data.effective
+      }));
+  }, [sourceGroups]);
+
+  // Bar chart data: Estimated vs Quoted vs Paid totals
+  const barChartData = useMemo(() => {
+    return [
+      { name: 'Estimated', value: totals.estimated, fill: '#9ca3af' },
+      { name: 'Quoted', value: totals.quoted, fill: '#3b82f6' },
+      { name: 'Paid', value: totals.paid, fill: '#22c55e' }
+    ];
+  }, [totals]);
+
   return (
     <div className="p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className={THEME.punk.textStyle}>Financials</h2>
         <div className="flex gap-2">
+          <button 
+            onClick={() => setShowVisualize(!showVisualize)} 
+            className={cn("px-4 py-2", THEME.punk.btn, showVisualize ? "bg-pink-500 text-white" : "bg-white")}
+          >
+            <Icon name="BarChart2" size={16} className="inline mr-2" />
+            {showVisualize ? 'Hide Charts' : 'Visualize'}
+          </button>
           <select value={costMode} onChange={e => setCostMode(e.target.value)} className={cn("px-3 py-2", THEME.punk.input)}>
             <option value="effective">Effective Cost (Paid → Quoted → Estimated)</option>
             <option value="paid">Paid Only</option>
@@ -4431,6 +4707,64 @@ export const FinancialsView = () => {
           </select>
         </div>
       </div>
+
+      {/* Charts Section - Visible when Visualize is toggled ON */}
+      {showVisualize && (
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
+          {/* Pie Chart - Cost Distribution by Source */}
+          <div className={cn("p-4", THEME.punk.card)}>
+            <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Cost Distribution by Source</h3>
+            {pieChartData.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-sm opacity-50">No cost data available</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    stroke="#000"
+                    strokeWidth={2}
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatMoney(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Bar Chart - Estimated vs Quoted vs Paid */}
+          <div className={cn("p-4", THEME.punk.card)}>
+            <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Estimated vs Quoted vs Paid</h3>
+            {totals.estimated === 0 && totals.quoted === 0 && totals.paid === 0 ? (
+              <div className="h-64 flex items-center justify-center text-sm opacity-50">No cost data available</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={barChartData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#000" strokeOpacity={0.2} />
+                  <XAxis type="number" tickFormatter={(value) => formatMoney(value)} stroke="#000" strokeWidth={2} />
+                  <YAxis type="category" dataKey="name" stroke="#000" strokeWidth={2} tick={{ fontWeight: 'bold' }} />
+                  <Tooltip formatter={(value) => formatMoney(value)} />
+                  <Bar dataKey="value" stroke="#000" strokeWidth={2}>
+                    {barChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Filter Panel - Per Section 5 of implementation plan */}
       <div className={cn("p-4 mb-6 bg-gray-50", THEME.punk.card)}>
@@ -4936,6 +5270,7 @@ export const EventsListView = ({ onSelectEvent }) => {
   ];
 
   // Filter options
+   
   const filterOptions = [
     { 
       field: 'type', 
@@ -5695,6 +6030,7 @@ export const ExpensesListView = ({ onSelectExpense }) => {
   ];
 
   // Filter options
+   
   const filterOptions = [
     { 
       field: 'category', 
@@ -6057,6 +6393,7 @@ export const VideosListView = ({ onSelectVideo }) => {
   ];
 
   // Filter options
+   
   const filterOptions = [
     { field: 'videoType', label: 'All Types', options: videoTypeOptions.map(t => ({ value: t.key, label: t.label })) }
   ];
@@ -6360,9 +6697,18 @@ export const VideoDetailView = ({ video, onBack }) => {
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
           <Icon name="ChevronLeft" size={16} /> Back to Videos
         </button>
-        <button onClick={handleDeleteVideo} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
-          <Icon name="Trash2" size={16} />
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => exportVideoPDF(currentVideo, teamMembers)} 
+            className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-600 text-white")}
+            title="Export to PDF"
+          >
+            <Icon name="FileText" size={16} /> Export PDF
+          </button>
+          <button onClick={handleDeleteVideo} className={cn("px-4 py-2", THEME.punk.btn, "bg-red-500 text-white")}>
+            <Icon name="Trash2" size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Display Section */}
@@ -6820,12 +7166,14 @@ export const VideoDetailView = ({ video, onBack }) => {
 
 // Global Tasks List View - Standardized Architecture
 // Phase 5: Enhanced with Category management
+// Phase 6: Added Kanban Board View
 export const GlobalTasksListView = ({ onSelectTask }) => {
   const { data, actions } = useStore();
   const [filterArchived, setFilterArchived] = useState('active');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showManageCategoriesModal, setShowManageCategoriesModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [viewMode, setViewMode] = useState('list'); // 'list', 'grid', 'board'
   const [newTaskForm, setNewTaskForm] = useState({
     taskName: 'New Task',
     category: 'Other',
@@ -6834,6 +7182,57 @@ export const GlobalTasksListView = ({ onSelectTask }) => {
     estimatedCost: 0,
     notes: ''
   });
+
+  // Kanban board column configuration
+  const kanbanColumns = useMemo(() => [
+    { 
+      id: 'todo', 
+      title: 'Todo', 
+      statuses: ['Not Started'], 
+      bgColor: 'bg-gray-100',
+      borderColor: 'border-gray-400'
+    },
+    { 
+      id: 'inprogress', 
+      title: 'In Progress', 
+      statuses: ['In-Progress', 'In Progress'], 
+      bgColor: 'bg-blue-100',
+      borderColor: 'border-blue-400'
+    },
+    { 
+      id: 'review', 
+      title: 'Review', 
+      statuses: ['Waiting on Someone Else', 'Paid But Not Complete', 'Complete But Not Paid'], 
+      bgColor: 'bg-yellow-100',
+      borderColor: 'border-yellow-400'
+    },
+    { 
+      id: 'done', 
+      title: 'Done', 
+      statuses: ['Complete', 'Done'], 
+      bgColor: 'bg-green-100',
+      borderColor: 'border-green-400'
+    }
+  ], []);
+
+  // Helper to get column index for a task status
+  const getColumnForStatus = useCallback((status) => {
+    const index = kanbanColumns.findIndex(col => col.statuses.includes(status));
+    return index >= 0 ? index : 0; // Default to first column if status not found
+  }, [kanbanColumns]);
+
+  // Move task to previous/next column
+  const moveTaskToColumn = useCallback(async (task, direction) => {
+    const currentColIndex = getColumnForStatus(task.status);
+    const newColIndex = direction === 'left' 
+      ? Math.max(0, currentColIndex - 1)
+      : Math.min(kanbanColumns.length - 1, currentColIndex + 1);
+    
+    if (newColIndex !== currentColIndex) {
+      const newStatus = kanbanColumns[newColIndex].statuses[0];
+      await actions.updateGlobalTask(task.id, { status: newStatus });
+    }
+  }, [getColumnForStatus, kanbanColumns, actions]);
 
   // Phase 5.1: Categories as Items
   const allCategories = useMemo(() => {
@@ -6882,6 +7281,7 @@ export const GlobalTasksListView = ({ onSelectTask }) => {
   ];
 
   // Filter options
+  // eslint-disable-next-line no-unused-vars
   const filterOptions = [
     { 
       field: 'category', 
@@ -6925,21 +7325,210 @@ export const GlobalTasksListView = ({ onSelectTask }) => {
     </div>
   );
 
-  // Header extra content
-  const headerExtra = (
-    <>
-      <div className="flex items-center gap-4 mb-4">
-        <select value={filterArchived} onChange={e => setFilterArchived(e.target.value)} className={cn("px-3 py-2", THEME.punk.input)}>
-          <option value="all">All</option>
-          <option value="active">Active</option>
-          <option value="done">Done</option>
-          <option value="archived">Archived</option>
-        </select>
-        <button onClick={() => setShowManageCategoriesModal(true)} className={cn("px-4 py-2", THEME.punk.btn, "bg-purple-600 text-white")}>
-          <Icon name="Folder" size={16} className="inline mr-1" /> Categories
-        </button>
+  // Kanban Board Card Component
+  const KanbanTaskCard = ({ task, columnIndex }) => {
+    const isFirstColumn = columnIndex === 0;
+    const isLastColumn = columnIndex === kanbanColumns.length - 1;
+    
+    return (
+      <div 
+        className={cn(
+          "p-3 mb-2 bg-white border-2 border-black cursor-pointer hover:shadow-lg transition-shadow",
+          task.isArchived && "opacity-50"
+        )}
+        onClick={() => onSelectTask?.(task)}
+      >
+        <div className="font-bold text-sm mb-2 truncate">{task.taskName}</div>
+        {task.category && (
+          <div className="text-xs mb-1">
+            <span className="px-1 py-0.5 bg-purple-100 border border-purple-300 font-bold">{task.category}</span>
+          </div>
+        )}
+        {task.date && (
+          <div className="text-xs text-gray-600 mb-1">📅 {task.date}</div>
+        )}
+        {task.estimatedCost > 0 && (
+          <div className="text-xs text-gray-600 mb-2">💰 {formatMoney(getEffectiveCost(task))}</div>
+        )}
+        
+        {/* Move arrows */}
+        <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+          <button
+            onClick={(e) => { e.stopPropagation(); moveTaskToColumn(task, 'left'); }}
+            disabled={isFirstColumn}
+            className={cn(
+              "px-2 py-1 text-xs font-bold border-2 border-black",
+              isFirstColumn ? "opacity-30 cursor-not-allowed bg-gray-100" : "bg-white hover:bg-gray-100"
+            )}
+            title="Move left"
+          >
+            ← 
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); moveTaskToColumn(task, 'right'); }}
+            disabled={isLastColumn}
+            className={cn(
+              "px-2 py-1 text-xs font-bold border-2 border-black",
+              isLastColumn ? "opacity-30 cursor-not-allowed bg-gray-100" : "bg-white hover:bg-gray-100"
+            )}
+            title="Move right"
+          >
+            →
+          </button>
+        </div>
       </div>
-      
+    );
+  };
+
+  // Board View Component
+  const BoardView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {kanbanColumns.map((column, colIndex) => {
+        const columnTasks = filteredTasks.filter(task => 
+          column.statuses.includes(task.status)
+        );
+        
+        return (
+          <div 
+            key={column.id} 
+            className={cn("border-4 border-black p-3 min-h-[400px]", column.bgColor)}
+          >
+            <div className={cn("font-black uppercase text-sm mb-3 pb-2 border-b-2", column.borderColor)}>
+              {column.title} 
+              <span className="ml-2 px-2 py-0.5 bg-black text-white text-xs rounded-none">
+                {columnTasks.length}
+              </span>
+            </div>
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {columnTasks.length === 0 ? (
+                <div className="p-4 text-center text-xs opacity-50 border-2 border-dashed border-gray-400">
+                  No tasks
+                </div>
+              ) : (
+                columnTasks.map(task => (
+                  <KanbanTaskCard key={task.id} task={task} columnIndex={colIndex} />
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // View Mode Toggle with Board option
+  const ViewModeToggleWithBoard = () => (
+    <div className="flex border-4 border-black">
+      <button 
+        onClick={() => setViewMode('list')} 
+        className={cn("px-3 py-2 font-bold text-xs", viewMode === 'list' ? "bg-black text-white" : "bg-white")}
+        title="List View"
+      >
+        <Icon name="List" size={16} />
+      </button>
+      <button 
+        onClick={() => setViewMode('grid')} 
+        className={cn("px-3 py-2 font-bold text-xs border-l-4 border-black", viewMode === 'grid' ? "bg-black text-white" : "bg-white")}
+        title="Grid View"
+      >
+        <Icon name="Folder" size={16} />
+      </button>
+      <button 
+        onClick={() => setViewMode('board')} 
+        className={cn("px-3 py-2 font-bold text-xs border-l-4 border-black", viewMode === 'board' ? "bg-black text-white" : "bg-white")}
+        title="Board View"
+      >
+        <Icon name="Layout" size={16} />
+      </button>
+    </div>
+  );
+
+  // List View Component - renders a table of tasks
+  const ListView = () => (
+    <div className={cn("overflow-x-auto", THEME.punk.card)}>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-black text-white">
+            {columns.map(col => (
+              <th key={col.field} className={cn("p-3", col.align === 'right' ? 'text-right' : 'text-left')}>
+                {col.label}
+              </th>
+            ))}
+            <th className="p-3 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredTasks.length === 0 ? (
+            <tr><td colSpan={columns.length + 1} className="p-10 text-center opacity-50">No tasks yet. Click + Add Task to create one.</td></tr>
+          ) : (
+            filteredTasks.map(task => (
+              <tr 
+                key={task.id} 
+                className={cn("border-b border-gray-200 hover:bg-yellow-50 cursor-pointer", task.isArchived && "opacity-50")}
+                onClick={() => onSelectTask?.(task)}
+              >
+                {columns.map(col => (
+                  <td 
+                    key={col.field}
+                    className={cn("p-3", col.align === 'right' ? 'text-right' : '')}
+                  >
+                    {col.render ? col.render(task) : (task[col.field] ?? '-')}
+                  </td>
+                ))}
+                <td className="p-3 text-center" onClick={e => e.stopPropagation()}>
+                  {renderActions(task)}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  // Grid View Component - renders cards in a grid
+  const GridView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {filteredTasks.length === 0 ? (
+        <div className={cn("col-span-full p-10 text-center opacity-50", THEME.punk.card)}>No tasks yet. Click + Add Task to create one.</div>
+      ) : (
+        filteredTasks.map(task => renderGridCard(task))
+      )}
+    </div>
+  );
+
+  // Main render - all views use consistent header
+  return (
+    <div className="p-6 pb-24">
+      {/* Header */}
+      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <h2 className={cn(THEME.punk.textStyle, "punk-accent-underline text-2xl")}>Global Tasks</h2>
+        <div className="flex flex-wrap gap-2 items-center">
+          <ViewModeToggleWithBoard />
+          <select value={filterArchived} onChange={e => setFilterArchived(e.target.value)} className={cn("px-3 py-2", THEME.punk.input)}>
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="done">Done</option>
+            <option value="archived">Archived</option>
+          </select>
+          <button onClick={() => setShowManageCategoriesModal(true)} className={cn("px-4 py-2", THEME.punk.btn, "bg-purple-600 text-white")}>
+            <Icon name="Folder" size={16} className="inline mr-1" /> Categories
+          </button>
+          <button onClick={handleAddTask} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>
+            + Add Task
+          </button>
+        </div>
+      </div>
+
+      {/* View Content */}
+      {viewMode === 'board' ? (
+        <BoardView />
+      ) : viewMode === 'grid' ? (
+        <GridView />
+      ) : (
+        <ListView />
+      )}
+
       {/* Manage Categories Modal */}
       {showManageCategoriesModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowManageCategoriesModal(false)}>
@@ -7006,24 +7595,6 @@ export const GlobalTasksListView = ({ onSelectTask }) => {
           </div>
         </div>
       )}
-    </>
-  );
-
-  return (
-    <>
-    <StandardListPage
-      title="Global Tasks"
-      items={filteredTasks}
-      onSelectItem={onSelectTask}
-      onAddItem={handleAddTask}
-      addButtonText="+ Add Task"
-      columns={columns}
-      filterOptions={filterOptions}
-      renderGridCard={renderGridCard}
-      renderActions={renderActions}
-      headerExtra={headerExtra}
-      emptyMessage="No tasks yet. Click + Add Task to create one."
-    />
     
     {/* Add Task Modal */}
     {showAddTaskModal && (
@@ -7107,7 +7678,7 @@ export const GlobalTasksListView = ({ onSelectTask }) => {
         </div>
       </div>
     )}
-  </>
+    </div>
   );
 };
 
@@ -7125,15 +7696,31 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
     return (data.taskCategories || []).map(c => ({ ...c, isLegacy: false }));
   }, [data.taskCategories]);
 
+  const currentTask = useMemo(() => 
+    (data.globalTasks || []).find(t => t.id === task.id) || task, 
+    [data.globalTasks, task]
+  );
+
+  // Lock Era feature: check if this task belongs to a locked era
+  const isTaskLocked = useMemo(() => 
+    isEraLocked(currentTask.eraIds || currentTask.era_ids || [], data.eras || []), 
+    [currentTask.eraIds, currentTask.era_ids, data.eras]
+  );
+
   const handleSave = useCallback(async () => { 
+    if (isTaskLocked) {
+      console.warn('Cannot save: task belongs to a locked era');
+      return;
+    }
     await actions.updateGlobalTask(task.id, form); 
-  }, [actions, task.id, form]);
+  }, [actions, task.id, form, isTaskLocked]);
   
   const handleFieldChange = useCallback((field, value) => { 
     setForm(prev => ({ ...prev, [field]: value })); 
   }, []);
 
   const handleAddCategoryAndAssign = async () => {
+    if (isTaskLocked) return;
     if (newCategoryName.trim()) {
       const newCategory = await actions.addTaskCategory({ name: newCategoryName.trim() });
       if (newCategory) {
@@ -7148,7 +7735,7 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
   };
 
   const addAssignment = () => {
-    if (!newAssignments.memberId) return;
+    if (isTaskLocked || !newAssignments.memberId) return;
     const updatedMembers = [...(form.assignedMembers || []), { memberId: newAssignments.memberId, cost: parseFloat(newAssignments.cost) || 0 }];
     handleFieldChange('assignedMembers', updatedMembers);
     // Save directly with the new assignedMembers to avoid stale state
@@ -7157,16 +7744,12 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
   };
 
   const removeAssignment = (index) => {
+    if (isTaskLocked) return;
     const updatedMembers = (form.assignedMembers || []).filter((_, i) => i !== index);
     handleFieldChange('assignedMembers', updatedMembers);
     // Save directly with the new assignedMembers to avoid stale state
     actions.updateGlobalTask(task.id, { ...form, assignedMembers: updatedMembers });
   };
-
-  const currentTask = useMemo(() => 
-    (data.globalTasks || []).find(t => t.id === task.id) || task, 
-    [data.globalTasks, task]
-  );
   
   const assignedTeamMembers = useMemo(() => {
     const memberIds = new Set();
@@ -7223,12 +7806,12 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
 
   // Edit Section
   const editSection = (
-    <div className={cn("p-6 mb-6", THEME.punk.card)}>
+    <div className={cn("p-6 mb-6", THEME.punk.card, isTaskLocked && "opacity-60 pointer-events-none")}>
       <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Task Information</h3>
       <div className="grid md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Task Name</label>
-          <input value={form.taskName || ''} onChange={e => handleFieldChange('taskName', e.target.value)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+          <input value={form.taskName || ''} onChange={e => handleFieldChange('taskName', e.target.value)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} disabled={isTaskLocked} />
         </div>
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Category</label>
@@ -7236,6 +7819,7 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
             <select 
               value={form.category || ''} 
               onChange={e => { 
+                if (isTaskLocked) return;
                 const newCategory = e.target.value;
                 handleFieldChange('category', newCategory); 
                 const cat = allCategories.find(c => c.name === newCategory);
@@ -7246,19 +7830,21 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
                 actions.updateGlobalTask(task.id, { ...form, category: newCategory, categoryId: newCategoryId }); 
               }} 
               className={cn("flex-1", THEME.punk.input)}
+              disabled={isTaskLocked}
             >
               <option value="">No Category</option>
               {allCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
             <button 
-              onClick={() => setShowAddCategory(!showAddCategory)}
+              onClick={() => !isTaskLocked && setShowAddCategory(!showAddCategory)}
               className={cn("px-3 py-2 text-xs", THEME.punk.btn, showAddCategory ? "bg-gray-500 text-white" : "bg-purple-600 text-white")}
               title="Add New Category"
+              disabled={isTaskLocked}
             >
               {showAddCategory ? '×' : '+'}
             </button>
           </div>
-          {showAddCategory && (
+          {showAddCategory && !isTaskLocked && (
             <div className="flex gap-2 mt-2">
               <input 
                 value={newCategoryName} 
@@ -7310,7 +7896,7 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
 
   // Team Member Assignments Section
   const teamSection = (
-    <div className={cn("p-6 mb-6", THEME.punk.card)}>
+    <div className={cn("p-6 mb-6", THEME.punk.card, isTaskLocked && "opacity-60 pointer-events-none")}>
       <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Team Member Assignments</h3>
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2 mb-3">
@@ -7347,6 +7933,7 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
         tagIds: form.tagIds || []
       }}
       onChange={({ eraIds, stageIds, tagIds }) => {
+        if (isTaskLocked) return;
         handleFieldChange('eraIds', eraIds);
         handleFieldChange('stageIds', stageIds);
         handleFieldChange('tagIds', tagIds);
@@ -7355,18 +7942,47 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
     />
   );
 
+  // Handle delete with lock check
+  const handleDelete = async () => {
+    if (isTaskLocked) {
+      alert('Cannot delete: this task belongs to a locked era');
+      return;
+    }
+    await actions.deleteGlobalTask(task.id);
+    onBack();
+  };
+
+  // Handle archive with lock check
+  const handleArchive = async () => {
+    if (isTaskLocked) {
+      alert('Cannot archive: this task belongs to a locked era');
+      return;
+    }
+    await actions.archiveGlobalTask(task.id);
+    onBack();
+  };
+
   return (
-    <StandardDetailPage
-      item={currentTask}
-      onBack={onBack}
-      backText="Back to Tasks"
-      onDelete={async () => { await actions.deleteGlobalTask(task.id); onBack(); }}
-      onArchive={!currentTask.isArchived ? async () => { await actions.archiveGlobalTask(task.id); onBack(); } : undefined}
-      onRestore={currentTask.isArchived ? () => actions.updateGlobalTask(task.id, { isArchived: false }) : undefined}
-      isArchived={currentTask.isArchived}
-      displaySection={displaySection}
-      editSection={editSection}
-      extraSections={<>{teamSection}{eraStageTagsSection}</>}
-    />
+    <>
+      {/* Locked Era Warning Banner */}
+      {isTaskLocked && (
+        <div className={cn("mx-6 mt-6 p-3 bg-red-100 border-4 border-red-500 flex items-center gap-2")}>
+          <Icon name="Lock" size={16} className="text-red-600" />
+          <span className="font-bold text-red-800">This task belongs to a locked era. Editing is disabled.</span>
+        </div>
+      )}
+      <StandardDetailPage
+        item={currentTask}
+        onBack={onBack}
+        backText="Back to Tasks"
+        onDelete={isTaskLocked ? undefined : handleDelete}
+        onArchive={!currentTask.isArchived && !isTaskLocked ? handleArchive : undefined}
+        onRestore={currentTask.isArchived && !isTaskLocked ? () => actions.updateGlobalTask(task.id, { isArchived: false }) : undefined}
+        isArchived={currentTask.isArchived}
+        displaySection={displaySection}
+        editSection={editSection}
+        extraSections={<>{teamSection}{eraStageTagsSection}</>}
+      />
+    </>
   );
 };
