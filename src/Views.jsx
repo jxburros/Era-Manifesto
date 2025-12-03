@@ -2442,19 +2442,93 @@ export const SettingsView = () => {
                 {/* Eras */}
                 <div className="pt-4 border-t-4 border-black">
                   <h3 className="font-black text-xs uppercase mb-2">Eras</h3>
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {(data.eras || []).map(era => (
-                      <div key={era.id} className="flex items-center gap-2">
-                        <input value={era.name} onChange={e => actions.updateEra(era.id, { name: e.target.value })} className={cn("flex-1", THEME.punk.input)} />
-                        <input type="color" value={era.color || '#000000'} onChange={e => actions.updateEra(era.id, { color: e.target.value })} className="w-16 h-10 border-4 border-black" />
-                        <button 
-                          onClick={() => exportEraPDF(era, data.releases || [], data.songs || [])} 
-                          className={cn("px-2 py-1 text-xs", THEME.punk.btn, "bg-blue-600 text-white")}
-                          title="Export Era Report to PDF"
-                        >
-                          <Icon name="FileText" size={14} />
-                        </button>
-                        <button onClick={() => actions.deleteEra(era.id)} className="text-red-500 font-bold text-xs">Delete</button>
+                      <div key={era.id} className={cn("p-3 space-y-2", THEME.punk.card, era.isLocked && "border-red-500 bg-red-50")}>
+                        {/* Era Name and Theme Color */}
+                        <div className="flex items-center gap-2">
+                          <input 
+                            value={era.name} 
+                            onChange={e => actions.updateEra(era.id, { name: e.target.value })} 
+                            className={cn("flex-1", THEME.punk.input)} 
+                            placeholder="Era Name"
+                          />
+                          <input 
+                            type="color" 
+                            value={era.color || era.themeColor || '#000000'} 
+                            onChange={e => actions.updateEra(era.id, { color: e.target.value, themeColor: e.target.value })} 
+                            className="w-16 h-10 border-4 border-black" 
+                            title="Theme Color"
+                          />
+                          <button 
+                            onClick={() => exportEraPDF(era, data.releases || [], data.songs || [])} 
+                            className={cn("px-2 py-1 text-xs", THEME.punk.btn, "bg-blue-600 text-white")}
+                            title="Export Era Report to PDF"
+                          >
+                            <Icon name="FileText" size={14} />
+                          </button>
+                          <button onClick={() => actions.deleteEra(era.id)} className="text-red-500 font-bold text-xs">Delete</button>
+                        </div>
+                        {/* Lock Era Checkbox */}
+                        <div className="flex items-center gap-2">
+                          <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={era.isLocked || false} 
+                              onChange={e => actions.updateEra(era.id, { isLocked: e.target.checked })} 
+                              className="w-4 h-4"
+                            />
+                            <span className={era.isLocked ? "text-red-600" : ""}>
+                              <Icon name="Lock" size={12} className="inline mr-1" />
+                              Lock Era (Prevent Edits)
+                            </span>
+                          </label>
+                          {era.isLocked && (
+                            <span className="px-2 py-1 bg-red-200 text-red-800 text-[10px] font-bold border border-red-500">
+                              LOCKED
+                            </span>
+                          )}
+                        </div>
+                        {/* Badge Icon */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold uppercase w-24">Badge Icon</label>
+                          <input 
+                            value={era.badgeIcon || ''} 
+                            onChange={e => actions.updateEra(era.id, { badgeIcon: e.target.value })} 
+                            className={cn("flex-1", THEME.punk.input)} 
+                            placeholder="Icon name (e.g., Star, Heart) or URL"
+                          />
+                        </div>
+                        {/* Background Image */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold uppercase w-24">Background</label>
+                          <input 
+                            value={era.backgroundImage || ''} 
+                            onChange={e => actions.updateEra(era.id, { backgroundImage: e.target.value })} 
+                            className={cn("flex-1", THEME.punk.input)} 
+                            placeholder="Background image URL"
+                          />
+                        </div>
+                        {/* Era Preview (shows colored border/badge if set) */}
+                        {(era.color || era.badgeIcon || era.backgroundImage) && (
+                          <div 
+                            className="mt-2 p-2 border-l-4 text-xs"
+                            style={{ 
+                              borderColor: era.color || era.themeColor || '#000000',
+                              backgroundImage: era.backgroundImage ? `url(${era.backgroundImage})` : 'none',
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center'
+                            }}
+                          >
+                            <span 
+                              className="inline-flex items-center gap-1 px-2 py-1 font-bold"
+                              style={{ backgroundColor: era.backgroundImage ? 'rgba(255,255,255,0.8)' : 'transparent' }}
+                            >
+                              {era.badgeIcon && <Icon name={era.badgeIcon} size={12} />}
+                              Era Flag: {era.name}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     ))}
                     <button onClick={() => actions.addEra({ name: 'New Era' })} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Add Era</button>

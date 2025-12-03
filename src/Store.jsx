@@ -302,6 +302,18 @@ export const itemBelongsToEra = (item, eraModeEraId) => {
   return false;
 };
 
+// Helper function to check if any of an item's eras are locked
+// Returns true if at least one era in itemEraIds has isLocked: true
+export const isEraLocked = (itemEraIds, eras) => {
+  if (!itemEraIds || !Array.isArray(itemEraIds) || itemEraIds.length === 0) return false;
+  if (!eras || !Array.isArray(eras)) return false;
+  
+  return itemEraIds.some(eraId => {
+    const era = eras.find(e => e.id === eraId);
+    return era?.isLocked === true;
+  });
+};
+
 // Exclusivity options for availability windows
 export const EXCLUSIVITY_OPTIONS = ['None', 'Platform Exclusive', 'Website Only', 'Radio Only', 'Timed Exclusive'];
 
@@ -1318,7 +1330,17 @@ export const StoreProvider = ({ children }) => {
  
 
     addEra: async (era) => {
-      const newEra = { id: crypto.randomUUID(), name: era.name || 'New Era', color: era.color || '#000000' };
+      const newEra = {
+        id: crypto.randomUUID(),
+        name: era.name || 'New Era',
+        color: era.color || '#000000',
+        // Era Customization fields
+        themeColor: era.themeColor || era.color || '#000000',
+        badgeIcon: era.badgeIcon || '',
+        backgroundImage: era.backgroundImage || '',
+        // Lock Era feature: when true, prevents edits to items belonging to this era
+        isLocked: era.isLocked || false
+      };
       if (mode === 'cloud') {
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'album_eras'), { ...newEra, createdAt: serverTimestamp() });
       } else {
@@ -1547,6 +1569,11 @@ export const StoreProvider = ({ children }) => {
      
     updateSong: async (songId, updates) => {
       const song = data.songs.find(s => s.id === songId);
+      // Lock Era guard: prevent edits if song belongs to a locked era
+      if (song && isEraLocked(song.eraIds || song.era_ids || [], data.eras || [])) {
+        console.warn('Cannot update song: belongs to a locked era');
+        return { error: 'Era is locked', locked: true };
+      }
       // Capture snapshot for undo
       if (song) {
         actions.captureSnapshot('update', 'songs', songId, song, `Update song "${song.title || 'Untitled'}"`);
@@ -1565,6 +1592,11 @@ export const StoreProvider = ({ children }) => {
      deleteSong: async (songId) => {
        // Capture snapshot for undo
        const existing = data.songs?.find(s => s.id === songId);
+       // Lock Era guard: prevent deletion if song belongs to a locked era
+       if (existing && isEraLocked(existing.eraIds || existing.era_ids || [], data.eras || [])) {
+         console.warn('Cannot delete song: belongs to a locked era');
+         return { error: 'Era is locked', locked: true };
+       }
        if (existing) {
          actions.captureSnapshot('delete', 'songs', songId, existing, `Delete song "${existing.title || 'Untitled'}"`);
        }
@@ -2112,6 +2144,11 @@ export const StoreProvider = ({ children }) => {
      updateGlobalTask: async (taskId, updates) => {
        // Capture snapshot for undo
        const existing = data.globalTasks?.find(t => t.id === taskId);
+       // Lock Era guard: prevent edits if task belongs to a locked era
+       if (existing && isEraLocked(existing.eraIds || existing.era_ids || [], data.eras || [])) {
+         console.warn('Cannot update task: belongs to a locked era');
+         return { error: 'Era is locked', locked: true };
+       }
        if (existing) {
          actions.captureSnapshot('update', 'globalTasks', taskId, existing, `Update task "${existing.taskName || existing.title || 'Untitled'}"`);
        }
@@ -2128,6 +2165,11 @@ export const StoreProvider = ({ children }) => {
      deleteGlobalTask: async (taskId) => {
        // Capture snapshot for undo
        const existing = data.globalTasks?.find(t => t.id === taskId);
+       // Lock Era guard: prevent deletion if task belongs to a locked era
+       if (existing && isEraLocked(existing.eraIds || existing.era_ids || [], data.eras || [])) {
+         console.warn('Cannot delete task: belongs to a locked era');
+         return { error: 'Era is locked', locked: true };
+       }
        if (existing) {
          actions.captureSnapshot('delete', 'globalTasks', taskId, existing, `Delete task "${existing.taskName || existing.title || 'Untitled'}"`);
        }
@@ -2344,6 +2386,11 @@ export const StoreProvider = ({ children }) => {
     updateRelease: async (releaseId, updates) => {
       // Capture snapshot for undo before any changes
       const releaseForUndo = data.releases.find(r => r.id === releaseId);
+      // Lock Era guard: prevent edits if release belongs to a locked era
+      if (releaseForUndo && isEraLocked(releaseForUndo.eraIds || releaseForUndo.era_ids || [], data.eras || [])) {
+        console.warn('Cannot update release: belongs to a locked era');
+        return { error: 'Era is locked', locked: true };
+      }
       if (releaseForUndo) {
         actions.captureSnapshot('update', 'releases', releaseId, releaseForUndo, `Update release "${releaseForUndo.name || 'Untitled'}"`);
       }
@@ -2444,6 +2491,11 @@ export const StoreProvider = ({ children }) => {
      deleteRelease: async (releaseId) => {
        // Capture snapshot for undo
        const existing = data.releases?.find(r => r.id === releaseId);
+       // Lock Era guard: prevent deletion if release belongs to a locked era
+       if (existing && isEraLocked(existing.eraIds || existing.era_ids || [], data.eras || [])) {
+         console.warn('Cannot delete release: belongs to a locked era');
+         return { error: 'Era is locked', locked: true };
+       }
        if (existing) {
          actions.captureSnapshot('delete', 'releases', releaseId, existing, `Delete release "${existing.name || 'Untitled'}"`);
        }
