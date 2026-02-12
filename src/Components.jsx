@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock } from 'lucide-react';
+import { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search } from 'lucide-react';
 import { useStore, STATUS_OPTIONS, getEffectiveCost } from './Store';
 import { THEME, COLORS, formatMoney, STAGES, cn } from './utils';
 
 export const Icon = ({ name, ...props }) => {
-  const icons = { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock };
+  const icons = { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search };
   const I = icons[name] || Circle;
   return <I {...props} />;
 };
@@ -18,6 +18,7 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
 
   // Top buttons (side-by-side)
   const topButtons = [
+    { id: 'today', label: 'Today', icon: 'Zap' },
     { id: 'dashboard', label: 'Dashboard', icon: 'PieChart' },
     { id: 'calendar', label: 'Calendar', icon: 'Calendar' },
   ];
@@ -81,13 +82,14 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
         <div>
           <h1 onClick={() => { setActiveTab('dashboard'); setIsOpen(false); }} className={cn("text-xl flex items-center gap-2 punk-accent-underline font-rubik-distressed cursor-pointer", colorClass)}><Icon name="Music" /> Era Manifesto</h1>
           <div className={cn("text-xs font-bold mt-1", isDark ? "text-slate-400" : "opacity-60")}>{settings.artistName || 'Artist'}</div>
+          <div className={cn("text-[10px] mt-1", isDark ? "text-slate-500" : "opacity-50")}>⌘/Ctrl+K for quick actions</div>
         </div>
         <button onClick={() => setIsOpen(false)} className={cn("md:hidden", isDark && "text-slate-50")}><Icon name="X" /></button>
       </div>
 
       {/* Top Buttons (Dashboard + Calendar side-by-side) */}
       <div className="p-4 pb-2">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {topButtons.map(item => (
             <button 
               key={item.id}
@@ -148,7 +150,7 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
 
       {/* Footer Items */}
       <div className="p-4 pt-2">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {footerMenu.map(item => (
             <button 
               key={item.id}
@@ -282,7 +284,7 @@ export const Editor = ({ task, onClose }) => {
                 {tab === 'photos' && (
                     <div className="space-y-4">
                         <label className="w-full h-24 border-2 border-dashed border-gray-400 flex items-center justify-center cursor-pointer hover:bg-gray-50"><Icon name="Camera" className="opacity-50" /><input type="file" accept="image/*" onChange={handleUpload} className="hidden" /></label>
-                        <div className="grid grid-cols-2 gap-2">{photos.map(p => <div key={p.id} className="relative aspect-square"><img src={p.data} className="w-full h-full object-cover border-2 border-black" /><button onClick={() => actions.delete('photos', p.id)} className="absolute top-1 right-1 bg-red-500 text-white p-1"><Icon name="X" size={12} /></button></div>)}</div>
+                        <div className="grid grid-cols-3 gap-2">{photos.map(p => <div key={p.id} className="relative aspect-square"><img src={p.data} className="w-full h-full object-cover border-2 border-black" /><button onClick={() => actions.delete('photos', p.id)} className="absolute top-1 right-1 bg-red-500 text-white p-1"><Icon name="X" size={12} /></button></div>)}</div>
                     </div>
                 )}
             </div>
