@@ -1006,7 +1006,7 @@ export const FilesView = () => {
 
 export const TeamView = () => {
     const { data, actions } = useStore();
-    // Per APP ARCHITECTURE.txt Section 5.5: Team Member properties
+    // Per APP_ARCHITECTURE.md Section 5.5: Team Member properties
     const [newMember, setNewMember] = useState({
         name: '',
         role: '',
@@ -1041,7 +1041,7 @@ export const TeamView = () => {
         const rolesArray = newMemberRolesText.split(',').map(r => r.trim()).filter(Boolean);
         const instrumentsArray = newMemberInstrumentsText.split(',').map(i => i.trim()).filter(Boolean);
         await actions.addTeamMember({ ...newMember, roles: rolesArray, role: rolesArray[0] || '', instruments: instrumentsArray });
-        // Reset with all new fields per APP ARCHITECTURE.txt Section 5.5
+        // Reset with all new fields per APP_ARCHITECTURE.md Section 5.5
         setNewMember({ name: '', role: '', roles: [], type: 'individual', contacts: { phone: '', email: '', website: '' }, notes: '', links: { groups: [], organizations: [], members: [] }, isMusician: false, instruments: [], workMode: 'In-Person', orgType: 'For-Profit', groupType: '' });
         setNewMemberRolesText('');
         setNewMemberInstrumentsText('');
@@ -1131,7 +1131,7 @@ export const TeamView = () => {
                             <option value="organization">Organization</option>
                         </select>
                     </div>
-                    {/* Per APP ARCHITECTURE.txt Section 5.5: Work Mode for Individuals */}
+                    {/* Per APP_ARCHITECTURE.md Section 5.5: Work Mode for Individuals */}
                     {newMember.type === 'individual' && (
                         <div className="flex gap-2 items-center">
                             <label className="text-xs font-bold uppercase">Work Mode</label>
@@ -1142,7 +1142,7 @@ export const TeamView = () => {
                             </select>
                         </div>
                     )}
-                    {/* Per APP ARCHITECTURE.txt Section 5.5: Organization Type */}
+                    {/* Per APP_ARCHITECTURE.md Section 5.5: Organization Type */}
                     {newMember.type === 'organization' && (
                         <div className="flex gap-2 items-center">
                             <label className="text-xs font-bold uppercase">Org Type</label>
@@ -1153,7 +1153,7 @@ export const TeamView = () => {
                             </select>
                         </div>
                     )}
-                    {/* Per APP ARCHITECTURE.txt Section 5.5: Group Type */}
+                    {/* Per APP_ARCHITECTURE.md Section 5.5: Group Type */}
                     {newMember.type === 'group' && (
                         <div className="flex gap-2 items-center">
                             <label className="text-xs font-bold uppercase">Group Type</label>
@@ -1261,7 +1261,7 @@ export const TeamView = () => {
                             </div>
                         )}
                         <div className="absolute top-2 right-2 flex gap-1">
-                            {/* Per APP ARCHITECTURE.txt Section 5.5: Shortcut to create Standalone Task with Team Member pre-filled */}
+                            {/* Per APP_ARCHITECTURE.md Section 5.5: Shortcut to create Standalone Task with Team Member pre-filled */}
                             <button 
                                 onClick={async () => {
                                     const task = await actions.createTaskForTeamMember(v.id);
@@ -1421,7 +1421,7 @@ export const MiscView = () => {
             (evt.customTasks || []).forEach(task => pushItem(`${task.title} — ${evt.title}`, 'Event Task', task.date, getEffectiveCost(task), task.notes));
         });
 
-        // Per APP ARCHITECTURE.txt Section 1.2: Show Expense Items
+        // Per APP_ARCHITECTURE.md Section 1.2: Show Expense Items
         (data.expenses || []).filter(e => !e.isArchived || showArchived).forEach(e => pushItem(e.name, 'Expense', e.date, getEffectiveCost(e), e.description));
 
         (data.misc || []).forEach(m => pushItem(m.description, 'Misc', m.date, m.amount, 'Legacy expense'));
@@ -1429,7 +1429,7 @@ export const MiscView = () => {
         return rows.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     }, [data, showArchived]);
 
-    // Per APP ARCHITECTURE.txt Section 1.2: Use new Expense Item type
+    // Per APP_ARCHITECTURE.md Section 1.2: Use new Expense Item type
     const addExpenseItem = () => {
         const amount = parseFloat(expenseDraft.amount);
         if (!expenseDraft.description || isNaN(amount)) return;
@@ -1464,7 +1464,7 @@ export const MiscView = () => {
                 </div>
             </div>
             
-            {/* Expense Items Section - Per APP ARCHITECTURE.txt Section 1.2 */}
+            {/* Expense Items Section - Per APP_ARCHITECTURE.md Section 1.2 */}
             {expenseItems.length > 0 && (
                 <div className={cn("mb-6 p-4", THEME.punk.card)}>
                     <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Expense Items</h3>

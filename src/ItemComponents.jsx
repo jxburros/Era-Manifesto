@@ -418,7 +418,7 @@ export const UniversalStagePicker = ({ value = [], onChange, stages = [], multip
 
 // ============================================================
 // STANDARDIZED COMPONENTS
-// Per STANDARDIZED_ARCHITECTURE.md - Unified components for consistent UI
+// Per APP_ARCHITECTURE.md - Unified components for consistent UI
 // ============================================================
 
 /**
