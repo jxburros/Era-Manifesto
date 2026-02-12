@@ -596,7 +596,7 @@ export const recalculateDeadlines = (existingDeadlines, releaseDate, isSingle, v
   });
   
   newDeadlines.forEach(deadline => {
-    if (!deadline.isOverridden && deadline.status !== 'Done' && offsets[deadline.type] !== undefined) {
+    if (!deadline.isOverridden && deadline.status !== 'Done' && deadline.status !== 'Complete' && offsets[deadline.type] !== undefined) {
       const newDate = new Date(release);
       newDate.setDate(newDate.getDate() + offsets[deadline.type]);
       deadline.date = newDate.toISOString().split('T')[0];
@@ -620,7 +620,7 @@ export const recalculateReleaseTasks = (existingTasks, releaseDate) => {
   });
   
   newTasks.forEach(task => {
-    if (!task.isOverridden && task.status !== 'Done' && offsets[task.type] !== undefined) {
+    if (!task.isOverridden && task.status !== 'Done' && task.status !== 'Complete' && offsets[task.type] !== undefined) {
       const newDate = new Date(release);
       newDate.setDate(newDate.getDate() + offsets[task.type]);
       task.date = newDate.toISOString().split('T')[0];
@@ -651,7 +651,7 @@ const propagateSongMetadata = (song) => {
   };
 
   const mapTasks = (tasks = []) => tasks.map(task => {
-    if (task.isOverridden || task.status === 'Done') {
+    if (task.isOverridden || task.status === 'Done' || task.status === 'Complete') {
       return applyMetadataDefaults(task, {});
     }
     return applyMetadataDefaults(task, meta);
@@ -3157,6 +3157,16 @@ export const StoreProvider = ({ children }) => {
       }));
     },
 
+    // Update custom task on standalone video
+    updateStandaloneVideoCustomTask: async (videoId, taskId, updates) => {
+      setData(prev => ({
+        ...prev,
+        standaloneVideos: (prev.standaloneVideos || []).map(v =>
+          v.id === videoId ? { ...v, customTasks: (v.customTasks || []).map(t => t.id === taskId ? { ...t, ...updates } : t) } : v
+        )
+      }));
+    },
+
     // Add custom task to song video - Following unified Task system
     addSongVideoCustomTask: async (songId, videoId, task) => {
       const newTask = {
@@ -3176,6 +3186,21 @@ export const StoreProvider = ({ children }) => {
         )
       }));
       return newTask;
+    },
+
+    // Update custom task on song video
+    updateSongVideoCustomTask: async (songId, videoId, taskId, updates) => {
+      setData(prev => ({
+        ...prev,
+        songs: (prev.songs || []).map(s =>
+          s.id === songId ? {
+            ...s,
+            videos: (s.videos || []).map(v =>
+              v.id === videoId ? { ...v, customTasks: (v.customTasks || []).map(t => t.id === taskId ? { ...t, ...updates } : t) } : v
+            )
+          } : s
+        )
+      }));
     },
 
     // Delete custom task from song video
