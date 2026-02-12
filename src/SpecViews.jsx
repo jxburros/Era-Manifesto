@@ -1605,7 +1605,7 @@ export const SongDetailView = ({ song, onBack }) => {
 };
 
 // Global Tasks View (Spec 2.3) - Phase 4: Enhanced with archived/done filtering
-// Per APP ARCHITECTURE.txt Section 1.2: Task Categories as Items
+// Per APP_ARCHITECTURE.md Section 1.2: Task Categories as Items
 export const GlobalTasksView = () => {
   const { data, actions } = useStore();
   const [sortBy, setSortBy] = useState('date');
@@ -1714,7 +1714,7 @@ export const GlobalTasksView = () => {
         </div>
       </div>
 
-      {/* Task Category Manager - Per APP ARCHITECTURE.txt Section 1.2 */}
+      {/* Task Category Manager - Per APP_ARCHITECTURE.md Section 1.2 */}
       {showCategoryManager && (
         <div className={cn("p-6 mb-6", THEME.punk.card, "bg-purple-50")}>
           <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Task Categories</h3>
@@ -4382,7 +4382,7 @@ export const TaskDashboardView = () => {
   );
 };
 
-// Financials View - Per music-tracker-implementation-plan.md Section 5
+// Financials View
 // Build filter panel for Stage/Era/Release/Song/Version/Item Type + paid/quoted/projected toggles
 // Render tables and charts based on cost precedence
 export const FinancialsView = () => {
@@ -4638,7 +4638,7 @@ export const FinancialsView = () => {
       }
     });
     
-    // Per APP ARCHITECTURE.txt Section 1.2: Expenses as Item type
+    // Per APP_ARCHITECTURE.md Section 1.2: Expenses as Item type
     (data.expenses || []).forEach(expense => {
       if (expense.isArchived) return;
       if (filterItemType !== 'all' && filterItemType !== 'expense') return;
@@ -4946,7 +4946,7 @@ export const FinancialsView = () => {
   );
 };
 
-// Progress View - Per music-tracker-implementation-plan.md Section 5
+// Progress View
 // Display progress using 0/0.5/1 model with filters for Era, Stage, Tags, Item Type, Release/Song/Version
 export const ProgressView = () => {
   const { data } = useStore();
