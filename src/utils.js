@@ -23,7 +23,8 @@ export const THEME = {
     shadow: "shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(100,116,139,1)]",
     textStyle: "uppercase font-black tracking-widest",
       btn: "border-[3px] border-black dark:border-slate-600 font-black uppercase tracking-widest hover:-translate-y-1 active:translate-y-0 transition-transform bg-white dark:bg-slate-700 dark:text-slate-50 hover:bg-[var(--accent-soft)] dark:hover:bg-slate-600 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.85)]",
-      input: "border-[3px] border-black dark:border-slate-600 font-bold p-3 focus:ring-0 outline-none bg-white dark:bg-slate-800 dark:text-slate-50",
+      input: "border-[3px] border-black dark:border-slate-600 font-bold px-3 py-2.5 rounded-none focus:ring-0 focus:border-[var(--accent-strong)] dark:focus:border-[var(--accent)] outline-none bg-white dark:bg-slate-800 dark:text-slate-50 placeholder:opacity-60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors",
+      inputCompact: "border-[3px] border-black dark:border-slate-600 font-bold px-2 py-1.5 rounded-none focus:ring-0 focus:border-[var(--accent-strong)] dark:focus:border-[var(--accent)] outline-none bg-white dark:bg-slate-800 dark:text-slate-50 placeholder:opacity-60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors",
       card: "bg-[var(--accent-soft)] dark:bg-slate-800 border-[3px] border-black dark:border-slate-600 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.85)] dark:shadow-[6px_6px_0px_0px_rgba(100,116,139,0.85)]"
     }
   };
