@@ -182,7 +182,7 @@ export const Editor = ({ task, onClose }) => {
     const addSubTask = () => {
         const cleanedSubTask = sub.trim();
         if (!cleanedSubTask) return;
-        actions.add('tasks', { title: cleanedSubTask, parentId: form.id, status: 'todo' });
+        actions.add('tasks', { title: cleanedSubTask, parentId: form.id, status: 'Not Started' });
         setSub('');
     };
     const artistName = data.settings?.artistName || 'Artist';

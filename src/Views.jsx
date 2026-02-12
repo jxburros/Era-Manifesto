@@ -9,12 +9,12 @@ export const ListView = ({ onEdit }) => {
     const { data, actions } = useStore();
     const [filter, setFilter] = useState('all');
 
-    const buildTree = (pid) => data.tasks.filter(t => t.parentId === pid && !t.archived).map(t => ({...t, children: buildTree(t.id)}));
+    const buildTree = (pid) => data.tasks.filter(t => t.parentId === pid && !t.archived && (filter === 'all' || t.stageId === filter)).map(t => ({...t, children: buildTree(t.id)}));
     const tree = buildTree(null);
 
     const handleAdd = (type, pid) => {
         const stageId = filter !== 'all' ? filter : (data.stages[0]?.id || '');
-        actions.add('tasks', { title: `New ${type}`, isCategory: type === 'category', parentId: pid, status: 'todo', stageId });
+        actions.add('tasks', { title: `New ${type}`, isCategory: type === 'category', parentId: pid, status: 'Not Started', stageId });
     };
 
     const TaskRow = ({ task, level = 0 }) => {
@@ -45,7 +45,7 @@ export const ListView = ({ onEdit }) => {
                    <label htmlFor="list-stage-filter" className="text-xs font-bold uppercase">Filter:</label>
                    <select id="list-stage-filter" value={filter} onChange={e => setFilter(e.target.value)} className={cn("w-40", THEME.punk.inputCompact)}>
                        <option value="all">All Stages</option>
-                       {data.stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                       {(data.stages || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                    </select>
                 </div>
                 <button onClick={() => handleAdd('category', null)} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Category</button>
@@ -1544,7 +1544,7 @@ export const ArchiveView = () => {
               {archivedGlobal.map(t => (
                 <div key={t.id} className={cn("p-3 flex justify-between items-center", THEME.punk.card)}>
                   <div>
-                    <div className="font-bold">{t.title}</div>
+                    <div className="font-bold">{t.title || t.taskName || 'Untitled'}</div>
                     <div className="text-xs opacity-60">Global task archived {t.archivedAt ? new Date(t.archivedAt).toLocaleString() : ''}</div>
                   </div>
                   <div className="flex gap-2">
@@ -1576,7 +1576,7 @@ export const ActiveView = ({ onEdit }) => {
         const tasks = [];
         
         // Legacy tasks from the original tasks array
-        const legacyTasks = data.tasks.filter(t => !t.archived && !t.isCategory && t.status !== 'done');
+        const legacyTasks = data.tasks.filter(t => !t.archived && !t.isCategory && t.status !== 'done' && t.status !== 'Done' && t.status !== 'Complete');
         legacyTasks.forEach(t => {
             tasks.push({
                 ...t,
@@ -1589,7 +1589,7 @@ export const ActiveView = ({ onEdit }) => {
         
         // Song tasks (deadlines) and custom tasks
         (data.songs || []).forEach(song => {
-            (song.deadlines || []).filter(d => d.status !== 'Done').forEach(d => {
+            (song.deadlines || []).filter(d => d.status !== 'Done' && d.status !== 'Complete').forEach(d => {
                 tasks.push({
                     id: `song-${song.id}-${d.id}`,
                     title: d.type,
@@ -1604,7 +1604,7 @@ export const ActiveView = ({ onEdit }) => {
                     isPaid: (d.paidCost || 0) > 0
                 });
             });
-            (song.customTasks || []).filter(t => t.status !== 'Done').forEach(t => {
+            (song.customTasks || []).filter(t => t.status !== 'Done' && t.status !== 'Complete').forEach(t => {
                 tasks.push({
                     id: `song-custom-${song.id}-${t.id}`,
                     title: t.title,
@@ -1622,7 +1622,7 @@ export const ActiveView = ({ onEdit }) => {
         });
         
         // Global tasks
-        (data.globalTasks || []).filter(t => t.status !== 'Done' && !t.isArchived).forEach(t => {
+        (data.globalTasks || []).filter(t => t.status !== 'Done' && t.status !== 'Complete' && !t.isArchived).forEach(t => {
             tasks.push({
                 id: `global-${t.id}`,
                 title: t.taskName,
@@ -1640,7 +1640,7 @@ export const ActiveView = ({ onEdit }) => {
         
         // Release tasks
         (data.releases || []).forEach(release => {
-            (release.tasks || []).filter(t => t.status !== 'Done').forEach(t => {
+            (release.tasks || []).filter(t => t.status !== 'Done' && t.status !== 'Complete').forEach(t => {
                 tasks.push({
                     id: `release-${release.id}-${t.id}`,
                     title: t.type,
@@ -1661,7 +1661,7 @@ export const ActiveView = ({ onEdit }) => {
     }, [data.tasks, data.songs, data.globalTasks, data.releases]);
     
     // Filter tasks into categories
-    const inProgress = allTasks.filter(t => t.status === 'In Progress');
+    const inProgress = allTasks.filter(t => t.status === 'In Progress' || t.status === 'In-Progress');
     const overdue = allTasks.filter(t => t.dueDate && t.dueDate < today);
     const dueSoon = allTasks.filter(t => t.dueDate && t.dueDate >= today && t.dueDate <= nextWeek);
     const unpaid = allTasks.filter(t => !t.isPaid && t.effectiveCost > 0);
@@ -1671,12 +1671,12 @@ export const ActiveView = ({ onEdit }) => {
             key={task.id} 
             onClick={() => task.source === 'Legacy' ? onEdit(task) : undefined} 
             className={cn(
-                "p-4 cursor-pointer hover:bg-yellow-50 border-l-4",
+                "p-4 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 border-l-4",
                 THEME.punk.card,
-                highlight === 'overdue' ? 'border-l-red-500 bg-red-50' :
-                highlight === 'dueSoon' ? 'border-l-yellow-500 bg-yellow-50' :
-                highlight === 'inProgress' ? 'border-l-blue-500 bg-blue-50' :
-                highlight === 'unpaid' ? 'border-l-purple-500 bg-purple-50' :
+                highlight === 'overdue' ? 'border-l-red-500 bg-red-50 dark:bg-red-900/20' :
+                highlight === 'dueSoon' ? 'border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
+                highlight === 'inProgress' ? 'border-l-blue-500 bg-blue-50 dark:bg-blue-900/20' :
+                highlight === 'unpaid' ? 'border-l-purple-500 bg-purple-50 dark:bg-purple-900/20' :
                 'border-l-gray-300'
             )}
         >
@@ -1686,7 +1686,7 @@ export const ActiveView = ({ onEdit }) => {
                 {task.dueDate && <span className={cn("px-2 py-1 font-bold border border-black", task.dueDate < today ? 'bg-red-200' : task.dueDate <= nextWeek ? 'bg-yellow-200' : 'bg-gray-200')}>
                     {task.dueDate < today ? 'OVERDUE: ' : 'Due: '}{task.dueDate}
                 </span>}
-                <span className={cn("px-2 py-1 font-bold border border-black", task.status === 'In Progress' ? 'bg-blue-200' : 'bg-gray-200')}>{task.status}</span>
+                <span className={cn("px-2 py-1 font-bold border border-black", (task.status === 'In Progress' || task.status === 'In-Progress') ? 'bg-blue-200' : 'bg-gray-200')}>{task.status}</span>
                 {task.effectiveCost > 0 && <span className={cn("px-2 py-1 font-bold border border-black", task.isPaid ? 'bg-green-200' : 'bg-purple-200')}>{task.isPaid ? 'Paid' : 'Unpaid'}: {formatMoney(task.effectiveCost)}</span>}
             </div>
         </div>
@@ -1698,20 +1698,20 @@ export const ActiveView = ({ onEdit }) => {
             
             {/* Summary Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className={cn("p-4 text-center", THEME.punk.card, "bg-red-50")}>
-                    <div className="text-3xl font-black text-red-600">{overdue.length}</div>
+                <div className={cn("p-4 text-center", THEME.punk.card, "bg-red-50 dark:bg-red-900/30")}>
+                    <div className="text-3xl font-black text-red-600 dark:text-red-400">{overdue.length}</div>
                     <div className="text-xs font-bold uppercase">Overdue</div>
                 </div>
-                <div className={cn("p-4 text-center", THEME.punk.card, "bg-yellow-50")}>
-                    <div className="text-3xl font-black text-yellow-600">{dueSoon.length}</div>
+                <div className={cn("p-4 text-center", THEME.punk.card, "bg-yellow-50 dark:bg-yellow-900/30")}>
+                    <div className="text-3xl font-black text-yellow-600 dark:text-yellow-400">{dueSoon.length}</div>
                     <div className="text-xs font-bold uppercase">Due This Week</div>
                 </div>
-                <div className={cn("p-4 text-center", THEME.punk.card, "bg-blue-50")}>
-                    <div className="text-3xl font-black text-blue-600">{inProgress.length}</div>
+                <div className={cn("p-4 text-center", THEME.punk.card, "bg-blue-50 dark:bg-blue-900/30")}>
+                    <div className="text-3xl font-black text-blue-600 dark:text-blue-400">{inProgress.length}</div>
                     <div className="text-xs font-bold uppercase">In Progress</div>
                 </div>
-                <div className={cn("p-4 text-center", THEME.punk.card, "bg-purple-50")}>
-                    <div className="text-3xl font-black text-purple-600">{unpaid.length}</div>
+                <div className={cn("p-4 text-center", THEME.punk.card, "bg-purple-50 dark:bg-purple-900/30")}>
+                    <div className="text-3xl font-black text-purple-600 dark:text-purple-400">{unpaid.length}</div>
                     <div className="text-xs font-bold uppercase">Unpaid</div>
                 </div>
             </div>

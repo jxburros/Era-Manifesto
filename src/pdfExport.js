@@ -201,6 +201,7 @@ export const exportSongPDF = (song, teamMembers = [], eras = []) => {
     doc.setFont('helvetica', 'normal');
     
     song.musicians.forEach(m => {
+      y = checkPageBreak(doc, y);
       const name = getTeamMemberName(m.memberId, teamMembers);
       const instruments = (m.instruments || []).join(', ') || 'Not specified';
       doc.text(`• ${name}: ${instruments}`, 18, y);
@@ -281,6 +282,7 @@ export const exportSongPDF = (song, teamMembers = [], eras = []) => {
     doc.setFontSize(10);
     const lines = doc.splitTextToSize(song.notes, 180);
     doc.text(lines, 14, y);
+    y += lines.length * 5 + 5;
   }
   
   // Save the PDF
@@ -417,7 +419,7 @@ export const exportVideoPDF = (video, teamMembers = []) => {
     y += 3;
     doc.setTextColor(200, 0, 0);
     doc.setFont('helvetica', 'bold');
-    doc.text(`⚠ Over budget by ${formatMoney(taskEstimated - video.budgetedCost)}`, 14, y);
+    doc.text(`[!] Over budget by ${formatMoney(taskEstimated - video.budgetedCost)}`, 14, y);
     doc.setTextColor(0, 0, 0);
     y += 8;
   }
@@ -460,7 +462,7 @@ export const exportReleasePDF = (release, songs = [], teamMembers = []) => {
   // Basic Information Section
   y = addSectionHeader(doc, 'Basic Information', y);
   y = addKeyValue(doc, 'Release Name', release.name, y);
-  y = addKeyValue(doc, 'Release Type', release.type + (release.type === 'Other' && release.typeDetails ? ` (${release.typeDetails})` : ''), y, 50);
+  y = addKeyValue(doc, 'Release Type', (release.type || 'Unknown') + (release.type === 'Other' && release.typeDetails ? ` (${release.typeDetails})` : ''), y, 50);
   y = addKeyValue(doc, 'Release Date', formatDate(release.releaseDate), y);
   y = addKeyValue(doc, 'Physical Copies', release.hasPhysicalCopies ? 'Yes' : 'No', y);
   

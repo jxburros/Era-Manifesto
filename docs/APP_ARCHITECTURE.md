@@ -112,7 +112,7 @@ Tags can be assigned to Items and Tasks.
 
 1.7 Progress System
 
-Task statuses are now:
+Task statuses are:
 
 Not Started
 
@@ -126,7 +126,11 @@ Complete But Not Paid
 
 Complete
 
+Delayed
+
 Other
+
+Note: Legacy data may contain 'Done' (alias for 'Complete') and 'In Progress' (alias for 'In-Progress'). Both canonical and legacy values are accepted throughout the application.
 
 Progress Calculation:
 

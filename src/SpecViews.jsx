@@ -94,7 +94,7 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
   // Header extra content (singles toggle)
   const headerExtra = (
     <div className="flex items-center gap-4 mb-4">
-      <label className="flex items-center gap-2 px-3 py-2 border-4 border-black bg-white font-bold text-sm">
+      <label className="flex items-center gap-2 px-3 py-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-sm">
         <input type="checkbox" checked={filterSingles} onChange={e => setFilterSingles(e.target.checked)} className="w-4 h-4" />
         Singles Only
       </label>
@@ -148,6 +148,9 @@ export const SongDetailView = ({ song, onBack }) => {
     (song.versions || []).forEach(v => { initial[v.id] = (v.instruments || []).join(', '); });
     return initial;
   });
+
+  // Sync form state when song prop changes (e.g. navigating between songs)
+  useEffect(() => { setForm({ ...song }); }, [song.id]);
 
   // Sync text states with song prop when it changes
   useEffect(() => {
@@ -654,7 +657,7 @@ export const SongDetailView = ({ song, onBack }) => {
 
       {/* SECTION B: Song Information - Consolidated per spec */}
       <div className={cn("p-6 mb-6", THEME.punk.card, isSongLocked && "opacity-60 pointer-events-none")}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Song Information</h3>
+        <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Song Information</h3>
         
         {/* Row 1: Title, Writers, Composers, Category */}
         <div className="grid md:grid-cols-4 gap-4 mb-4">
@@ -688,7 +691,7 @@ export const SongDetailView = ({ song, onBack }) => {
         <div className="grid md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Attached Releases (Core Version)</label>
-            <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white min-h-[40px] max-h-24 overflow-y-auto items-center">
+            <div className="flex flex-wrap gap-2 p-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 min-h-[40px] max-h-24 overflow-y-auto items-center">
               {(data.releases || []).length === 0 ? (
                 <span className="text-xs opacity-50">No releases available</span>
               ) : (data.releases || []).map(r => (
@@ -736,7 +739,7 @@ export const SongDetailView = ({ song, onBack }) => {
         <div className="grid md:grid-cols-3 gap-4 mb-4">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Flags</label>
-            <div className="flex flex-wrap gap-4 p-2 border-4 border-black bg-white h-10 items-center">
+            <div className="flex flex-wrap gap-4 p-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 h-10 items-center">
               <label className="flex items-center gap-1 text-xs font-bold cursor-pointer">
                 <input type="checkbox" checked={form.isSingle || false} onChange={e => { const newValue = e.target.checked; handleFieldChange('isSingle', newValue); actions.updateSong(song.id, { ...form, isSingle: newValue }); }} className="w-4 h-4" />
                 Single
@@ -753,7 +756,7 @@ export const SongDetailView = ({ song, onBack }) => {
           </div>
           <div className="md:col-span-2">
             <label className="block text-xs font-bold uppercase mb-1">Videos (Core Version)</label>
-            <div className="flex flex-wrap gap-3 p-2 border-4 border-black bg-white min-h-[40px] items-center">
+            <div className="flex flex-wrap gap-3 p-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 min-h-[40px] items-center">
               {[
                 { key: 'music', label: 'Music' },
                 { key: 'lyric', label: 'Lyric' },
@@ -862,7 +865,7 @@ export const SongDetailView = ({ song, onBack }) => {
       {/* SECTION C: Versions Module - Collapsible list per spec */}
       {/* Issue #3: Display-Only Core Version at top of Versions list */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black pb-2 gap-2">
+        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2 gap-2">
           <h3 className="font-black uppercase">Versions</h3>
           <div className="flex gap-2">
             {/* Per spec: Add Copy Version (duplicate from Core) and Add Blank Version buttons */}
@@ -935,7 +938,7 @@ export const SongDetailView = ({ song, onBack }) => {
             const isExpanded = expandedVersions[v.id];
             
             return (
-              <div key={v.id} className="border-2 border-black bg-white">
+              <div key={v.id} className="border-2 border-black dark:border-slate-600 bg-white dark:bg-slate-800">
                 {/* Collapsed header - Version Name and task count */}
                 <div 
                   className="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50"
@@ -1142,7 +1145,7 @@ export const SongDetailView = ({ song, onBack }) => {
       {/* SECTION D: Tasks Module - All tasks from song and versions per spec */}
       {/* Issues #7, #8, #9, #10, #11, #12, #13, #14: Unified task system with proper behavior */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black pb-2 gap-2">
+        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2 gap-2">
           <h3 className="font-black uppercase">Tasks</h3>
           <div className="flex flex-wrap gap-2 items-center">
             {/* Task Filters - Issue #12: Remove Category filter */}
@@ -1195,7 +1198,7 @@ export const SongDetailView = ({ song, onBack }) => {
           <table className="w-full text-sm">
             <thead>
               {/* Issue #10, #12, #13: Simplified columns - removed Category, duplicate date, and Assigned column */}
-              <tr className="bg-gray-100 border-b-2 border-black">
+              <tr className="bg-gray-100 dark:bg-slate-700 border-b-2 border-black dark:border-slate-600">
                 <th className="p-2 text-left">Version</th>
                 <th className="p-2 text-left cursor-pointer hover:bg-gray-200" onClick={() => { setTaskSortBy('type'); setTaskSortDir(taskSortBy === 'type' && taskSortDir === 'asc' ? 'desc' : 'asc'); }}>Task {taskSortBy === 'type' && (taskSortDir === 'asc' ? '↑' : '↓')}</th>
                 <th className="p-2 text-left cursor-pointer hover:bg-gray-200" onClick={() => { setTaskSortBy('date'); setTaskSortDir(taskSortBy === 'date' && taskSortDir === 'asc' ? 'desc' : 'asc'); }}>Due Date {taskSortBy === 'date' && (taskSortDir === 'asc' ? '↑' : '↓')}</th>
@@ -1326,8 +1329,8 @@ export const SongDetailView = ({ song, onBack }) => {
       {/* Issue #11: AutoTasks have locked Name/Due Date fields with override option */}
       {editingTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => { setEditingTask(null); setEditingTaskContext(null); }}>
-          <div className={cn("w-full max-w-lg p-6 bg-white max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+          <div className={cn("w-full max-w-lg p-6 bg-white dark:bg-slate-800 max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2">
               <h3 className="font-black uppercase">
                 {editingTaskContext?.type === 'new-custom' ? 'Add Custom Task' : 'Edit Task'}
               </h3>
@@ -1589,7 +1592,7 @@ export const SongDetailView = ({ song, onBack }) => {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 mt-6 pt-4 border-t-4 border-black">
+            <div className="flex gap-2 mt-6 pt-4 border-t-4 border-black dark:border-slate-600">
               <button onClick={handleSaveTaskEdit} className={cn("flex-1 px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>
                 Save Changes
               </button>
@@ -1651,14 +1654,14 @@ export const GlobalTasksView = () => {
     
     // Phase 4: Archived/done filtering
     if (filterArchived === 'active') {
-      filtered = filtered.filter(t => !t.isArchived && t.status !== 'Done');
+      filtered = filtered.filter(t => !t.isArchived && t.status !== 'Done' && t.status !== 'Complete');
     } else if (filterArchived === 'archived') {
       filtered = filtered.filter(t => t.isArchived);
     } else if (filterArchived === 'done') {
-      filtered = filtered.filter(t => t.status === 'Done');
+      filtered = filtered.filter(t => (t.status === 'Done' || t.status === 'Complete'));
     }
     // 'all' shows everything
-    
+
     if (filterCategory !== 'all') {
       // Match by category name (dropdown uses category names as values)
       filtered = filtered.filter(t => t.category === filterCategory);
@@ -1717,7 +1720,7 @@ export const GlobalTasksView = () => {
       {/* Task Category Manager - Per APP_ARCHITECTURE.md Section 1.2 */}
       {showCategoryManager && (
         <div className={cn("p-6 mb-6", THEME.punk.card, "bg-purple-50")}>
-          <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Task Categories</h3>
+          <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Task Categories</h3>
           <div className="grid md:grid-cols-3 gap-4 mb-4">
             <input 
               value={newCategory.name} 
@@ -1789,7 +1792,7 @@ export const GlobalTasksView = () => {
       </div>
 
       {showAddForm && (
-        <div className={cn("p-6 mb-6 bg-gray-50", THEME.punk.card)}>
+        <div className={cn("p-6 mb-6 bg-gray-50 dark:bg-slate-800", THEME.punk.card)}>
           <h3 className="font-black uppercase mb-4">New Task</h3>
           <div className="grid md:grid-cols-2 gap-4">
             <input value={newTask.taskName} onChange={e => setNewTask({ ...newTask, taskName: e.target.value })} placeholder="Task Name" className={cn("w-full", THEME.punk.input)} />
@@ -1808,7 +1811,7 @@ export const GlobalTasksView = () => {
 
       {editingTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className={cn("w-full max-w-lg p-6 bg-white", THEME.punk.card)}>
+          <div className={cn("w-full max-w-lg p-6 bg-white dark:bg-slate-800", THEME.punk.card)}>
             <h3 className="font-black uppercase mb-4">Edit Task</h3>
             <div className="grid gap-4">
               <input value={editingTask.taskName} onChange={e => setEditingTask({ ...editingTask, taskName: e.target.value })} placeholder="Task Name" className={cn("w-full", THEME.punk.input)} />
@@ -1875,9 +1878,9 @@ export const GlobalTasksView = () => {
                 </td>
                 <td className="p-3"><span className={cn(
                   "px-2 py-1 text-xs font-bold",
-                  task.status === 'Done'
+                  (task.status === 'Done' || task.status === 'Complete')
                     ? 'bg-green-200'
-                    : task.status === 'In Progress'
+                    : (task.status === 'In Progress' || task.status === 'In-Progress')
                       ? 'bg-blue-200'
                       : task.status === 'Delayed'
                         ? 'bg-red-200'
@@ -2024,6 +2027,8 @@ export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
 export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...release });
+  // Sync form state when release prop changes
+  useEffect(() => { setForm({ ...release }); }, [release.id]);
   // Phase 3.5: Tracks module state (replaces Required Recordings)
   const [showAddTrack, setShowAddTrack] = useState(false);
   const [newTrack, setNewTrack] = useState({ songId: '', versionIds: [], isExternal: false, externalArtist: '', externalTitle: '' });
@@ -2045,7 +2050,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
 
   const teamMembers = useMemo(() => data.teamMembers || [], [data.teamMembers]);
 
-  const currentRelease = data.releases.find(r => r.id === release.id) || release;
+  const currentRelease = useMemo(() => (data.releases || []).find(r => r.id === release.id) || release, [data.releases, release]);
 
   // Lock Era feature: check if this release belongs to a locked era
   const isReleaseLocked = useMemo(() => 
@@ -2347,7 +2352,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
 
       {/* SECTION B: Release Information (editable) - Phase 3 Enhanced */}
       <div className={cn("p-6 mb-6", THEME.punk.card, isReleaseLocked && "opacity-60 pointer-events-none")}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Release Information</h3>
+        <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Release Information</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Name</label>
@@ -2429,7 +2434,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
 
       {/* Phase 3.5: Tracks Module (replaces Required Recordings) */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+        <div className="flex justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2">
           <h3 className="font-black uppercase">Tracks</h3>
           <button onClick={() => setShowAddTrack(!showAddTrack)} className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-black text-white")}>{showAddTrack ? 'Cancel' : '+ Add Track'}</button>
         </div>
@@ -2490,7 +2495,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
                 {selectedSongForTrack && (
                   <div>
                     <label className="block text-xs font-bold uppercase mb-1">Select Version(s) - leave empty for Core Version</label>
-                    <div className="flex flex-wrap gap-2 p-2 border-2 border-black bg-white">
+                    <div className="flex flex-wrap gap-2 p-2 border-2 border-black dark:border-slate-600 bg-white dark:bg-slate-800">
                       {(selectedSongForTrack.versions || []).filter(v => v.id !== 'core').map(v => (
                         <label key={v.id} className="flex items-center gap-1 text-xs font-bold cursor-pointer">
                           <input 
@@ -2522,7 +2527,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-100 border-b-2 border-black">
+              <tr className="bg-gray-100 dark:bg-slate-700 border-b-2 border-black dark:border-slate-600">
                 <th className="p-2 text-left">#</th>
                 <th className="p-2 text-left">Track</th>
                 <th className="p-2 text-left">Version(s)</th>
@@ -2611,7 +2616,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
         
         {/* Track Summary */}
         {(currentRelease.tracks || []).length > 0 && (
-          <div className="mt-3 p-3 bg-gray-100 border-2 border-black flex gap-4 text-xs font-bold">
+          <div className="mt-3 p-3 bg-gray-100 dark:bg-slate-700 border-2 border-black dark:border-slate-600 flex gap-4 text-xs font-bold">
             <span>Total: {getTrackStats.total}</span>
             <span className="text-green-600">Complete: {getTrackStats.completed}</span>
             <span className="text-orange-600">Remaining: {getTrackStats.remaining}</span>
@@ -2622,7 +2627,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
 
       {/* Unified Tasks Module - combines auto-generated and custom tasks */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black pb-2 gap-2">
+        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2 gap-2">
           <h3 className="font-black uppercase">Tasks</h3>
           <div className="flex flex-wrap gap-2 items-center">
             {/* Task Filters */}
@@ -2670,7 +2675,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-100 border-b-2 border-black">
+              <tr className="bg-gray-100 dark:bg-slate-700 border-b-2 border-black dark:border-slate-600">
                 <th className="p-2 text-left">Type</th>
                 <th className="p-2 text-left cursor-pointer hover:bg-gray-200" onClick={() => { setTaskSortBy('type'); setTaskSortDir(taskSortBy === 'type' && taskSortDir === 'asc' ? 'desc' : 'asc'); }}>Task {taskSortBy === 'type' && (taskSortDir === 'asc' ? '↑' : '↓')}</th>
                 <th className="p-2 text-left cursor-pointer hover:bg-gray-200" onClick={() => { setTaskSortBy('date'); setTaskSortDir(taskSortBy === 'date' && taskSortDir === 'asc' ? 'desc' : 'asc'); }}>Date {taskSortBy === 'date' && (taskSortDir === 'asc' ? '↑' : '↓')}</th>
@@ -2755,8 +2760,8 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
       {/* Release Task More/Edit Info Page Modal - Unified Task Handling Architecture */}
       {editingTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => { setEditingTask(null); setEditingTaskContext(null); }}>
-          <div className={cn("w-full max-w-lg p-6 bg-white max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+          <div className={cn("w-full max-w-lg p-6 bg-white dark:bg-slate-800 max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2">
               <h3 className="font-black uppercase">
                 {editingTaskContext?.type === 'new-custom' ? 'Add Task' : 'Edit Task'}
               </h3>
@@ -2831,7 +2836,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
               {/* Team Members */}
               <div>
                 <label className="block text-xs font-bold uppercase mb-1">Team Members</label>
-                <div className="flex flex-wrap gap-1 p-2 border-4 border-black bg-white text-xs max-h-24 overflow-y-auto">
+                <div className="flex flex-wrap gap-1 p-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 text-xs max-h-24 overflow-y-auto">
                   {teamMembers.map(m => (
                     <label key={m.id} className="flex items-center gap-1 cursor-pointer">
                       <input 
@@ -2866,7 +2871,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 mt-6 pt-4 border-t-4 border-black">
+            <div className="flex gap-2 mt-6 pt-4 border-t-4 border-black dark:border-slate-600">
               <button onClick={handleSaveTaskEdit} className={cn("flex-1 px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>
                 Save Changes
               </button>
@@ -3370,7 +3375,7 @@ export const CombinedTimelineView = () => {
         </div>
       </div>
 
-      <div className={cn("p-4 mb-6 bg-gray-50", THEME.punk.card)}>
+      <div className={cn("p-4 mb-6 bg-gray-50 dark:bg-slate-800", THEME.punk.card)}>
         <div className="grid md:grid-cols-5 gap-3 mb-3">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Source</label>
@@ -3431,7 +3436,7 @@ export const CombinedTimelineView = () => {
           </div>
           <div className="md:col-span-2">
             <label className="block text-xs font-bold uppercase mb-1">Team Members</label>
-            <div className="flex flex-wrap gap-1 p-2 border-4 border-black bg-white max-h-20 overflow-y-auto">
+            <div className="flex flex-wrap gap-1 p-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 max-h-20 overflow-y-auto">
               {teamMembers.length === 0 ? (
                 <span className="text-xs opacity-50">No team members available</span>
               ) : teamMembers.map(m => (
@@ -3511,9 +3516,9 @@ export const CombinedTimelineView = () => {
                 <td className="p-3">{item.category}</td>
                 <td className="p-3">{item.status && <span className={cn(
                   "px-2 py-1 text-xs font-bold",
-                  item.status === 'Done'
+                  (item.status === 'Done' || item.status === 'Complete')
                     ? 'bg-green-200'
-                    : item.status === 'In Progress'
+                    : (item.status === 'In Progress' || item.status === 'In-Progress')
                       ? 'bg-blue-200'
                       : item.status === 'Delayed'
                         ? 'bg-red-200'
@@ -3530,7 +3535,7 @@ export const CombinedTimelineView = () => {
       {/* Detail Modal */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
-          <div className={cn("w-full max-w-md p-6 bg-white", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+          <div className={cn("w-full max-w-md p-6 bg-white dark:bg-slate-800", THEME.punk.card)} onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
               <h3 className="font-black uppercase">{selectedItem.name}</h3>
               <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-gray-200" aria-label="Close"><Icon name="X" size={16} /></button>
@@ -3575,6 +3580,8 @@ export const VideosView = ({ onSelectSong }) => {
     { key: 'enhancedLyric', label: 'Enhanced lyric video' },
     { key: 'music', label: 'Music video' },
     { key: 'visualizer', label: 'Visualizer' },
+    { key: 'live', label: 'Live Video' },
+    { key: 'loop', label: 'Loop Video' },
     { key: 'custom', label: 'Custom' }
   ];
 
@@ -3651,7 +3658,7 @@ export const VideosView = ({ onSelectSong }) => {
                     <div className="text-xs font-bold uppercase mb-1">Auto Tasks</div>
                     <div className="flex flex-wrap gap-1">
                       {video.tasks.map(task => (
-                        <span key={task.id} className={cn("px-2 py-1 text-[10px] border font-bold", task.status === 'Done' ? 'bg-green-100 border-green-500' : 'bg-gray-100 border-gray-400')}>
+                        <span key={task.id} className={cn("px-2 py-1 text-[10px] border font-bold", (task.status === 'Done' || task.status === 'Complete') ? 'bg-green-100 border-green-500' : 'bg-gray-100 border-gray-400')}>
                           {task.type} ({task.date})
                         </span>
                       ))}
@@ -3679,7 +3686,7 @@ export const VideosView = ({ onSelectSong }) => {
               const key = `${song.id}-${v.id}`;
               const draft = drafts[key] || { title: `${v.name} Video`, versionId: v.id, types: {} };
               return (
-                <div key={v.id} className="border-2 border-black bg-white p-3 space-y-2">
+                <div key={v.id} className="border-2 border-black dark:border-slate-600 bg-white dark:bg-slate-800 p-3 space-y-2">
                   <div className="flex justify-between items-center">
                     <div className="font-bold">{v.name}</div>
                     <button onClick={() => {
@@ -3937,14 +3944,14 @@ export const TaskDashboardView = () => {
       // Tasks due in next 30 days that are not done
       filtered = filtered.filter(t => 
         t.date && 
-        t.date >= today && 
-        t.date <= nextMonth && 
-        t.status !== 'Done'
+        t.date >= today &&
+        t.date <= nextMonth &&
+        t.status !== 'Done' && t.status !== 'Complete'
       );
       filtered.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     } else if (view === 'inProgress') {
       // Tasks that are actively in progress
-      filtered = filtered.filter(t => t.status === 'In Progress');
+      filtered = filtered.filter(t => (t.status === 'In Progress' || t.status === 'In-Progress'));
       filtered.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     }
     
@@ -3954,11 +3961,11 @@ export const TaskDashboardView = () => {
   // Calculate overview statistics
   const stats = useMemo(() => {
     const notStarted = allTasks.filter(t => t.status === 'Not Started').length;
-    const inProgress = allTasks.filter(t => t.status === 'In Progress').length;
-    const done = allTasks.filter(t => t.status === 'Done').length;
+    const inProgress = allTasks.filter(t => (t.status === 'In Progress' || t.status === 'In-Progress')).length;
+    const done = allTasks.filter(t => (t.status === 'Done' || t.status === 'Complete')).length;
     const delayed = allTasks.filter(t => t.status === 'Delayed').length;
-    const dueSoon = allTasks.filter(t => t.date && t.date >= today && t.date <= nextWeek && t.status !== 'Done').length;
-    const overdue = allTasks.filter(t => t.date && t.date < today && t.status !== 'Done').length;
+    const dueSoon = allTasks.filter(t => t.date && t.date >= today && t.date <= nextWeek && t.status !== 'Done' && t.status !== 'Complete').length;
+    const overdue = allTasks.filter(t => t.date && t.date < today && t.status !== 'Done' && t.status !== 'Complete').length;
     const totalCost = allTasks.reduce((sum, t) => sum + getEffectiveCost(t), 0);
     const totalPaid = allTasks.reduce((sum, t) => {
       const { source, value } = resolveCostPrecedence(t);
@@ -3980,8 +3987,8 @@ export const TaskDashboardView = () => {
       const cat = task.category || 'Other';
       if (!groups[cat]) groups[cat] = { total: 0, done: 0, inProgress: 0 };
       groups[cat].total++;
-      if (task.status === 'Done') groups[cat].done++;
-      if (task.status === 'In Progress') groups[cat].inProgress++;
+      if ((task.status === 'Done' || task.status === 'Complete')) groups[cat].done++;
+      if ((task.status === 'In Progress' || task.status === 'In-Progress')) groups[cat].inProgress++;
     });
     return groups;
   }, [allTasks]);
@@ -3991,7 +3998,7 @@ export const TaskDashboardView = () => {
     const alerts = [];
     
     // Overdue tasks
-    const overdueTasks = allTasks.filter(t => t.date && t.date < today && t.status !== 'Done');
+    const overdueTasks = allTasks.filter(t => t.date && t.date < today && t.status !== 'Done' && t.status !== 'Complete');
     if (overdueTasks.length > 0) {
       alerts.push({
         id: 'overdue',
@@ -4003,7 +4010,7 @@ export const TaskDashboardView = () => {
     }
     
     // Tasks due this week
-    const dueThisWeek = allTasks.filter(t => t.date && t.date >= today && t.date <= nextWeek && t.status !== 'Done');
+    const dueThisWeek = allTasks.filter(t => t.date && t.date >= today && t.date <= nextWeek && t.status !== 'Done' && t.status !== 'Complete');
     if (dueThisWeek.length > 0) {
       alerts.push({
         id: 'due-soon',
@@ -4071,8 +4078,8 @@ export const TaskDashboardView = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Done': return 'bg-green-200 text-green-800';
-      case 'In Progress': return 'bg-blue-200 text-blue-800';
+      case 'Done': case 'Complete': return 'bg-green-200 text-green-800';
+      case 'In Progress': case 'In-Progress': return 'bg-blue-200 text-blue-800';
       case 'Delayed': return 'bg-red-200 text-red-800';
       default: return 'bg-gray-200 text-gray-800';
     }
@@ -4271,7 +4278,7 @@ export const TaskDashboardView = () => {
       {view === 'overview' ? (
         /* Overview by Category */
         <div className={cn("p-6", THEME.punk.card)}>
-          <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Progress by Category</h3>
+          <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Progress by Category</h3>
           <div className="space-y-4">
             {Object.entries(categoryGroups).map(([category, data]) => (
               <div key={category} className="flex items-center gap-4">
@@ -4297,21 +4304,21 @@ export const TaskDashboardView = () => {
           </div>
           
           {/* Status Distribution */}
-          <h3 className="font-black uppercase mt-8 mb-4 border-b-4 border-black pb-2">Status Distribution</h3>
+          <h3 className="font-black uppercase mt-8 mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Status Distribution</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-3 bg-gray-100 border-4 border-black">
+            <div className="p-3 bg-gray-100 dark:bg-slate-700 border-4 border-black dark:border-slate-600">
               <div className="text-2xl font-black">{stats.notStarted}</div>
               <div className="text-xs font-bold uppercase">Not Started</div>
             </div>
-            <div className="p-3 bg-blue-100 border-4 border-black">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900 border-4 border-black dark:border-slate-600">
               <div className="text-2xl font-black">{stats.inProgress}</div>
               <div className="text-xs font-bold uppercase">In Progress</div>
             </div>
-            <div className="p-3 bg-green-100 border-4 border-black">
+            <div className="p-3 bg-green-100 dark:bg-green-900 border-4 border-black dark:border-slate-600">
               <div className="text-2xl font-black">{stats.done}</div>
               <div className="text-xs font-bold uppercase">Done</div>
             </div>
-            <div className="p-3 bg-red-100 border-4 border-black">
+            <div className="p-3 bg-red-100 dark:bg-red-900 border-4 border-black dark:border-slate-600">
               <div className="text-2xl font-black">{stats.delayed}</div>
               <div className="text-xs font-bold uppercase">Delayed</div>
             </div>
@@ -4735,7 +4742,7 @@ export const FinancialsView = () => {
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           {/* Pie Chart - Cost Distribution by Source */}
           <div className={cn("p-4", THEME.punk.card)}>
-            <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Cost Distribution by Source</h3>
+            <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Cost Distribution by Source</h3>
             {pieChartData.length === 0 ? (
               <div className="h-64 flex items-center justify-center text-sm opacity-50">No cost data available</div>
             ) : (
@@ -4766,7 +4773,7 @@ export const FinancialsView = () => {
 
           {/* Bar Chart - Estimated vs Quoted vs Paid */}
           <div className={cn("p-4", THEME.punk.card)}>
-            <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Estimated vs Quoted vs Paid</h3>
+            <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Estimated vs Quoted vs Paid</h3>
             {totals.estimated === 0 && totals.quoted === 0 && totals.paid === 0 ? (
               <div className="h-64 flex items-center justify-center text-sm opacity-50">No cost data available</div>
             ) : (
@@ -4789,7 +4796,7 @@ export const FinancialsView = () => {
       )}
 
       {/* Filter Panel - Per Section 5 of implementation plan */}
-      <div className={cn("p-4 mb-6 bg-gray-50", THEME.punk.card)}>
+      <div className={cn("p-4 mb-6 bg-gray-50 dark:bg-slate-800", THEME.punk.card)}>
         <div className="grid md:grid-cols-5 gap-3">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Stage</label>
@@ -4858,11 +4865,11 @@ export const FinancialsView = () => {
 
       {/* Summary by Source */}
       <div className={cn("p-4 mb-6", THEME.punk.card)}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Summary by Source</h3>
+        <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Summary by Source</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-100 border-b-2 border-black">
+              <tr className="bg-gray-100 dark:bg-slate-700 border-b-2 border-black dark:border-slate-600">
                 <th className="p-2 text-left">Source</th>
                 <th className="p-2 text-right">Count</th>
                 <th className="p-2 text-right">Estimated</th>
@@ -5117,7 +5124,7 @@ export const ProgressView = () => {
       </div>
 
       {/* Filter Panel */}
-      <div className={cn("p-4 mb-6 bg-gray-50", THEME.punk.card)}>
+      <div className={cn("p-4 mb-6 bg-gray-50 dark:bg-slate-800", THEME.punk.card)}>
         <div className="grid md:grid-cols-6 gap-3">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Era</label>
@@ -5338,6 +5345,8 @@ export const EventsListView = ({ onSelectEvent, onEventCreated }) => {
 export const EventDetailView = ({ event, onBack }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...event });
+  // Sync form state when event prop changes
+  useEffect(() => { setForm({ ...event }); }, [event.id]);
   const [taskFilterStatus, setTaskFilterStatus] = useState('all');
   const [taskSortBy, setTaskSortBy] = useState('date');
   const [taskSortDir, setTaskSortDir] = useState('asc');
@@ -5390,7 +5399,7 @@ export const EventDetailView = ({ event, onBack }) => {
     setEditingTaskContext(null);
   };
 
-  const currentEvent = useMemo(() => data.events.find(e => e.id === event.id) || event, [data.events, event]);
+  const currentEvent = useMemo(() => (data.events || []).find(e => e.id === event.id) || event, [data.events, event]);
   const eventTasks = useMemo(() => currentEvent.tasks || [], [currentEvent.tasks]);
   const eventCustomTasks = useMemo(() => currentEvent.customTasks || [], [currentEvent.customTasks]);
   const allEventTasks = useMemo(() => [...eventTasks, ...eventCustomTasks], [eventTasks, eventCustomTasks]);
@@ -5469,7 +5478,7 @@ export const EventDetailView = ({ event, onBack }) => {
   const editSection = (
     <>
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Event Information</h3>
+        <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Event Information</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Title</label>
@@ -5518,14 +5527,14 @@ export const EventDetailView = ({ event, onBack }) => {
 
       {/* Attendees Module */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Attendees</h3>
+        <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Attendees</h3>
         <div className="space-y-2">
           {(form.attendees || []).length === 0 ? (
             <div className="text-xs opacity-50 mb-2">No attendees added yet.</div>
           ) : (
             <div className="flex flex-wrap gap-2 mb-3">
               {(form.attendees || []).map((attendee, idx) => (
-                <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-gray-100 border-2 border-black text-xs font-bold">
+                <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-slate-700 border-2 border-black dark:border-slate-600 text-xs font-bold">
                   <span>{attendee}</span>
                   <button 
                     onClick={() => {
@@ -5575,11 +5584,11 @@ export const EventDetailView = ({ event, onBack }) => {
 
       {/* Items Linked to This Event - Simplified UI */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Items Linked to This Event</h3>
+        <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Items Linked to This Event</h3>
         
         {/* Display linked items as pills */}
         <div className="mb-4">
-          <div className="flex flex-wrap gap-2 min-h-[40px] p-2 bg-gray-50 border-2 border-black">
+          <div className="flex flex-wrap gap-2 min-h-[40px] p-2 bg-gray-50 dark:bg-slate-800 border-2 border-black dark:border-slate-600">
             {/* Songs */}
             {(form.linkedSongIds || []).map(songId => {
               const song = (data.songs || []).find(s => s.id === songId);
@@ -5730,7 +5739,7 @@ export const EventDetailView = ({ event, onBack }) => {
   const tasksSection = (
     <>
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black pb-2 gap-2">
+        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2 gap-2">
           <h3 className="font-black uppercase">Tasks</h3>
           <div className="flex flex-wrap gap-2 items-center">
             <select value={taskFilterStatus} onChange={e => setTaskFilterStatus(e.target.value)} className={cn("px-2 py-1 text-xs", THEME.punk.input)}>
@@ -5786,7 +5795,7 @@ export const EventDetailView = ({ event, onBack }) => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-100 border-b-2 border-black">
+              <tr className="bg-gray-100 dark:bg-slate-700 border-b-2 border-black dark:border-slate-600">
                 <th className="p-2 text-left">Type</th>
                 <th className="p-2 text-left">Task</th>
                 <th className="p-2 text-left">Date</th>
@@ -5871,8 +5880,8 @@ export const EventDetailView = ({ event, onBack }) => {
       {/* Event Task More/Edit Info Page Modal - Unified Task Handling Architecture */}
       {editingTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => { setEditingTask(null); setEditingTaskContext(null); }}>
-          <div className={cn("w-full max-w-lg p-6 bg-white max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+          <div className={cn("w-full max-w-lg p-6 bg-white dark:bg-slate-800 max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2">
               <h3 className="font-black uppercase">
                 {editingTaskContext?.type === 'new-custom' ? 'Add Task' : 'Edit Task'}
               </h3>
@@ -5947,7 +5956,7 @@ export const EventDetailView = ({ event, onBack }) => {
               {/* Team Members */}
               <div>
                 <label className="block text-xs font-bold uppercase mb-1">Team Members</label>
-                <div className="flex flex-wrap gap-1 p-2 border-4 border-black bg-white text-xs max-h-24 overflow-y-auto">
+                <div className="flex flex-wrap gap-1 p-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 text-xs max-h-24 overflow-y-auto">
                   {teamMembers.map(m => (
                     <label key={m.id} className="flex items-center gap-1 cursor-pointer">
                       <input 
@@ -5982,7 +5991,7 @@ export const EventDetailView = ({ event, onBack }) => {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 mt-6 pt-4 border-t-4 border-black">
+            <div className="flex gap-2 mt-6 pt-4 border-t-4 border-black dark:border-slate-600">
               <button onClick={handleSaveTaskEdit} className={cn("flex-1 px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>
                 Save Changes
               </button>
@@ -6143,6 +6152,8 @@ export const ExpensesListView = ({ onSelectExpense, onExpenseCreated }) => {
 export const ExpenseDetailView = ({ expense, onBack }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...expense });
+  // Sync form state when expense prop changes
+  useEffect(() => { setForm({ ...expense }); }, [expense.id]);
   const [statusWarning, setStatusWarning] = useState('');
 
   const handleSave = useCallback(async () => { 
@@ -6178,7 +6189,7 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
           key: 'status', 
           label: 'Status', 
           bgClass: currentExpense.status === 'Complete' ? 'bg-green-100' : 
-                   currentExpense.status === 'In Progress' ? 'bg-yellow-100' : 'bg-gray-100',
+                   (currentExpense.status === 'In Progress' || currentExpense.status === 'In-Progress') ? 'bg-yellow-100' : 'bg-gray-100',
           default: 'Not Started'
         },
         { key: 'date', label: 'Date', bgClass: 'bg-blue-100', default: 'Not Set' },
@@ -6215,7 +6226,7 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
   // Edit Section
   const editSection = (
     <div className={cn("p-6 mb-6", THEME.punk.card)}>
-      <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Expense Information</h3>
+      <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Expense Information</h3>
       <div className="grid md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Name</label>
@@ -6278,7 +6289,7 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
             </button>
           </div>
           {form.vendorMode === 'teamMember' ? (
-            <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white min-h-[40px]">
+            <div className="flex flex-wrap gap-2 p-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 min-h-[40px]">
               {(data.teamMembers || []).map(member => (
                 <label key={member.id} className="flex items-center gap-1 text-xs font-bold cursor-pointer">
                   <input 
@@ -6448,8 +6459,8 @@ export const VideosListView = ({ onSelectVideo }) => {
   // Add Video Modal
   const addVideoModal = showAddVideoModal && (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className={cn("bg-white p-6 max-w-md w-full", THEME.punk.card)}>
-        <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+      <div className={cn("bg-white dark:bg-slate-800 p-6 max-w-md w-full", THEME.punk.card)}>
+        <div className="flex justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2">
           <h3 className="font-black uppercase">Add New Video</h3>
           <button onClick={() => { setShowAddVideoModal(false); setNewVideoType(''); }} className="text-2xl font-bold">×</button>
         </div>
@@ -6496,6 +6507,8 @@ export const VideosListView = ({ onSelectVideo }) => {
 export const VideoDetailView = ({ video, onBack }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...video });
+  // Sync form state when video prop changes
+  useEffect(() => { setForm({ ...video }); }, [video.id]);
   const [editingTask, setEditingTask] = useState(null); // Phase 1.7: Task editing modal
   const [editingTaskContext, setEditingTaskContext] = useState(null); // { type: 'auto'|'custom'|'new-custom' } - Unified Task Handling
   const [taskFilterStatus, setTaskFilterStatus] = useState('all');
@@ -6748,7 +6761,7 @@ export const VideoDetailView = ({ video, onBack }) => {
 
       {/* SECTION B: Video Information (editable) - Phase 1 Updates */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Video Information</h3>
+        <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Video Information</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Title</label>
@@ -6849,7 +6862,7 @@ export const VideoDetailView = ({ video, onBack }) => {
           {/* Phase 1.3: Attached Items (Releases and Events for tracking) */}
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Attached Releases</label>
-            <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white min-h-[40px] max-h-24 overflow-y-auto">
+            <div className="flex flex-wrap gap-2 p-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 min-h-[40px] max-h-24 overflow-y-auto">
               {(data.releases || []).map(r => (
                 <label key={r.id} className="flex items-center gap-1 text-xs font-bold cursor-pointer">
                   <input 
@@ -6872,7 +6885,7 @@ export const VideoDetailView = ({ video, onBack }) => {
           </div>
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Attached Events</label>
-            <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white min-h-[40px] max-h-24 overflow-y-auto">
+            <div className="flex flex-wrap gap-2 p-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 min-h-[40px] max-h-24 overflow-y-auto">
               {(data.events || []).map(ev => (
                 <label key={ev.id} className="flex items-center gap-1 text-xs font-bold cursor-pointer">
                   <input 
@@ -6903,7 +6916,7 @@ export const VideoDetailView = ({ video, onBack }) => {
 
       {/* Unified Tasks Module - combines auto-generated and custom tasks */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
-        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black pb-2 gap-2">
+        <div className="flex flex-wrap justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2 gap-2">
           <h3 className="font-black uppercase">Tasks</h3>
           <div className="flex flex-wrap gap-2 items-center">
             <select value={taskFilterStatus} onChange={e => setTaskFilterStatus(e.target.value)} className={cn("px-2 py-1 text-xs", THEME.punk.input)}>
@@ -6948,7 +6961,7 @@ export const VideoDetailView = ({ video, onBack }) => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-100 border-b-2 border-black">
+              <tr className="bg-gray-100 dark:bg-slate-700 border-b-2 border-black dark:border-slate-600">
                 <th className="p-2 text-left">Type</th>
                 <th className="p-2 text-left">Task</th>
                 <th className="p-2 text-left">Date</th>
@@ -7032,8 +7045,8 @@ export const VideoDetailView = ({ video, onBack }) => {
       {/* Phase 1.7: Video Task More/Edit Info Page Modal - Unified Task Handling Architecture */}
       {editingTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => { setEditingTask(null); setEditingTaskContext(null); }}>
-          <div className={cn("bg-white p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+          <div className={cn("bg-white dark:bg-slate-800 p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2">
               <h3 className="font-black uppercase">{editingTaskContext?.type === 'new-custom' ? 'Add Task' : 'Edit Video Task'}</h3>
               <button onClick={() => { setEditingTask(null); setEditingTaskContext(null); }} className="text-2xl font-bold">×</button>
             </div>
@@ -7098,7 +7111,7 @@ export const VideoDetailView = ({ video, onBack }) => {
               {/* Phase 1.7: Team Members */}
               <div>
                 <label className="block text-xs font-bold uppercase mb-1">Team Members</label>
-                <div className="flex flex-wrap gap-1 p-1 border-4 border-black bg-white text-xs max-h-20 overflow-y-auto">
+                <div className="flex flex-wrap gap-1 p-1 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 text-xs max-h-20 overflow-y-auto">
                   {teamMembers.map(m => (
                     <label key={m.id} className="flex items-center gap-1 cursor-pointer">
                       <input 
@@ -7275,11 +7288,11 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
   const filteredTasks = useMemo(() => {
     let tasks = [...(data.globalTasks || [])];
     if (filterArchived === 'active') {
-      tasks = tasks.filter(t => !t.isArchived && t.status !== 'Done');
+      tasks = tasks.filter(t => !t.isArchived && t.status !== 'Done' && t.status !== 'Complete');
     } else if (filterArchived === 'archived') {
       tasks = tasks.filter(t => t.isArchived);
     } else if (filterArchived === 'done') {
-      tasks = tasks.filter(t => t.status === 'Done');
+      tasks = tasks.filter(t => (t.status === 'Done' || t.status === 'Complete'));
     }
     return tasks;
   }, [data.globalTasks, filterArchived]);
@@ -7565,13 +7578,13 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
       {/* Manage Categories Modal */}
       {showManageCategoriesModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowManageCategoriesModal(false)}>
-          <div className={cn("bg-white p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+          <div className={cn("bg-white dark:bg-slate-800 p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2">
               <h3 className="font-black uppercase">Manage Categories</h3>
               <button onClick={() => setShowManageCategoriesModal(false)} className="text-2xl font-bold">×</button>
             </div>
             
-            <div className="mb-4 p-3 bg-gray-50 border-2 border-black">
+            <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-800 border-2 border-black dark:border-slate-600">
               <div className="flex gap-2">
                 <input 
                   value={newCategoryName} 
@@ -7604,7 +7617,7 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
                     t.categoryId === category.id || t.category === category.name
                   ).length;
                   return (
-                    <div key={category.id} className="flex items-center justify-between p-3 border-2 border-black bg-white">
+                    <div key={category.id} className="flex items-center justify-between p-3 border-2 border-black dark:border-slate-600 bg-white dark:bg-slate-800">
                       <div>
                         <span className="font-bold">{category.name}</span>
                         <span className="ml-2 text-xs opacity-60">({taskCount} tasks)</span>
@@ -7632,8 +7645,8 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
     {/* Add Task Modal */}
     {showAddTaskModal && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddTaskModal(false)}>
-        <div className={cn("bg-white p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
-          <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
+        <div className={cn("bg-white dark:bg-slate-800 p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto", THEME.punk.card)} onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center mb-4 border-b-4 border-black dark:border-slate-600 pb-2">
             <h3 className="font-black uppercase">Add New Task</h3>
             <button onClick={() => setShowAddTaskModal(false)} className="text-2xl font-bold">×</button>
           </div>
@@ -7720,6 +7733,8 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
 export const GlobalTaskDetailView = ({ task, onBack }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...task });
+  // Sync form state when task prop changes
+  useEffect(() => { setForm({ ...task }); }, [task.id]);
   const [newAssignments, setNewAssignments] = useState({ memberId: '', cost: 0 });
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -7840,7 +7855,7 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
   // Edit Section
   const editSection = (
     <div className={cn("p-6 mb-6", THEME.punk.card, isTaskLocked && "opacity-60 pointer-events-none")}>
-      <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Task Information</h3>
+      <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Task Information</h3>
       <div className="grid md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Task Name</label>
@@ -7930,7 +7945,7 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
   // Team Member Assignments Section
   const teamSection = (
     <div className={cn("p-6 mb-6", THEME.punk.card, isTaskLocked && "opacity-60 pointer-events-none")}>
-      <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Team Member Assignments</h3>
+      <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Team Member Assignments</h3>
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2 mb-3">
           {(form.assignedMembers || []).length === 0 ? (

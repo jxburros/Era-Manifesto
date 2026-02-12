@@ -15,21 +15,21 @@ export const ItemCard = ({ item, onClick }) => (
   >
     <div className="flex items-center justify-between gap-2">
       <div className="font-black uppercase text-sm flex-1 truncate">{item.name}</div>
-      {item.primaryDate && <span className="text-[11px] font-bold px-2 py-1 border-2 border-black bg-white">{item.primaryDate}</span>}
+      {item.primaryDate && <span className="text-[11px] font-bold px-2 py-1 border-2 border-black bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200">{item.primaryDate}</span>}
     </div>
     {item.stage && <div className="text-[11px] font-bold uppercase text-left opacity-70">{item.stage}</div>}
     <div className="flex flex-wrap gap-2 items-center text-[11px]">
       {item.tags?.map(tag => (
-        <span key={tag} className="px-2 py-1 bg-yellow-100 border-2 border-black font-bold">{tag}</span>
+        <span key={tag} className="px-2 py-1 bg-yellow-100 border-2 border-black dark:bg-yellow-900/30 dark:border-slate-600 dark:text-yellow-200 font-bold">{tag}</span>
       ))}
       {item.progressLabel && (
-        <span className="px-2 py-1 bg-green-100 border-2 border-black font-bold">{item.progressLabel}</span>
+        <span className="px-2 py-1 bg-green-100 border-2 border-black dark:bg-green-900/30 dark:border-slate-600 dark:text-green-200 font-bold">{item.progressLabel}</span>
       )}
     </div>
     {item.teamMembers?.length > 0 && (
       <div className="flex flex-wrap gap-2 text-[11px]">
         {item.teamMembers.map(member => (
-          <span key={member} className="px-2 py-1 bg-purple-100 border-2 border-black font-bold flex items-center gap-1">
+          <span key={member} className="px-2 py-1 bg-purple-100 border-2 border-black dark:bg-purple-900/30 dark:border-slate-600 dark:text-purple-200 font-bold flex items-center gap-1">
             <Icon name="Users" size={12} /> {member}
           </span>
         ))}
@@ -41,21 +41,21 @@ export const ItemCard = ({ item, onClick }) => (
 // List row version of ItemCard
 export const ItemRow = ({ item, onClick }) => (
   <div
-    className={cn('p-3 grid grid-cols-6 gap-3 items-center border-b border-gray-200 hover:bg-yellow-50 cursor-pointer', item.accent)}
+    className={cn('p-3 grid grid-cols-6 gap-3 items-center border-b border-gray-200 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 cursor-pointer', item.accent)}
     onClick={() => onClick?.(item)}
   >
     <div className="font-black truncate">{item.name}</div>
     <div className="text-xs font-bold">{item.primaryDate || '-'}</div>
     <div className="text-xs flex flex-wrap gap-1">
       {item.tags?.map(tag => (
-        <span key={tag} className="px-2 py-1 bg-gray-100 border border-black text-[10px] font-bold">{tag}</span>
+        <span key={tag} className="px-2 py-1 bg-gray-100 border border-black dark:bg-slate-700 dark:border-slate-600 text-[10px] font-bold">{tag}</span>
       ))}
     </div>
     <div className="text-xs font-bold">{item.stage || '-'}</div>
     <div className="text-xs font-bold">{item.progressLabel || '-'}</div>
     <div className="flex flex-wrap gap-1 text-[10px]">
       {item.teamMembers?.map(member => (
-        <span key={member} className="px-2 py-1 bg-purple-100 border border-black font-bold flex items-center gap-1">
+        <span key={member} className="px-2 py-1 bg-purple-100 border border-black dark:bg-purple-900/30 dark:border-slate-600 font-bold flex items-center gap-1">
           <Icon name="Users" size={12} /> {member}
         </span>
       ))}
@@ -67,7 +67,7 @@ export const ItemRow = ({ item, onClick }) => (
 export const ItemTimelineEntry = ({ item, onClick }) => (
   <div
     className={cn(
-      'p-3 mb-2 border-2 border-black bg-white flex flex-col gap-2 hover:-translate-y-0.5 transition-transform cursor-pointer',
+      'p-3 mb-2 border-2 border-black bg-white dark:bg-slate-800 dark:border-slate-600 flex flex-col gap-2 hover:-translate-y-0.5 transition-transform cursor-pointer',
       item.accent || ''
     )}
     onClick={() => onClick?.(item)}
@@ -211,12 +211,12 @@ export const AutocompleteInput = ({
       
       {/* Suggestions dropdown */}
       {showSuggestions && filteredSuggestions.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg-white border-4 border-black max-h-40 overflow-y-auto shadow-lg">
+        <div className="absolute z-10 w-full mt-1 bg-white border-4 border-black dark:bg-slate-800 dark:border-slate-600 max-h-40 overflow-y-auto shadow-lg">
           {filteredSuggestions.map((suggestion, index) => (
             <button
               key={`${suggestion}-${index}`}
               onClick={() => handleSelectSuggestion(suggestion)}
-              className="w-full text-left px-3 py-2 hover:bg-yellow-100 text-sm font-bold"
+              className="w-full text-left px-3 py-2 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 text-sm font-bold"
             >
               {suggestion}
             </button>
@@ -284,7 +284,7 @@ export const UniversalTagsPicker = ({ value = [], onChange, tags = [], onCreateT
       
       {/* Suggestions dropdown */}
       {showSuggestions && (inputValue.trim() || availableTags.length > 0) && (
-        <div className="absolute z-10 w-full mt-1 bg-white border-4 border-black max-h-40 overflow-y-auto shadow-lg">
+        <div className="absolute z-10 w-full mt-1 bg-white border-4 border-black dark:bg-slate-800 dark:border-slate-600 max-h-40 overflow-y-auto shadow-lg">
           {filteredSuggestions.map(tag => (
             <button
               key={tag.id}
@@ -313,7 +313,7 @@ export const UniversalTagsPicker = ({ value = [], onChange, tags = [], onCreateT
       {selectedTags.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2 min-h-[28px]">
           {selectedTags.map(tag => (
-            <div key={tag.id} className="flex items-center gap-1 px-2 py-1 bg-yellow-100 border-2 border-black text-xs font-bold">
+            <div key={tag.id} className="flex items-center gap-1 px-2 py-1 bg-yellow-100 border-2 border-black dark:bg-yellow-900/30 dark:border-slate-600 text-xs font-bold">
               <span style={{ color: tag.color || '#000' }}>{tag.name}</span>
               <button onClick={() => handleRemoveTag(tag.id)} className="text-gray-600 hover:text-red-600">
                 <Icon name="X" size={12} />
@@ -349,7 +349,7 @@ export const UniversalEraPicker = ({ value = [], onChange, eras = [], multiple =
   
   // Multi-select mode - checkboxes as pills
   return (
-    <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white min-h-[40px]">
+    <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white dark:bg-slate-800 dark:border-slate-600 min-h-[40px]">
       {eras.map(era => (
         <label key={era.id} className="flex items-center gap-1 text-xs font-bold cursor-pointer">
           <input
@@ -394,7 +394,7 @@ export const UniversalStagePicker = ({ value = [], onChange, stages = [], multip
   
   // Multi-select mode - checkboxes as pills
   return (
-    <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white min-h-[40px]">
+    <div className="flex flex-wrap gap-2 p-2 border-4 border-black bg-white dark:bg-slate-800 dark:border-slate-600 min-h-[40px]">
       {stages.map(stage => (
         <label key={stage.id} className="flex items-center gap-1 text-xs font-bold cursor-pointer">
           <input
@@ -581,7 +581,7 @@ export const TaskEditModal = ({
       onClick={onClose}
     >
       <div 
-        className={cn("bg-white p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto", THEME.punk.card)} 
+        className={cn("p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto", THEME.punk.card)}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-2">
@@ -883,8 +883,8 @@ export const StandardTaskList = ({
       {/* Legend */}
       {showLegend && (
         <div className="flex flex-wrap gap-2 mb-3 text-[10px] font-bold">
-          <span className="px-2 py-1 bg-yellow-100 border-2 border-black">Auto Task</span>
-          <span className="px-2 py-1 bg-green-100 border-2 border-black">Custom Task</span>
+          <span className="px-2 py-1 bg-yellow-100 border-2 border-black dark:bg-yellow-900/30 dark:border-slate-600 dark:text-yellow-200">Auto Task</span>
+          <span className="px-2 py-1 bg-green-100 border-2 border-black dark:bg-green-900/30 dark:border-slate-600 dark:text-green-200">Custom Task</span>
         </div>
       )}
 
@@ -892,7 +892,7 @@ export const StandardTaskList = ({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-100 border-b-2 border-black">
+            <tr className="bg-gray-100 border-b-2 border-black dark:bg-slate-700 dark:border-slate-600">
               <th className="p-2 text-left">Type</th>
               <th className="p-2 text-left">Task</th>
               <th className="p-2 text-left">Date</th>
@@ -915,8 +915,8 @@ export const StandardTaskList = ({
                   <tr 
                     key={task.id} 
                     className={cn(
-                      "border-b border-gray-200 cursor-pointer hover:bg-gray-50",
-                      isOverdue ? "bg-red-50" : task._isAuto ? "bg-yellow-50" : "bg-green-50"
+                      "border-b border-gray-200 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700",
+                      isOverdue ? "bg-red-50 dark:bg-red-900/20" : task._isAuto ? "bg-yellow-50 dark:bg-yellow-900/20" : "bg-green-50 dark:bg-green-900/20"
                     )}
                     onClick={() => handleTaskClick(task)}
                   >
@@ -980,14 +980,14 @@ export const ViewModeToggle = ({ viewMode, setViewMode }) => (
   <div className="flex border-4 border-black">
     <button 
       onClick={() => setViewMode('list')} 
-      className={cn("px-3 py-2 font-bold text-xs", viewMode === 'list' ? "bg-black text-white" : "bg-white")}
+      className={cn("px-3 py-2 font-bold text-xs", viewMode === 'list' ? "bg-black text-white" : "bg-white dark:bg-slate-800")}
       title="List View"
     >
       <Icon name="List" size={16} />
     </button>
     <button 
       onClick={() => setViewMode('grid')} 
-      className={cn("px-3 py-2 font-bold text-xs border-l-4 border-black", viewMode === 'grid' ? "bg-black text-white" : "bg-white")}
+      className={cn("px-3 py-2 font-bold text-xs border-l-4 border-black", viewMode === 'grid' ? "bg-black text-white" : "bg-white dark:bg-slate-800")}
       title="Grid View"
     >
       <Icon name="Folder" size={16} />
@@ -1002,7 +1002,7 @@ export const ViewModeToggle = ({ viewMode, setViewMode }) => (
  * @param {Array} fields - Array of field configurations [{key, label, render?, default?, bgClass?}]
  */
 export const DisplayInfoSection = ({ item, fields }) => (
-  <div className={cn("p-6 mb-6 bg-gray-50", THEME.punk.card)}>
+  <div className={cn("p-6 mb-6 bg-gray-50 dark:bg-slate-800", THEME.punk.card)}>
     <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">Display Information</h3>
     <div className="text-2xl font-black mb-4 pb-2 border-b-2 border-gray-300">
       {item.name || item.title || 'Untitled'}
@@ -1014,7 +1014,7 @@ export const DisplayInfoSection = ({ item, fields }) => (
         return (
           <div key={field.key} className={colSpanClass}>
             <label className="block text-xs font-bold uppercase mb-2">{field.label}</label>
-            <div className={cn("px-3 py-2 border-2 border-black text-sm font-bold", field.bgClass || "bg-gray-100")}>
+            <div className={cn("px-3 py-2 border-2 border-black text-sm font-bold", field.bgClass || "bg-gray-100 dark:bg-slate-700")}>
               {field.render ? field.render(item) : (item[field.key] || field.default || '-')}
             </div>
           </div>
@@ -1195,7 +1195,7 @@ export const StandardListPage = ({
                 filteredItems.map(item => (
                   <tr 
                     key={item.id} 
-                    className={cn("border-b border-gray-200 hover:bg-yellow-50", item.isArchived && "opacity-50")}
+                    className={cn("border-b border-gray-200 hover:bg-yellow-50 dark:hover:bg-yellow-900/20", item.isArchived && "opacity-50")}
                   >
                     {columns.map(col => (
                       <td 

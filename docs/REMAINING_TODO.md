@@ -25,7 +25,7 @@ This document lists the remaining features that have not yet been implemented, o
 | Add New and row click behavior | ✅ Done | Works for all item types |
 | Songs: Versions count and quick link | ✅ Done | SongDetailView shows versions |
 | Releases: Stage/Era and Tracklist progress summary | ✅ Done | Has tracklist, progress summary in grid view |
-| Events: date/location chips and status | ⚠️ Partial | CalendarView shows events, no dedicated list |
+| Events: date/location chips and status | ✅ Done | EventsListView and EventDetailView implemented |
 | Global Tasks: Category badge | ✅ Done | GlobalTasksView has categories |
 | Expenses: Task-based expense flow | ✅ Done | MiscView handles expenses |
 
@@ -38,7 +38,7 @@ This document lists the remaining features that have not yet been implemented, o
 | Notes module | ✅ Done | All detail views have notes |
 | Song Versions module | ✅ Done | Full implementation |
 | Release Tracklist module | ✅ Done | Required recordings section |
-| Event Date/Location module | ⚠️ Partial | Basic fields, no dedicated module |
+| Event Date/Location module | ✅ Done | EventDetailView with date, location, type fields |
 | Video Platform/Exclusivity module | ✅ Done | Fields exist in video views |
 | Task linking when opened from Item | ✅ Done | Tasks filtered by parent |
 
@@ -63,7 +63,7 @@ This document lists the remaining features that have not yet been implemented, o
 | Dashboard: random Item spotlight | ✅ Done | Implemented in TaskDashboardView |
 | Financials: filter panel | ✅ Done | Full implementation |
 | Financials: tables based on cost precedence | ✅ Done | Summary and detail tables |
-| Financials: charts | ❌ Missing | No visualizations (requires chart library) |
+| Financials: charts | ⚠️ Partial | Recharts library available, basic structure ready |
 | Tasks: Global Task table with sorting/filtering | ✅ Done | GlobalTasksView |
 | Progress: 0/0.5/1 model with filters | ✅ Done | ProgressView |
 
@@ -203,9 +203,9 @@ This document lists the remaining features that have not yet been implemented, o
 ## Tier 3: High Complexity (1-2 days each)
 
 ### 3.1 Section 5: Financials Charts
-**Effort:** 1-2 days  
-**Location:** FinancialsView enhancement  
-**Dependencies:** Chart library (Chart.js, Recharts)  
+**Effort:** 1-2 days
+**Location:** FinancialsView enhancement
+**Dependencies:** Recharts (already installed)
 **Description:** Visual cost breakdowns
 - Pie chart by source type
 - Bar chart estimated vs quoted vs paid
@@ -222,10 +222,10 @@ This document lists the remaining features that have not yet been implemented, o
 **Location:** New ActivityLogView + Store.jsx  
 **Description:** Track changes to tasks, costs, dates, team members
 
-### 3.4 PDF Export for Release Summary
-**Effort:** 1-2 days  
-**Dependencies:** PDF library (jsPDF, html2pdf)  
-**Description:** Generate PDF reports
+### 3.4 PDF Export for Release Summary ✅ COMPLETED
+**Status:** ✅ Completed
+**Location:** `src/pdfExport.js`
+**Description:** PDF export implemented for songs, videos, releases, and eras using jsPDF
 
 ### 3.5 Song Version Comparison View
 **Effort:** 1-2 days  
@@ -239,12 +239,10 @@ This document lists the remaining features that have not yet been implemented, o
 **Effort:** 3-5 days  
 **Description:** Comprehensive reporting with multiple report types
 
-### 4.2 Section 2: Dedicated Events List View
-**Effort:** 3-5 days  
-**Description:** Full events page (currently only in calendar)
-- Events list/grid view
-- Event detail page
-- date/location chips
+### 4.2 Section 2: Dedicated Events List View ✅ COMPLETED
+**Status:** ✅ Completed
+**Location:** `src/SpecViews.jsx` (EventsListView, EventDetailView)
+**Description:** Full events page with list/grid view, detail page, and date/location chips
 
 ---
 
@@ -276,5 +274,5 @@ This document lists the remaining features that have not yet been implemented, o
 - Section 3 improvements (Display Information, Task sorting) now applied to both SongDetailView and ReleaseDetailView
 - Grid/List toggle implemented for Songs and Releases lists
 - New Standalone Task from Team Member was already implemented
-- Charts require adding a new npm dependency (Chart.js or Recharts)
+- Recharts library is already included as a dependency for chart visualizations
 - Consider implementing CSV exports before PDF exports (simpler)
