@@ -176,6 +176,13 @@ export const Editor = ({ task, onClose }) => {
     const [form, setForm] = useState(task ? {...task} : {});
     const [tab, setTab] = useState('details');
     const [sub, setSub] = useState('');
+
+    const addSubTask = () => {
+        const cleanedSubTask = sub.trim();
+        if (!cleanedSubTask) return;
+        actions.add('tasks', { title: cleanedSubTask, parentId: form.id, status: 'todo' });
+        setSub('');
+    };
     const artistName = data.settings?.artistName || 'Artist';
 
     useEffect(() => {
@@ -256,8 +263,8 @@ export const Editor = ({ task, onClose }) => {
                          </button>
                          <div className="border-t-4 border-black pt-4">
                             <div className="flex gap-2">
-                               <input value={sub} onChange={e => setSub(e.target.value)} className={cn("w-full", THEME.punk.input)} placeholder="Quick sub-task..." onKeyDown={e => { if(e.key === 'Enter') { actions.add('tasks', { title: sub, parentId: form.id, status: 'todo' }); setSub(''); }}} />
-                               <button onClick={() => { actions.add('tasks', { title: sub, parentId: form.id, status: 'todo' }); setSub(''); }} className={cn("px-4", THEME.punk.btn, "bg-black text-white")}>Add</button>
+                               <input value={sub} onChange={e => setSub(e.target.value)} className={cn("w-full", THEME.punk.input)} placeholder="Quick sub-task..." onKeyDown={e => { if(e.key === 'Enter') { addSubTask(); }}} />
+                               <button onClick={addSubTask} disabled={!sub.trim()} className={cn("px-4", THEME.punk.btn, "bg-black text-white", !sub.trim() && "opacity-50 cursor-not-allowed hover:translate-y-0")}>Add</button>
                             </div>
                        </div>
                     </>

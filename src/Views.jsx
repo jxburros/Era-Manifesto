@@ -41,9 +41,9 @@ export const ListView = ({ onEdit }) => {
     return (
         <div className="p-6 pb-24">
             <div className="flex justify-between mb-6">
-                <div className={cn("flex items-center px-2 bg-white", THEME.punk.border)}>
-                   <span className="text-xs font-bold uppercase px-2">Filter:</span>
-                   <select value={filter} onChange={e => setFilter(e.target.value)} className="bg-transparent font-bold outline-none py-2 w-32">
+                <div className="flex items-center gap-2">
+                   <label htmlFor="list-stage-filter" className="text-xs font-bold uppercase">Filter:</label>
+                   <select id="list-stage-filter" value={filter} onChange={e => setFilter(e.target.value)} className={cn("w-40", THEME.punk.inputCompact)}>
                        <option value="all">All Stages</option>
                        {data.stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                    </select>
