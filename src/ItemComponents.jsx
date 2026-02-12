@@ -1050,7 +1050,8 @@ export const StandardListPage = ({
   renderGridCard,
   renderActions,
   headerExtra,
-  emptyMessage
+  emptyMessage,
+  emptyStateActions = []
 }) => {
   const [viewMode, setViewMode] = useState('list');
   const [sortBy, setSortBy] = useState(columns[0]?.field || 'name');
@@ -1095,6 +1096,24 @@ export const StandardListPage = ({
   const singularTitle = title.replace(/s$/, '');
   const buttonText = addButtonText || `+ Add ${singularTitle}`;
   const empty = emptyMessage || `No ${title.toLowerCase()} yet. Click ${buttonText} to create one.`;
+  const renderEmptyState = () => (
+    <div className={cn("p-10 text-center", THEME.punk.card)}>
+      <div className="opacity-60 mb-4">{empty}</div>
+      {emptyStateActions.length > 0 && (
+        <div className="flex flex-wrap gap-2 justify-center">
+          {emptyStateActions.map((action) => (
+            <button
+              key={action.label}
+              onClick={action.onClick}
+              className={cn("px-3 py-2 text-xs", THEME.punk.btn, action.className || "bg-white")}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="p-6 pb-24">
@@ -1134,7 +1153,7 @@ export const StandardListPage = ({
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredItems.length === 0 ? (
-            <div className={cn("col-span-full p-10 text-center opacity-50", THEME.punk.card)}>{empty}</div>
+            <div className="col-span-full">{renderEmptyState()}</div>
           ) : (
             filteredItems.map(item => renderGridCard ? renderGridCard(item) : (
               <div 
@@ -1171,7 +1190,7 @@ export const StandardListPage = ({
             </thead>
             <tbody>
               {filteredItems.length === 0 ? (
-                <tr><td colSpan={columns.length + (renderActions ? 1 : 0)} className="p-10 text-center opacity-50">{empty}</td></tr>
+                <tr><td colSpan={columns.length + (renderActions ? 1 : 0)} className="p-4">{renderEmptyState()}</td></tr>
               ) : (
                 filteredItems.map(item => (
                   <tr 
