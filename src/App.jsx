@@ -180,6 +180,22 @@ const FloatingActionButton = () => {
   const [expenseAmount, setExpenseAmount] = useState('');
   const [noteTitle, setNoteTitle] = useState('');
 
+  const closeTaskModal = () => {
+    setTaskTitle('');
+    setShowTaskModal(false);
+  };
+
+  const closeExpenseModal = () => {
+    setExpenseName('');
+    setExpenseAmount('');
+    setShowExpenseModal(false);
+  };
+
+  const closeNoteModal = () => {
+    setNoteTitle('');
+    setShowNoteModal(false);
+  };
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -207,9 +223,15 @@ const FloatingActionButton = () => {
 
   const handleAddExpense = async () => {
     if (!expenseName.trim()) return;
+    const parsedAmount = parseFloat(expenseAmount);
+    if (expenseAmount && (isNaN(parsedAmount) || parsedAmount < 0)) {
+      showToast('Expense amount must be 0 or greater', { type: 'warning', duration: 3000 });
+      return;
+    }
+
     await actions.addExpense({
       name: expenseName.trim(),
-      paidCost: parseFloat(expenseAmount) || 0,
+      paidCost: parsedAmount || 0,
       status: 'Complete'
     });
     showToast(`Expense "${expenseName.trim()}" logged`, { type: 'success' });
@@ -254,6 +276,15 @@ const FloatingActionButton = () => {
 
   // Quick add modal component
   const QuickModal = ({ title, show, onClose, onSubmit, children }) => {
+    useEffect(() => {
+      if (!show) return;
+      const handleEscape = (event) => {
+        if (event.key === 'Escape') onClose();
+      };
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }, [show, onClose]);
+
     if (!show) return null;
     return (
       <div 
@@ -345,7 +376,7 @@ const FloatingActionButton = () => {
       <QuickModal 
         title="Add Task" 
         show={showTaskModal} 
-        onClose={() => setShowTaskModal(false)}
+        onClose={closeTaskModal}
         onSubmit={handleAddTask}
       >
         <input
@@ -363,7 +394,7 @@ const FloatingActionButton = () => {
       <QuickModal 
         title="Log Expense" 
         show={showExpenseModal} 
-        onClose={() => setShowExpenseModal(false)}
+        onClose={closeExpenseModal}
         onSubmit={handleAddExpense}
       >
         <div className="space-y-3">
@@ -381,6 +412,8 @@ const FloatingActionButton = () => {
             onChange={e => setExpenseAmount(e.target.value)}
             placeholder="Amount ($)"
             className={cn("w-full", THEME.punk.input)}
+            min="0"
+            step="0.01"
             onKeyDown={e => e.key === 'Enter' && handleAddExpense()}
           />
         </div>
@@ -390,7 +423,7 @@ const FloatingActionButton = () => {
       <QuickModal 
         title="Quick Note" 
         show={showNoteModal} 
-        onClose={() => setShowNoteModal(false)}
+        onClose={closeNoteModal}
         onSubmit={handleAddNote}
       >
         <input
