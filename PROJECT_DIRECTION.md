@@ -101,6 +101,8 @@ Videos support:
   - Enhanced lyric video
   - Music video
   - Visualizer
+  - Live video
+  - Loop video
   - Custom types
 - Exclusive availability windows (start and end dates)
 - Three-tier cost tracking (estimated/quoted/paid)
@@ -164,7 +166,7 @@ Tasks have:
 - Title and description
 - Due date
 - Category/type
-- Status tracking (Not Started, In Progress, Done, Delayed)
+- Status tracking (Not Started, In-Progress, Waiting on Someone Else, Paid But Not Complete, Complete But Not Paid, Complete, Delayed, Other)
 - Three-tier cost tracking (estimated/quoted/paid)
 - Team member assignments with cost allocation
 - Notes
@@ -504,30 +506,41 @@ The app is production-ready with core features implemented and additional enhanc
 ### ✅ Fully Implemented
 
 - Songs and versions with multi-release linking
-- Videos (song-attached and standalone)
-- Releases with auto-task generation
-- Three-tier cost tracking system
-- Team members with musician flags
-- Calendar with clickable entries
-- Combined timeline with filtering
+- Videos (song-attached and standalone) with 7 video types
+- Releases with auto-task generation and tracklist management
+- Events with date, location, and custom tasks
+- Global tasks with categories and Kanban board view
+- Three-tier cost tracking system (Estimated/Quoted/Paid)
+- Team members with musician flags, instruments, and role tracking
+- Calendar with clickable entries and detail modals
+- Combined timeline with multi-source filtering
 - Photo gallery with upload/download
-- Notification system
-- Task dashboard with statistics
-- Dark mode with accent colors
-- Firebase cloud sync
-- Offline-first architecture
-- Active tasks view
-- Task archiving
-- Exclusivity windows
-- Instrument tracking
-- Auto-task generation and recalculation
-- Manual task override capability
+- Notification system (overdue, due soon, budget, delayed)
+- Task dashboard with statistics and category breakdowns
+- Dark mode with accent colors (Pink, Cyan, Lime, Violet)
+- Firebase cloud sync with anonymous authentication
+- Offline-first architecture with local storage fallback
+- Active tasks view with overdue/due soon/in-progress/unpaid sections
+- Task archiving and restoration
+- Exclusivity windows for songs, versions, videos, and releases
+- Instrument tracking with musician assignment
+- Auto-task generation and recalculation with manual override
+- PDF export for songs, videos, releases, and eras
+- Unified task editor with full cost and assignment support
+- Eras, Stages, and Tags organizational system
+- Era Mode for filtering all content by era
+- Focus Mode for simplified UI
+- Command palette (Cmd/Ctrl+K) for quick navigation
+- Floating Action Button for mobile quick actions
+- Undo/Redo functionality
+- Data export/import with version tracking
+- Expense tracking with dedicated list and detail views
+- Financials view with multi-dimension filtering
+- Progress view with point-based tracking
 
 ### 🔄 Planned Features
 
-- **Unified task editor component** (currently uses separate forms)
-- **PDF/CSV/printable exporting** for:
-  - Releases summary
+- **CSV exporting** for:
   - Budget summary
   - Task list
   - Song version comparison
@@ -542,7 +555,10 @@ The app is production-ready with core features implemented and additional enhanc
 - **Advanced reporting and analytics**
 - **Multi-user collaboration with permissions**
 - **User authentication** (beyond anonymous)
+- **Dashboard customization** (widget show/hide toggles)
+- **Saved filter presets**
+- **Auto-deadline formula configuration** in settings
 
 ---
 
-*Last updated: 2025-11-28*
+*Last updated: 2026-02-12*
