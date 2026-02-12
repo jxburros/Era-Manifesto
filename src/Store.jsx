@@ -3074,8 +3074,8 @@ export const StoreProvider = ({ children }) => {
       }
       
       // Phase 1.8: Auto-generate video tasks (respects autoTaskVideos setting)
-      const autoTaskVideosStandalone = data.settings?.autoTaskVideos !== false;
-      const autoTasks = (autoTaskVideosStandalone && primaryVideoType) ? generateVideoTasks(releaseDate, primaryVideoType) : [];
+      const autoTaskVideos = data.settings?.autoTaskVideos !== false;
+      const autoTasks = (autoTaskVideos && primaryVideoType) ? generateVideoTasks(releaseDate, primaryVideoType) : [];
       
       // Phase 1.1: Convert single type to types object for backwards compatibility
       const typesObject = primaryVideoType ? { [primaryVideoType]: true } : {};
