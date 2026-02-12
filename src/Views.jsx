@@ -1755,6 +1755,295 @@ export const ActiveView = ({ onEdit }) => {
     );
 };
 
+// Helper component for displaying backup list
+const BackupList = ({ actions, setImportStatus }) => {
+  const [backups, setBackups] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadBackups();
+  }, []);
+
+  const loadBackups = async () => {
+    setLoading(true);
+    const list = await actions.getBackupList();
+    setBackups(list);
+    setLoading(false);
+  };
+
+  const handleRestore = async (backupId) => {
+    if (!confirm('Restore from this backup? This will replace all current data!')) return;
+    
+    const result = await actions.restoreBackup(backupId);
+    if (result.success) {
+      setImportStatus('✓ Backup restored successfully! Reloading...');
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      setImportStatus(`Error restoring backup: ${result.error}`);
+    }
+  };
+
+  const handleDelete = async (backupId) => {
+    if (!confirm('Delete this backup?')) return;
+    
+    await actions.deleteBackupData(backupId);
+    await loadBackups();
+    setImportStatus('Backup deleted');
+    setTimeout(() => setImportStatus(''), 2000);
+  };
+
+  if (loading) return <div className="text-xs opacity-60">Loading backups...</div>;
+  if (backups.length === 0) return <div className="text-xs opacity-60">No backups yet</div>;
+
+  return (
+    <div className="space-y-2">
+      <div className="font-bold text-xs">Available Backups ({backups.length}/10):</div>
+      <div className="max-h-48 overflow-y-auto space-y-2">
+        {backups.map(backup => (
+          <div key={backup.id} className="flex items-center justify-between text-[11px] p-2 bg-white/50 border border-black/10">
+            <div className="flex-1">
+              <div className="font-mono">{backup.id.substring(7, 20)}...</div>
+              <div className="opacity-60">{new Date(backup.timestamp).toLocaleString()}</div>
+              <div className="opacity-60">{(backup.size / 1024).toFixed(1)} KB</div>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => handleRestore(backup.id)}
+                className={cn("px-2 py-1 text-[10px]", THEME.punk.btn, "bg-green-600 text-white")}
+              >
+                Restore
+              </button>
+              <button 
+                onClick={() => handleDelete(backup.id)}
+                className={cn("px-2 py-1 text-[10px]", THEME.punk.btn, "bg-red-600 text-white")}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Helper component for creating archives
+const ArchiveCreator = ({ actions, setImportStatus }) => {
+  const [description, setDescription] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  const handleCreate = async () => {
+    if (!description.trim()) {
+      alert('Please enter a description for the archive');
+      return;
+    }
+    
+    setCreating(true);
+    const result = await actions.archiveAllData(description);
+    if (result.success) {
+      setImportStatus(`✓ Archive created: ${result.archiveId}`);
+      setDescription('');
+      setTimeout(() => setImportStatus(''), 3000);
+    } else {
+      setImportStatus(`Error: ${result.error}`);
+    }
+    setCreating(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      <input 
+        type="text"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Archive description (e.g., 'Before album release')"
+        className={cn("w-full", THEME.punk.input)}
+        disabled={creating}
+      />
+      <button 
+        onClick={handleCreate}
+        disabled={creating}
+        className={cn("w-full px-3 py-2 text-xs", THEME.punk.btn, "bg-purple-600 text-white", creating && "opacity-50")}
+      >
+        {creating ? 'Creating Archive...' : 'Create Archive'}
+      </button>
+    </div>
+  );
+};
+
+// Helper component for displaying archive list
+const ArchiveList = ({ actions, setImportStatus }) => {
+  const [archives, setArchives] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadArchives();
+  }, []);
+
+  const loadArchives = async () => {
+    setLoading(true);
+    const list = await actions.getArchiveList();
+    setArchives(list);
+    setLoading(false);
+  };
+
+  const handleRestore = async (archiveId, mode) => {
+    const modeText = mode === 'replace' ? 'REPLACE all current data' : 'MERGE with current data';
+    if (!confirm(`Restore from this archive (${modeText})?`)) return;
+    
+    const result = await actions.restoreArchive(archiveId, mode);
+    if (result.success) {
+      setImportStatus(`✓ Archive restored successfully! Reloading...`);
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      setImportStatus(`Error restoring archive: ${result.error}`);
+    }
+  };
+
+  const handleDelete = async (archiveId) => {
+    if (!confirm('Delete this archive permanently?')) return;
+    
+    await actions.deleteArchivedData(archiveId);
+    await loadArchives();
+    setImportStatus('Archive deleted');
+    setTimeout(() => setImportStatus(''), 2000);
+  };
+
+  if (loading) return <div className="text-xs opacity-60">Loading archives...</div>;
+  if (archives.length === 0) return <div className="text-xs opacity-60">No archives yet</div>;
+
+  return (
+    <div className="space-y-2">
+      <div className="font-bold text-xs">Available Archives ({archives.length}):</div>
+      <div className="max-h-64 overflow-y-auto space-y-2">
+        {archives.map(archive => (
+          <div key={archive.id} className="p-2 bg-white/50 border border-black/10 space-y-2">
+            <div className="text-[11px]">
+              <div className="font-bold">{archive.description}</div>
+              <div className="opacity-60">{new Date(archive.timestamp).toLocaleString()}</div>
+              <div className="opacity-60">{(archive.size / 1024).toFixed(1)} KB</div>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => handleRestore(archive.id, 'merge')}
+                className={cn("flex-1 px-2 py-1 text-[10px]", THEME.punk.btn, "bg-blue-600 text-white")}
+              >
+                Merge
+              </button>
+              <button 
+                onClick={() => handleRestore(archive.id, 'replace')}
+                className={cn("flex-1 px-2 py-1 text-[10px]", THEME.punk.btn, "bg-orange-600 text-white")}
+              >
+                Replace
+              </button>
+              <button 
+                onClick={() => handleDelete(archive.id)}
+                className={cn("px-2 py-1 text-[10px]", THEME.punk.btn, "bg-red-600 text-white")}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Helper component for wipe data button with confirmation
+const WipeDataButton = ({ actions, setImportStatus }) => {
+  const [confirmText, setConfirmText] = useState('');
+  const [wiping, setWiping] = useState(false);
+
+  const handleWipe = async () => {
+    if (confirmText !== 'WIPE ALL DATA') {
+      alert('Please type "WIPE ALL DATA" to confirm');
+      return;
+    }
+
+    if (!confirm('⚠️ FINAL WARNING: This will delete ALL your data! An automatic backup will be created. Continue?')) {
+      return;
+    }
+
+    setWiping(true);
+    setImportStatus('Creating backup before wipe...');
+    
+    const result = await actions.wipeAllData(false);
+    if (result.success) {
+      setImportStatus(`✓ All data wiped! Backup: ${result.backupId}. Reloading...`);
+      setTimeout(() => window.location.reload(), 2000);
+    } else {
+      setImportStatus(`Error: ${result.error}`);
+      setWiping(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-bold">Type "WIPE ALL DATA" to confirm:</label>
+      <input 
+        type="text"
+        value={confirmText}
+        onChange={(e) => setConfirmText(e.target.value)}
+        placeholder="WIPE ALL DATA"
+        className={cn("w-full", THEME.punk.input, "border-red-500")}
+        disabled={wiping}
+      />
+      <button 
+        onClick={handleWipe}
+        disabled={wiping || confirmText !== 'WIPE ALL DATA'}
+        className={cn(
+          "w-full px-3 py-2 text-xs font-bold", 
+          THEME.punk.btn, 
+          "bg-red-700 text-white",
+          (wiping || confirmText !== 'WIPE ALL DATA') && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        {wiping ? 'Wiping Data...' : '🗑️ WIPE ALL DATA'}
+      </button>
+    </div>
+  );
+};
+
+// Helper component for storage info
+const StorageInfo = ({ actions }) => {
+  const [info, setInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadInfo();
+  }, []);
+
+  const loadInfo = async () => {
+    const storageInfo = await actions.getStorageInfo();
+    setInfo(storageInfo);
+    setLoading(false);
+  };
+
+  if (loading) return <div className="text-xs opacity-60">Loading storage info...</div>;
+  if (!info) return null;
+
+  return (
+    <div className={cn("p-3 text-xs space-y-2", THEME.punk.card, "bg-gray-50")}>
+      <div className="font-bold">IndexedDB Storage Usage</div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex justify-between">
+          <span>Backups:</span>
+          <span className="font-mono">{info.backupCount} ({(info.backupSize / 1024).toFixed(1)} KB)</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Archives:</span>
+          <span className="font-mono">{info.archiveCount} ({(info.archiveSize / 1024).toFixed(1)} KB)</span>
+        </div>
+        <div className="flex justify-between col-span-2 font-bold border-t border-black/20 pt-2">
+          <span>Total:</span>
+          <span className="font-mono">{(info.totalSize / 1024).toFixed(1)} KB</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const SettingsView = () => {
     const { data, actions, mode, mods } = useStore();
     const settings = data.settings || {};
@@ -2398,6 +2687,66 @@ export const SettingsView = () => {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Advanced Data Management - Backups & Archives */}
+                <div className="pt-4 border-t-4 border-black space-y-3">
+                  <h3 className="font-black text-xs uppercase">Advanced Data Management</h3>
+                  <p className="text-xs opacity-70">Automatic backups, archives, and data wipe functionality with IndexedDB storage.</p>
+                  
+                  {/* Automatic Backup Section */}
+                  <div className={cn("p-3 space-y-2", THEME.punk.card)}>
+                    <div className="font-bold text-sm flex items-center justify-between">
+                      <span>Automatic Backups</span>
+                      <button 
+                        onClick={async () => {
+                          const result = await actions.createAutoBackup();
+                          if (result.success) {
+                            setImportStatus(`✓ Backup created successfully!`);
+                            setTimeout(() => setImportStatus(''), 3000);
+                          } else {
+                            setImportStatus(`Error creating backup: ${result.error}`);
+                          }
+                        }}
+                        className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-blue-600 text-white")}
+                      >
+                        Create Backup Now
+                      </button>
+                    </div>
+                    <p className="text-[11px] opacity-70">Backups are automatically stored in IndexedDB. Last 10 backups are kept automatically.</p>
+                    
+                    <BackupList actions={actions} setImportStatus={setImportStatus} />
+                  </div>
+                  
+                  {/* Archive Data Section */}
+                  <div className={cn("p-3 space-y-2", THEME.punk.card)}>
+                    <div className="font-bold text-sm">Archive Current Data</div>
+                    <p className="text-[11px] opacity-70">Create a named archive of all current data. Archives are preserved permanently until manually deleted.</p>
+                    
+                    <ArchiveCreator actions={actions} setImportStatus={setImportStatus} />
+                    <ArchiveList actions={actions} setImportStatus={setImportStatus} />
+                  </div>
+                  
+                  {/* Wipe All Data Section */}
+                  <div className={cn("p-3 space-y-2 border-4 border-red-500", THEME.punk.card, "bg-red-50")}>
+                    <div className="font-bold text-sm text-red-700 flex items-center gap-2">
+                      <Icon name="AlertTriangle" size={16} />
+                      Wipe All Data
+                    </div>
+                    <p className="text-[11px] text-red-600">⚠️ This will DELETE ALL data including songs, releases, events, tasks, and more. An automatic backup will be created first.</p>
+                    
+                    <WipeDataButton actions={actions} setImportStatus={setImportStatus} />
+                    
+                    {settings.lastWipe && (
+                      <div className="text-[10px] opacity-70 text-red-700">
+                        Last wipe: {new Date(settings.lastWipe).toLocaleString()}
+                        {settings.wipeBackupId && <span className="ml-2">(Backup: {settings.wipeBackupId})</span>}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Storage Info */}
+                  <StorageInfo actions={actions} />
                 </div>
 
                 {/* Migration Onboarding */}

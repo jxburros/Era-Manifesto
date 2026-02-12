@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { saveBackup, saveArchive, getAllBackups, getAllArchives, getBackup, getArchive, deleteBackup, deleteArchive, getStorageSize } from './indexedDB';
 
 const StoreContext = createContext();
 
@@ -3587,6 +3588,299 @@ export const StoreProvider = ({ children }) => {
        });
        
        return payload;
+     },
+
+     // ============================================================
+     // ADVANCED DATA MANAGEMENT ACTIONS
+     // ============================================================
+
+     /**
+      * Create an archive of all current data
+      * Archives are stored in IndexedDB with a description
+      * @param {string} description - Description of the archive
+      * @returns {Promise<Object>} - Archive metadata
+      */
+     archiveAllData: async (description = '') => {
+       try {
+         const payload = actions.getExportPayload();
+         const archiveId = await saveArchive(payload, description || `Archive created at ${new Date().toLocaleString()}`);
+         
+         actions.logAudit('archive-all', 'system', 'data-archive', { 
+           archiveId,
+           description,
+           timestamp: new Date().toISOString()
+         });
+         
+         return { 
+           success: true, 
+           archiveId, 
+           timestamp: new Date().toISOString(),
+           description 
+         };
+       } catch (error) {
+         console.error('Failed to archive data:', error);
+         return { success: false, error: error.message };
+       }
+     },
+
+     /**
+      * Restore data from an archive
+      * @param {string} archiveId - The archive ID to restore
+      * @param {string} importMode - 'replace' or 'merge'
+      * @returns {Promise<Object>} - Result of restoration
+      */
+     restoreArchive: async (archiveId, importMode = 'merge') => {
+       try {
+         const archive = await getArchive(archiveId);
+         if (!archive || !archive.data) {
+           return { success: false, error: 'Archive not found' };
+         }
+         
+         await actions.importData(archive.data, importMode);
+         
+         actions.logAudit('restore-archive', 'system', 'data-restore', { 
+           archiveId,
+           mode: importMode,
+           timestamp: new Date().toISOString()
+         });
+         
+         return { success: true, archiveId, mode: importMode };
+       } catch (error) {
+         console.error('Failed to restore archive:', error);
+         return { success: false, error: error.message };
+       }
+     },
+
+     /**
+      * Get list of all archives
+      * @returns {Promise<Array>} - List of archives with metadata
+      */
+     getArchiveList: async () => {
+       try {
+         const archives = await getAllArchives();
+         return archives.map(a => ({
+           id: a.id,
+           timestamp: a.timestamp,
+           description: a.description,
+           size: a.size
+         }));
+       } catch (error) {
+         console.error('Failed to get archive list:', error);
+         return [];
+       }
+     },
+
+     /**
+      * Delete an archive by ID
+      * @param {string} archiveId - The archive ID to delete
+      */
+     deleteArchivedData: async (archiveId) => {
+       try {
+         await deleteArchive(archiveId);
+         actions.logAudit('delete-archive', 'system', 'archive-management', { archiveId });
+         return { success: true };
+       } catch (error) {
+         console.error('Failed to delete archive:', error);
+         return { success: false, error: error.message };
+       }
+     },
+
+     /**
+      * Create an automatic backup
+      * Backups are stored in IndexedDB (max 10 kept automatically)
+      * @returns {Promise<Object>} - Backup metadata
+      */
+     createAutoBackup: async () => {
+       try {
+         const payload = actions.getExportPayload();
+         const backupId = await saveBackup(payload);
+         
+         actions.logAudit('auto-backup', 'system', 'backup', { 
+           backupId,
+           timestamp: new Date().toISOString()
+         });
+         
+         return { success: true, backupId, timestamp: new Date().toISOString() };
+       } catch (error) {
+         console.error('Failed to create auto-backup:', error);
+         return { success: false, error: error.message };
+       }
+     },
+
+     /**
+      * Get list of all backups
+      * @returns {Promise<Array>} - List of backups with metadata
+      */
+     getBackupList: async () => {
+       try {
+         const backups = await getAllBackups();
+         return backups.map(b => ({
+           id: b.id,
+           timestamp: b.timestamp,
+           size: b.size
+         }));
+       } catch (error) {
+         console.error('Failed to get backup list:', error);
+         return [];
+       }
+     },
+
+     /**
+      * Restore from a backup
+      * @param {string} backupId - The backup ID to restore
+      * @returns {Promise<Object>} - Result of restoration
+      */
+     restoreBackup: async (backupId) => {
+       try {
+         const backup = await getBackup(backupId);
+         if (!backup || !backup.data) {
+           return { success: false, error: 'Backup not found' };
+         }
+         
+         await actions.importData(backup.data, 'replace');
+         
+         actions.logAudit('restore-backup', 'system', 'backup-restore', { 
+           backupId,
+           timestamp: new Date().toISOString()
+         });
+         
+         return { success: true, backupId };
+       } catch (error) {
+         console.error('Failed to restore backup:', error);
+         return { success: false, error: error.message };
+       }
+     },
+
+     /**
+      * Delete a backup by ID
+      * @param {string} backupId - The backup ID to delete
+      */
+     deleteBackupData: async (backupId) => {
+       try {
+         await deleteBackup(backupId);
+         return { success: true };
+       } catch (error) {
+         console.error('Failed to delete backup:', error);
+         return { success: false, error: error.message };
+       }
+     },
+
+     /**
+      * Get storage size information
+      * @returns {Promise<Object>} - Storage size details
+      */
+     getStorageInfo: async () => {
+       try {
+         return await getStorageSize();
+       } catch (error) {
+         console.error('Failed to get storage info:', error);
+         return {
+           backupSize: 0,
+           archiveSize: 0,
+           totalSize: 0,
+           backupCount: 0,
+           archiveCount: 0
+         };
+       }
+     },
+
+     /**
+      * Wipe all data (DESTRUCTIVE)
+      * Creates an automatic backup before wiping
+      * @param {boolean} skipBackup - Skip automatic backup (dangerous)
+      * @returns {Promise<Object>} - Result of wipe operation
+      */
+     wipeAllData: async (skipBackup = false) => {
+       try {
+         // Create automatic backup unless explicitly skipped
+         let backupId = null;
+         if (!skipBackup) {
+           const backupResult = await actions.createAutoBackup();
+           if (backupResult.success) {
+             backupId = backupResult.backupId;
+           }
+         }
+
+         const collections = [
+           'tasks', 'photos', 'files', 'vendors', 'teamMembers', 'misc',
+           'events', 'stages', 'eras', 'tags', 'songs', 'globalTasks',
+           'releases', 'standaloneVideos', 'templates', 'auditLog',
+           'expenses', 'taskCategories'
+         ];
+
+         // Preserve settings but clear data
+         const defaultSettings = {
+           ...data.settings,
+           lastWipe: new Date().toISOString(),
+           wipeBackupId: backupId
+         };
+
+         if (mode === 'cloud' && db && user) {
+           // For cloud mode: delete all documents
+           for (const col of collections) {
+             const colName = col === 'misc' ? 'misc_expenses' : col;
+             const existingItems = data[col] || [];
+             
+             for (const item of existingItems) {
+               try {
+                 await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, `album_${colName}`, item.id));
+               } catch (e) {
+                 console.error(`Failed to delete ${col} item during wipe`, item.id, e);
+               }
+             }
+           }
+           
+           // Clear undo stack and audit log
+           setUndoStack([]);
+           
+           // Save updated settings with wipe metadata
+           await setDoc(
+             doc(db, 'artifacts', appId, 'users', user.uid, 'album_tasks', 'settings'),
+             defaultSettings
+           );
+         } else {
+           // Local mode: reset state to defaults
+           const newData = {
+             tasks: [],
+             photos: [],
+             files: [],
+             vendors: [],
+             teamMembers: [],
+             misc: [],
+             events: [],
+             stages: [],
+             eras: [],
+             tags: [],
+             settings: defaultSettings,
+             songs: [],
+             globalTasks: [],
+             releases: [],
+             standaloneVideos: [],
+             templates: [],
+             auditLog: [],
+             expenses: [],
+             taskCategories: []
+           };
+           
+           setData(newData);
+           setUndoStack([]);
+         }
+
+         // Log the wipe action (will be the first entry in new audit log)
+         actions.logAudit('wipe-all', 'system', 'data-wipe', { 
+           timestamp: new Date().toISOString(),
+           backupId: backupId || 'none'
+         });
+
+         return { 
+           success: true, 
+           backupId, 
+           timestamp: new Date().toISOString() 
+         };
+       } catch (error) {
+         console.error('Failed to wipe data:', error);
+         return { success: false, error: error.message };
+       }
      }
   };
 
