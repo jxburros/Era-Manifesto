@@ -12,7 +12,7 @@ const getMinEndDate = (startDate) => {
 };
 
 // Song List View - Standardized Architecture
-export const SongListView = ({ onSelectSong }) => {
+export const SongListView = ({ onSelectSong, onSongCreated }) => {
   const { data, actions } = useStore();
   const [filterSingles, setFilterSingles] = useState(false);
   const settings = data.settings || {};
@@ -43,7 +43,20 @@ export const SongListView = ({ onSelectSong }) => {
     // Feature 4: Auto-assign active Era to new songs
     const defaultEraIds = eraModeEraId ? [eraModeEraId] : (settings.defaultEraId ? [settings.defaultEraId] : []);
     const newSong = await actions.addSong({ title: 'New Song', category: 'Album', releaseDate: '', isSingle: false, eraIds: defaultEraIds });
+    onSongCreated?.(newSong);
     if (onSelectSong) onSelectSong(newSong);
+  };
+
+  const handleAddSingleTemplate = async () => {
+    const newSong = await actions.addSong({ title: 'New Single', category: 'Single', isSingle: true, status: 'Not Started' });
+    onSongCreated?.(newSong);
+    onSelectSong?.(newSong);
+  };
+
+  const handleAddAlbumTrackTemplate = async () => {
+    const newSong = await actions.addSong({ title: 'Album Track', category: 'Album', isSingle: false, status: 'Not Started' });
+    onSongCreated?.(newSong);
+    onSelectSong?.(newSong);
   };
 
   // Column definitions
@@ -100,6 +113,10 @@ export const SongListView = ({ onSelectSong }) => {
       renderGridCard={renderGridCard}
       headerExtra={headerExtra}
       emptyMessage="No songs yet. Click + Add Song to create one."
+      emptyStateActions={[
+        { label: 'Create your first single', onClick: handleAddSingleTemplate, className: 'bg-pink-100' },
+        { label: 'Create an album track', onClick: handleAddAlbumTrackTemplate, className: 'bg-blue-100' }
+      ]}
     />
   );
 };
@@ -1881,7 +1898,7 @@ export const GlobalTasksView = () => {
 };
 
 // Releases List View - Standardized Architecture
-export const ReleasesListView = ({ onSelectRelease }) => {
+export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
   const { data, actions } = useStore();
   const settings = data.settings || {};
 
@@ -1901,6 +1918,7 @@ export const ReleasesListView = ({ onSelectRelease }) => {
     // Feature 4: Auto-assign active Era to new releases
     const defaultEraIds = eraModeEraId ? [eraModeEraId] : (settings.defaultEraId ? [settings.defaultEraId] : []);
     const newRelease = await actions.addRelease({ name: 'New Release', type: 'Album', releaseDate: '', estimatedCost: 0, notes: '', eraIds: defaultEraIds });
+    onReleaseCreated?.(newRelease);
     if (onSelectRelease) onSelectRelease(newRelease);
   };
 
@@ -1993,6 +2011,10 @@ export const ReleasesListView = ({ onSelectRelease }) => {
       filterOptions={filterOptions}
       renderGridCard={renderGridCard}
       emptyMessage="No releases yet. Click + Add Release to create one."
+      emptyStateActions={[
+        { label: 'Start a single rollout', onClick: () => actions.addRelease({ name: 'New Single Release', type: 'Single', releaseDate: '' }).then(r => { onReleaseCreated?.(r); onSelectRelease?.(r); }), className: 'bg-purple-100' },
+        { label: 'Start an EP rollout', onClick: () => actions.addRelease({ name: 'New EP Release', type: 'EP', releaseDate: '' }).then(r => { onReleaseCreated?.(r); onSelectRelease?.(r); }), className: 'bg-yellow-100' }
+      ]}
     />
   );
 };
@@ -5214,7 +5236,7 @@ export const ProgressView = () => {
 };
 
 // Events List View - Standardized Architecture
-export const EventsListView = ({ onSelectEvent }) => {
+export const EventsListView = ({ onSelectEvent, onEventCreated }) => {
   const { data, actions } = useStore();
   const settings = data.settings || {};
 
@@ -5249,6 +5271,7 @@ export const EventsListView = ({ onSelectEvent }) => {
       type: 'Standalone Event',
       eraIds: defaultEraIds
     }, false);
+    onEventCreated?.(newEvent);
     if (onSelectEvent) onSelectEvent(newEvent);
   };
 
@@ -5303,6 +5326,10 @@ export const EventsListView = ({ onSelectEvent }) => {
       filterOptions={filterOptions}
       renderGridCard={renderGridCard}
       emptyMessage="No events yet. Click + Add Event to create one."
+      emptyStateActions={[
+        { label: 'Add launch day event', onClick: handleAddEvent, className: 'bg-green-100' },
+        { label: 'Add promo week event', onClick: handleAddEvent, className: 'bg-orange-100' }
+      ]}
     />
   );
 };
@@ -5983,7 +6010,7 @@ export const EventDetailView = ({ event, onBack }) => {
 };
 
 // Expenses List View - Standardized Architecture
-export const ExpensesListView = ({ onSelectExpense }) => {
+export const ExpensesListView = ({ onSelectExpense, onExpenseCreated }) => {
   const { data, actions } = useStore();
   const [showArchived, setShowArchived] = useState(false);
 
@@ -5993,6 +6020,7 @@ export const ExpensesListView = ({ onSelectExpense }) => {
       date: new Date().toISOString().split('T')[0], 
       category: 'General' 
     });
+    onExpenseCreated?.(newExpense);
     if (onSelectExpense) onSelectExpense(newExpense);
   };
 
@@ -6102,6 +6130,10 @@ export const ExpensesListView = ({ onSelectExpense }) => {
       renderActions={renderActions}
       headerExtra={headerExtra}
       emptyMessage="No expenses yet."
+      emptyStateActions={[
+        { label: 'Log marketing expense', onClick: handleAddExpense, className: 'bg-green-100' },
+        { label: 'Log production expense', onClick: handleAddExpense, className: 'bg-blue-100' }
+      ]}
     />
   );
 };
@@ -7167,7 +7199,7 @@ export const VideoDetailView = ({ video, onBack }) => {
 // Global Tasks List View - Standardized Architecture
 // Phase 5: Enhanced with Category management
 // Phase 6: Added Kanban Board View
-export const GlobalTasksListView = ({ onSelectTask }) => {
+export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
   const { data, actions } = useStore();
   const [filterArchived, setFilterArchived] = useState('active');
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -7267,6 +7299,7 @@ export const GlobalTasksListView = ({ onSelectTask }) => {
 
   const handleCreateTask = async () => {
     const newTask = await actions.addGlobalTask(newTaskForm);
+    onTaskCreated?.(newTask);
     setShowAddTaskModal(false);
     if (onSelectTask) onSelectTask(newTask);
   };

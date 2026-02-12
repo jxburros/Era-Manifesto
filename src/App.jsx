@@ -37,6 +37,9 @@ const ToastProvider = ({ children }) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
   
+
+
+
   return (
     <ToastContext.Provider value={{ showToast, dismissToast, toasts }}>
       {children}
@@ -454,6 +457,44 @@ const FloatingActionButton = () => {
   );
 };
 
+
+const TodayView = ({ onNavigate }) => {
+  const { data } = useStore();
+  const today = new Date().toISOString().split('T')[0];
+  const tasks = data.globalTasks || [];
+  const overdue = tasks.filter(t => t.date && t.date < today && t.status !== 'Complete' && t.status !== 'Done' && !t.isArchived);
+  const upcoming = tasks.filter(t => t.date && t.date >= today && t.status !== 'Complete' && t.status !== 'Done' && !t.isArchived).slice(0, 5);
+  const recentlyEdited = [...tasks].reverse().slice(0, 5);
+
+  return (
+    <div className="p-6 pb-24 space-y-4">
+      <h2 className={cn(THEME.punk.textStyle, "punk-accent-underline text-2xl")}>Today</h2>
+      <div className="grid md:grid-cols-3 gap-4">
+        <button onClick={() => onNavigate('globalTasks')} className={cn('p-4 text-left', THEME.punk.card)}>
+          <div className="text-xs opacity-60">Overdue tasks</div>
+          <div className="text-2xl font-black text-red-600">{overdue.length}</div>
+        </button>
+        <button onClick={() => onNavigate('calendar')} className={cn('p-4 text-left', THEME.punk.card)}>
+          <div className="text-xs opacity-60">Upcoming this week</div>
+          <div className="text-2xl font-black">{upcoming.length}</div>
+        </button>
+        <button onClick={() => onNavigate('dashboard')} className={cn('p-4 text-left', THEME.punk.card)}>
+          <div className="text-xs opacity-60">Songs planned</div>
+          <div className="text-2xl font-black">{(data.songs || []).length}</div>
+        </button>
+      </div>
+      <div className={cn('p-4', THEME.punk.card)}>
+        <div className="font-bold uppercase mb-2">Recent activity</div>
+        <div className="space-y-1 text-sm">
+          {recentlyEdited.length === 0 ? <div className="opacity-60">No tasks yet.</div> : recentlyEdited.map(item => (
+            <div key={item.id} className="flex justify-between"><span>{item.taskName}</span><span className="opacity-60">{item.status}</span></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function AppInner() {
   const [tab, setTab] = useState('songs');
   const [editing, setEditing] = useState(null);
@@ -465,6 +506,9 @@ function AppInner() {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [selectedGlobalTask, setSelectedGlobalTask] = useState(null);
   const { data, actions } = useStore();
+  const { showToast } = useToast();
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
   const settings = data.settings || {};
   const isDark = settings.themeMode === 'dark';
   const focusMode = settings.focusMode || false;
@@ -473,6 +517,15 @@ function AppInner() {
   // Feature 4: Era Mode state
   const eraModeActive = settings.eraModeActive && settings.eraModeEraId;
   const eraModeEra = eraModeActive ? (data.eras || []).find(e => e.id === settings.eraModeEraId) : null;
+  const onboardingDismissed = settings.onboardingDismissed || false;
+  const onboardingSteps = [
+    { key: 'artist', label: 'Set artist and album info', done: Boolean(settings.artistName && settings.albumTitle), action: () => setTab('settings') },
+    { key: 'song', label: 'Create your first song', done: (data.songs || []).length > 0, action: () => setTab('songs') },
+    { key: 'release', label: 'Create your first release', done: (data.releases || []).length > 0, action: () => setTab('releases') },
+    { key: 'event', label: 'Add one event', done: (data.events || []).length > 0, action: () => setTab('events') },
+    { key: 'task', label: 'Add one global task', done: (data.globalTasks || []).length > 0, action: () => setTab('globalTasks') },
+  ];
+  const onboardingComplete = onboardingSteps.every(step => step.done);
 
   // Phase 10: Apply dark class to html element for Tailwind dark mode
   useEffect(() => {
@@ -483,7 +536,29 @@ function AppInner() {
     }
   }, [isDark]);
 
-  // Handle song selection
+  
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setCommandOpen(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const showCreatedToast = (type, entity) => {
+    const openMap = { song: () => handleSelectSong(entity), release: () => handleSelectRelease(entity), event: () => handleSelectEvent(entity), expense: () => handleSelectExpense(entity), task: () => handleSelectGlobalTask(entity) };
+    showToast(`${type} created`, {
+      type: 'success',
+      action: {
+        label: 'Open details',
+        onClick: () => openMap[type]?.()
+      }
+    });
+  };
+// Handle song selection
   const handleSelectSong = (song) => {
     setSelectedSong(song);
     setTab('songDetail');
@@ -518,6 +593,17 @@ function AppInner() {
     setSelectedGlobalTask(task);
     setTab('globalTaskDetail');
   };
+
+  const commandItems = [
+    { label: 'Go to Today', action: () => setTab('today') },
+    { label: 'Go to Songs', action: () => setTab('songs') },
+    { label: 'Go to Releases', action: () => setTab('releases') },
+    { label: 'Go to Events', action: () => setTab('events') },
+    { label: 'Go to Timeline', action: () => setTab('timeline') },
+    { label: 'Create Song', action: async () => { const song = await actions.addSong({ title: 'New Song' }); handleSelectSong(song); } },
+    { label: 'Create Release', action: async () => { const release = await actions.addRelease({ name: 'New Release', type: 'Single' }); handleSelectRelease(release); } },
+    { label: 'Create Task', action: async () => { const task = await actions.addGlobalTask({ taskName: 'New Task', status: 'Not Started', category: 'Other' }); handleSelectGlobalTask(task); } },
+  ].filter(item => item.label.toLowerCase().includes(commandQuery.toLowerCase()));
 
   return (
     <div
@@ -573,6 +659,18 @@ function AppInner() {
           {/* Spacer to push focus mode toggle to the right */}
           <div className="flex-1" />
           
+          <button
+            onClick={() => setCommandOpen(true)}
+            title="Quick actions"
+            className={cn(
+              "p-2 flex items-center gap-2 font-bold uppercase text-xs transition-transform hover:-translate-y-0.5 border-[3px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.85)]",
+              isDark ? "bg-slate-800 text-slate-50 border-slate-600" : "bg-white text-slate-900 border-black"
+            )}
+          >
+            <Icon name="Search" size={16} />
+            <span className="hidden sm:inline">Quick</span>
+          </button>
+
           {/* Focus Mode Toggle Button */}
           <button
             onClick={() => actions.saveSettings({ focusMode: !focusMode })}
@@ -619,13 +717,33 @@ function AppInner() {
           </div>
         )}
 
+        {!onboardingDismissed && !onboardingComplete && (
+          <div className={cn(
+            "mx-6 mb-2 mt-1 p-4 z-10 relative",
+            focusMode ? "border rounded" : "border-4",
+            isDark ? "bg-slate-800 border-slate-600" : "bg-white border-black"
+          )}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-black uppercase">Launch checklist</div>
+              <button onClick={() => actions.saveSettings({ onboardingDismissed: true })} className="text-xs opacity-70">Dismiss</button>
+            </div>
+            <div className="grid md:grid-cols-2 gap-2 text-sm">
+              {onboardingSteps.map(step => (
+                <button key={step.key} onClick={step.action} className={cn("text-left px-3 py-2 border-2", step.done ? "bg-green-100 border-green-500" : "bg-yellow-50 border-black")}>
+                  {step.done ? '✅' : '⬜'} {step.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className={cn(
           "flex-1 overflow-y-auto",
           "pt-16", // Always have padding for the header
           eraModeActive && "pt-28" // Extra padding when era mode banner is shown
         )}>
           {/* Songs - Following unified Item/Page architecture */}
-          {tab === 'songs' && <SongListView onSelectSong={handleSelectSong} />}
+          {tab === 'songs' && <SongListView onSelectSong={handleSelectSong} onSongCreated={(song) => showCreatedToast('song', song)} />}
           {tab === 'songDetail' && selectedSong && <SongDetailView song={selectedSong} onBack={() => { setSelectedSong(null); setTab('songs'); }} />}
           
           {/* Videos - Following unified Item/Page architecture */}
@@ -633,23 +751,25 @@ function AppInner() {
           {tab === 'videoDetail' && selectedVideo && <VideoDetailView video={selectedVideo} onBack={() => { setSelectedVideo(null); setTab('videos'); }} />}
           
           {/* Global Tasks - Following unified Item/Page architecture */}
-          {tab === 'globalTasks' && <GlobalTasksListView onSelectTask={handleSelectGlobalTask} />}
+          {tab === 'globalTasks' && <GlobalTasksListView onSelectTask={handleSelectGlobalTask} onTaskCreated={(task) => showCreatedToast('task', task)} />}
           {tab === 'globalTaskDetail' && selectedGlobalTask && <GlobalTaskDetailView task={selectedGlobalTask} onBack={() => { setSelectedGlobalTask(null); setTab('globalTasks'); }} />}
           
           {/* Releases - Following unified Item/Page architecture */}
-          {tab === 'releases' && <ReleasesListView onSelectRelease={handleSelectRelease} />}
+          {tab === 'releases' && <ReleasesListView onSelectRelease={handleSelectRelease} onReleaseCreated={(release) => showCreatedToast('release', release)} />}
           {tab === 'releaseDetail' && selectedRelease && <ReleaseDetailView release={selectedRelease} onBack={() => { setSelectedRelease(null); setTab('releases'); }} onSelectSong={handleSelectSong} />}
           
           {tab === 'timeline' && <CombinedTimelineView />}
           
           {/* Events - Following unified Item/Page architecture */}
-          {tab === 'events' && <EventsListView onSelectEvent={handleSelectEvent} />}
+          {tab === 'events' && <EventsListView onSelectEvent={handleSelectEvent} onEventCreated={(event) => showCreatedToast('event', event)} />}
           {tab === 'eventDetail' && selectedEvent && <EventDetailView event={selectedEvent} onBack={() => { setSelectedEvent(null); setTab('events'); }} />}
           
           {/* Expenses - Following unified Item/Page architecture */}
-          {tab === 'expenses' && <ExpensesListView onSelectExpense={handleSelectExpense} />}
+          {tab === 'expenses' && <ExpensesListView onSelectExpense={handleSelectExpense} onExpenseCreated={(expense) => showCreatedToast('expense', expense)} />}
           {tab === 'expenseDetail' && selectedExpense && <ExpenseDetailView expense={selectedExpense} onBack={() => { setSelectedExpense(null); setTab('expenses'); }} />}
           
+          {tab === 'today' && <TodayView onNavigate={setTab} />}
+
           {/* Task Dashboard - replaces confusing Plan view */}
           {tab === 'dashboard' && <TaskDashboardView />}
           
@@ -701,6 +821,32 @@ function AppInner() {
         `}</style>
       )}
       
+      {commandOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-24 px-4" onClick={() => setCommandOpen(false)}>
+          <div className={cn("w-full max-w-2xl p-4", THEME.punk.card, isDark ? 'bg-slate-800' : 'bg-white')} onClick={e => e.stopPropagation()}>
+            <input
+              value={commandQuery}
+              onChange={e => setCommandQuery(e.target.value)}
+              placeholder="Jump to view or run action..."
+              className={cn('w-full mb-3', THEME.punk.input)}
+              autoFocus
+            />
+            <div className="max-h-80 overflow-y-auto space-y-2">
+              {commandItems.map(item => (
+                <button
+                  key={item.label}
+                  onClick={async () => { await item.action(); setCommandOpen(false); setCommandQuery(''); }}
+                  className="w-full text-left px-3 py-2 border-2 border-black hover:bg-yellow-50 font-bold text-sm"
+                >
+                  {item.label}
+                </button>
+              ))}
+              {commandItems.length === 0 && <div className="text-sm opacity-60">No matching actions.</div>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast notification container */}
       <ToastContainer />
     </div>
