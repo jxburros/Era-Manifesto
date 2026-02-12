@@ -717,31 +717,32 @@ function AppInner() {
           </div>
         )}
 
-        {!onboardingDismissed && !onboardingComplete && (
-          <div className={cn(
-            "mx-6 mb-2 mt-1 p-4 z-10 relative",
-            focusMode ? "border rounded" : "border-4",
-            isDark ? "bg-slate-800 border-slate-600" : "bg-white border-black"
-          )}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="font-black uppercase">Launch checklist</div>
-              <button onClick={() => actions.saveSettings({ onboardingDismissed: true })} className="text-xs opacity-70">Dismiss</button>
-            </div>
-            <div className="grid md:grid-cols-2 gap-2 text-sm">
-              {onboardingSteps.map(step => (
-                <button key={step.key} onClick={step.action} className={cn("text-left px-3 py-2 border-2", step.done ? "bg-green-100 border-green-500" : "bg-yellow-50 border-black")}>
-                  {step.done ? '✅' : '⬜'} {step.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className={cn(
           "flex-1 overflow-y-auto",
           "pt-16", // Always have padding for the header
           eraModeActive && "pt-28" // Extra padding when era mode banner is shown
         )}>
+          {/* Launch Checklist - inside scrollable area to avoid overlapping */}
+          {!onboardingDismissed && !onboardingComplete && (
+            <div className={cn(
+              "mx-6 mb-4 mt-2 p-4 relative",
+              focusMode ? "border rounded" : "border-4",
+              focusMode ? "shadow-sm" : "shadow-[4px_4px_0px_0px_rgba(0,0,0,0.85)]",
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-black"
+            )}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-black uppercase">Launch checklist</div>
+                <button onClick={() => actions.saveSettings({ onboardingDismissed: true })} className="text-xs opacity-70 hover:opacity-100">Dismiss</button>
+              </div>
+              <div className="grid md:grid-cols-2 gap-2 text-sm">
+                {onboardingSteps.map(step => (
+                  <button key={step.key} onClick={step.action} className={cn("text-left px-3 py-2 border-2", step.done ? "bg-green-100 border-green-500" : "bg-yellow-50 border-black")}>
+                    {step.done ? '✅' : '⬜'} {step.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Songs - Following unified Item/Page architecture */}
           {tab === 'songs' && <SongListView onSelectSong={handleSelectSong} onSongCreated={(song) => showCreatedToast('song', song)} />}
           {tab === 'songDetail' && selectedSong && <SongDetailView song={selectedSong} onBack={() => { setSelectedSong(null); setTab('songs'); }} />}

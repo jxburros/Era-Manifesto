@@ -1263,8 +1263,9 @@ export const StoreProvider = ({ children }) => {
      // Phase 2: Events derive cost from Tasks only - no event-level cost fields
      addEvent: async (event, includePreparation = true) => {
        const defaultEraIds = event.eraIds || (data.settings?.defaultEraId ? [data.settings.defaultEraId] : []);
-       // Generate auto-tasks per Section 3.5
-       const autoTasks = generateEventTasks(event.date, includePreparation);
+       // Generate auto-tasks per Section 3.5 (respects autoTaskEvents setting)
+       const autoTaskEvents = data.settings?.autoTaskEvents !== false;
+       const autoTasks = autoTaskEvents ? generateEventTasks(event.date, includePreparation) : [];
        
        const newEvent = {
          id: crypto.randomUUID(),
@@ -1506,7 +1507,11 @@ export const StoreProvider = ({ children }) => {
         tagIds: song.tagIds || []
       };
       // Pass stemsNeeded to calculateDeadlines per Section 3.2
-      const deadlines = calculateDeadlines(song.releaseDate, song.isSingle, song.videoType, song.stemsNeeded).map(t => applyMetadataDefaults(t, metaDefaults));
+      // Respect autoTaskSongs setting - only generate tasks if enabled
+      const autoTaskSongs = data.settings?.autoTaskSongs !== false;
+      const deadlines = autoTaskSongs
+        ? calculateDeadlines(song.releaseDate, song.isSingle, song.videoType, song.stemsNeeded).map(t => applyMetadataDefaults(t, metaDefaults))
+        : [];
     const newSong = propagateSongMetadata({
         id: crypto.randomUUID(),
         title: song.title || 'New Song',
@@ -2318,11 +2323,12 @@ export const StoreProvider = ({ children }) => {
      
      // Release actions - Phase 3 enhancement
      addRelease: async (release) => {
-       // Auto-spawn release tasks based on release date
-       let releaseTasks = calculateReleaseTasks(release.releaseDate);
+       // Auto-spawn release tasks based on release date (respects autoTaskReleases setting)
+       const autoTaskReleases = data.settings?.autoTaskReleases !== false;
+       let releaseTasks = autoTaskReleases ? calculateReleaseTasks(release.releaseDate) : [];
        
-       // Phase 3.6: If hasPhysicalCopies, add physical release tasks
-       if (release.hasPhysicalCopies && release.releaseDate) {
+       // Phase 3.6: If hasPhysicalCopies, add physical release tasks (only if auto-tasks enabled)
+       if (autoTaskReleases && release.hasPhysicalCopies && release.releaseDate) {
          const releaseDate = new Date(release.releaseDate);
          PHYSICAL_RELEASE_TASK_TYPES.forEach(taskType => {
            const taskDate = new Date(releaseDate);
@@ -2884,8 +2890,9 @@ export const StoreProvider = ({ children }) => {
         else if (videoTypes.custom) primaryVideoType = 'custom';
       }
       
-      // Phase 1.8: Auto-generate video tasks based on video type (6 core tasks)
-      const autoTasks = primaryVideoType ? generateVideoTasks(releaseDate, primaryVideoType) : [];
+      // Phase 1.8: Auto-generate video tasks (respects autoTaskVideos setting)
+      const autoTaskVideos = data.settings?.autoTaskVideos !== false;
+      const autoTasks = (autoTaskVideos && primaryVideoType) ? generateVideoTasks(releaseDate, primaryVideoType) : [];
       
       // Phase 1.1: Convert single type to types object for backwards compatibility
       const typesObject = primaryVideoType ? { [primaryVideoType]: true } : {};
@@ -3066,8 +3073,9 @@ export const StoreProvider = ({ children }) => {
         else if (videoTypes.custom) primaryVideoType = 'custom';
       }
       
-      // Phase 1.8: Auto-generate video tasks based on video type (6 core tasks)
-      const autoTasks = primaryVideoType ? generateVideoTasks(releaseDate, primaryVideoType) : [];
+      // Phase 1.8: Auto-generate video tasks (respects autoTaskVideos setting)
+      const autoTaskVideosStandalone = data.settings?.autoTaskVideos !== false;
+      const autoTasks = (autoTaskVideosStandalone && primaryVideoType) ? generateVideoTasks(releaseDate, primaryVideoType) : [];
       
       // Phase 1.1: Convert single type to types object for backwards compatibility
       const typesObject = primaryVideoType ? { [primaryVideoType]: true } : {};
