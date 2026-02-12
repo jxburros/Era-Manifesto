@@ -1,6 +1,6 @@
 # Era Manifesto - Remaining Implementation Items
 
-This document lists the remaining features from `music-tracker-implementation-plan.md` that have not yet been implemented, organized by complexity tier.
+This document lists the remaining features that have not yet been implemented, organized by complexity tier.
 
 ---
 
