@@ -26,9 +26,13 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
     return calculateTaskProgress(tasks).progress;
   };
 
-  // Filter songs (singles filter and Era Mode applied)
+  // Filter songs (singles filter, Era Mode, and Manager Mode artist filter applied)
   const filteredSongs = useMemo(() => {
     let songs = [...(data.songs || [])];
+    // Manager Mode: Filter by selected artist
+    if (settings.appMode === 'manager' && settings.selectedArtistId) {
+      songs = songs.filter(s => s.artistId === settings.selectedArtistId);
+    }
     // Feature 4: Era Mode filter
     if (eraModeEraId) {
       songs = songs.filter(s => itemBelongsToEra(s, eraModeEraId));
@@ -37,7 +41,7 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
       songs = songs.filter(s => s.isSingle);
     }
     return songs;
-  }, [data.songs, filterSingles, eraModeEraId]);
+  }, [data.songs, filterSingles, eraModeEraId, settings.appMode, settings.selectedArtistId]);
 
   const handleAddSong = async () => {
     // Feature 4: Auto-assign active Era to new songs
@@ -1908,14 +1912,18 @@ export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
   // Feature 4: Era Mode filtering
   const eraModeEraId = (settings.eraModeActive && settings.eraModeEraId) ? settings.eraModeEraId : null;
 
-  // Filter releases by Era Mode
+  // Filter releases by Era Mode and Manager Mode artist
   const filteredReleases = useMemo(() => {
     let releases = [...(data.releases || [])];
+    // Manager Mode: Filter by selected artist
+    if (settings.appMode === 'manager' && settings.selectedArtistId) {
+      releases = releases.filter(r => r.artistId === settings.selectedArtistId);
+    }
     if (eraModeEraId) {
       releases = releases.filter(r => itemBelongsToEra(r, eraModeEraId));
     }
     return releases;
-  }, [data.releases, eraModeEraId]);
+  }, [data.releases, eraModeEraId, settings.appMode, settings.selectedArtistId]);
 
   const handleAddRelease = async () => {
     // Feature 4: Auto-assign active Era to new releases
@@ -5253,14 +5261,18 @@ export const EventsListView = ({ onSelectEvent, onEventCreated }) => {
   // Feature 4: Era Mode filtering
   const eraModeEraId = (settings.eraModeActive && settings.eraModeEraId) ? settings.eraModeEraId : null;
 
-  // Filter events by Era Mode
+  // Filter events by Era Mode and Manager Mode artist
   const filteredEvents = useMemo(() => {
     let events = [...(data.events || [])];
+    // Manager Mode: Filter by selected artist
+    if (settings.appMode === 'manager' && settings.selectedArtistId) {
+      events = events.filter(e => e.artistId === settings.selectedArtistId);
+    }
     if (eraModeEraId) {
       events = events.filter(e => itemBelongsToEra(e, eraModeEraId));
     }
     return events;
-  }, [data.events, eraModeEraId]);
+  }, [data.events, eraModeEraId, settings.appMode, settings.selectedArtistId]);
 
   const eventProgress = (event) => {
     const tasks = [...(event.tasks || []), ...(event.customTasks || [])];
@@ -6412,17 +6424,26 @@ export const VideosListView = ({ onSelectVideo }) => {
 
   // Collect all videos from songs and standalone
   const allVideos = useMemo(() => {
+    const settings = data.settings || {};
     const videos = [];
     (data.songs || []).forEach(song => {
+      // Manager Mode: Filter songs by artist
+      if (settings.appMode === 'manager' && settings.selectedArtistId && song.artistId !== settings.selectedArtistId) {
+        return; // Skip songs that don't match the selected artist
+      }
       (song.videos || []).forEach(video => {
         videos.push({ ...video, _songId: song.id, _songTitle: song.title, _source: 'song' });
       });
     });
     (data.standaloneVideos || []).forEach(video => {
+      // Manager Mode: Filter standalone videos by artist
+      if (settings.appMode === 'manager' && settings.selectedArtistId && video.artistId !== settings.selectedArtistId) {
+        return; // Skip videos that don't match the selected artist
+      }
       videos.push({ ...video, _source: 'standalone' });
     });
     return videos;
-  }, [data.songs, data.standaloneVideos]);
+  }, [data.songs, data.standaloneVideos, data.settings]);
 
   const handleAddVideo = async () => {
     if (!newVideoType) return;
@@ -7305,6 +7326,11 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
   // Filter tasks based on archived state
   const filteredTasks = useMemo(() => {
     let tasks = [...(data.globalTasks || [])];
+    // Manager Mode: Filter by selected artist
+    const settings = data.settings || {};
+    if (settings.appMode === 'manager' && settings.selectedArtistId) {
+      tasks = tasks.filter(t => t.artistId === settings.selectedArtistId);
+    }
     if (filterArchived === 'active') {
       tasks = tasks.filter(t => !t.isArchived && t.status !== 'Done' && t.status !== 'Complete');
     } else if (filterArchived === 'archived') {
@@ -7313,7 +7339,7 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
       tasks = tasks.filter(t => (t.status === 'Done' || t.status === 'Complete'));
     }
     return tasks;
-  }, [data.globalTasks, filterArchived]);
+  }, [data.globalTasks, filterArchived, data.settings]);
 
   const handleAddTask = () => {
     // Open the add task modal instead of immediately creating and navigating

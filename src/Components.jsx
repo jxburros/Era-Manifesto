@@ -12,9 +12,11 @@ export const Icon = ({ name, ...props }) => {
 export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
   const { data } = useStore();
   const settings = data.settings || {};
-  const colorClass = COLORS[settings.themeColor || 'pink'].split(' ')[2]; 
+  const colorClass = COLORS[settings.themeColor || 'pink'].split(' ')[2];
   const isDark = settings.themeMode === 'dark';
   const [viewsExpanded, setViewsExpanded] = useState(false);
+  const [contentExpanded, setContentExpanded] = useState(true);
+  const [uploadsExpanded, setUploadsExpanded] = useState(false);
 
   // Top buttons (side-by-side)
   const topButtons = [
@@ -23,17 +25,25 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
     { id: 'calendar', label: 'Calendar', icon: 'Calendar' },
   ];
 
-  // Main sections
-  const mainMenu = [
+  // Content sub-items (Songs, Releases, Videos)
+  const contentMenu = [
     { id: 'songs', label: 'Songs', icon: 'Music' },
     { id: 'releases', label: 'Releases', icon: 'Download' },
     { id: 'videos', label: 'Videos', icon: 'PlayCircle' },
+  ];
+
+  // Uploads sub-items (Photos, Files)
+  const uploadsMenu = [
+    { id: 'gallery', label: 'Photos', icon: 'Image' },
+    { id: 'files', label: 'Files', icon: 'File' },
+  ];
+
+  // Main sections (standalone items)
+  const mainMenu = [
     { id: 'events', label: 'Events', icon: 'Calendar' },
     { id: 'globalTasks', label: 'Global Tasks', icon: 'Activity' },
     { id: 'expenses', label: 'Expenses', icon: 'Receipt' },
     { id: 'team', label: 'Team', icon: 'Users' },
-    { id: 'gallery', label: 'Photos', icon: 'Image' },
-    { id: 'files', label: 'Files', icon: 'File' },
   ];
 
   // Views sub-items
@@ -51,6 +61,8 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
   ];
 
   const isViewsActive = viewsMenu.some(v => v.id === activeTab);
+  const isContentActive = contentMenu.some(v => v.id === activeTab);
+  const isUploadsActive = uploadsMenu.some(v => v.id === activeTab);
 
   const MenuButton = ({ item, compact = false }) => (
     <button 
@@ -111,6 +123,68 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
 
       {/* Main Navigation */}
       <nav className="flex-1 px-4 pb-4 space-y-2 overflow-y-auto">
+        {/* Content Expandable Section */}
+        <div>
+          <button
+            onClick={() => setContentExpanded(!contentExpanded)}
+            className={cn(
+              "w-full flex items-center justify-between px-4 py-3 text-left font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5",
+              isDark ? "border-slate-600" : "border-black",
+              isContentActive
+                ? "bg-[var(--accent)] text-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.35)]"
+                : (isDark ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-white hover:bg-[var(--accent-soft)]")
+            )}
+          >
+            <span className="flex items-center gap-3">
+              <Icon name="Package" size={18} /> Content
+            </span>
+            <Icon name={contentExpanded ? "ChevronDown" : "ChevronRight"} size={16} />
+          </button>
+
+          {/* Content Sub-items */}
+          {contentExpanded && (
+            <div className={cn(
+              "ml-4 mt-2 space-y-2 pl-2 border-l-[3px]",
+              isDark ? "border-slate-600" : "border-black"
+            )}>
+              {contentMenu.map(item => (
+                <MenuButton key={item.id} item={item} compact />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Uploads Expandable Section */}
+        <div>
+          <button
+            onClick={() => setUploadsExpanded(!uploadsExpanded)}
+            className={cn(
+              "w-full flex items-center justify-between px-4 py-3 text-left font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5",
+              isDark ? "border-slate-600" : "border-black",
+              isUploadsActive
+                ? "bg-[var(--accent)] text-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.35)]"
+                : (isDark ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-white hover:bg-[var(--accent-soft)]")
+            )}
+          >
+            <span className="flex items-center gap-3">
+              <Icon name="Upload" size={18} /> Uploads
+            </span>
+            <Icon name={uploadsExpanded ? "ChevronDown" : "ChevronRight"} size={16} />
+          </button>
+
+          {/* Uploads Sub-items */}
+          {uploadsExpanded && (
+            <div className={cn(
+              "ml-4 mt-2 space-y-2 pl-2 border-l-[3px]",
+              isDark ? "border-slate-600" : "border-black"
+            )}>
+              {uploadsMenu.map(item => (
+                <MenuButton key={item.id} item={item} compact />
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Main Menu Items */}
         {mainMenu.map(item => (
           <MenuButton key={item.id} item={item} />
@@ -118,7 +192,7 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
 
         {/* Views Expandable Section */}
         <div className="pt-2">
-          <button 
+          <button
             onClick={() => setViewsExpanded(!viewsExpanded)}
             className={cn(
               "w-full flex items-center justify-between px-4 py-3 text-left font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5",
@@ -133,7 +207,7 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
             </span>
             <Icon name={viewsExpanded ? "ChevronDown" : "ChevronRight"} size={16} />
           </button>
-          
+
           {/* Views Sub-items */}
           {viewsExpanded && (
             <div className={cn(
