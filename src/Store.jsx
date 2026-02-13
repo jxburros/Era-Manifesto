@@ -747,7 +747,9 @@ export const StoreProvider = ({ children }) => {
     auditLog: [],
     // Per APP_ARCHITECTURE.md Section 1.2: Expense and Task Category Item types
     expenses: [],
-    taskCategories: []
+    taskCategories: [],
+    // Artist/Manager Mode: Artists collection
+    artists: []
   });
   
   // Undo history stack - stores snapshots of items before mutations
@@ -795,7 +797,9 @@ export const StoreProvider = ({ children }) => {
         'album_tasks', 'album_photos', 'album_files', 'album_vendors', 'album_teamMembers', 'album_misc_expenses',
         'album_events', 'album_stages', 'album_eras', 'album_tags', 'album_songs', 'album_globalTasks', 'album_releases',
         // Per APP_ARCHITECTURE.md Section 1.2: Expense and Task Category Item types
-        'album_expenses', 'album_taskCategories'
+        'album_expenses', 'album_taskCategories',
+        // Artist/Manager Mode
+        'album_artists'
       ];
       const unsubs = collections.map(col => {
         const q = query(collection(db, 'artifacts', appId, 'users', user.uid, col));
@@ -1302,13 +1306,16 @@ export const StoreProvider = ({ children }) => {
      // Phase 2: Events derive cost from Tasks only - no event-level cost fields
      addEvent: async (event, includePreparation = true) => {
        const defaultEraIds = event.eraIds || (data.settings?.defaultEraId ? [data.settings.defaultEraId] : []);
+       // Auto-assign artist in Manager Mode
+       const artistId = event.artistId || (data.settings?.appMode === 'manager' && data.settings?.selectedArtistId ? data.settings.selectedArtistId : '');
        // Generate auto-tasks per Section 3.5 (respects autoTaskEvents setting)
        const autoTaskEvents = data.settings?.autoTaskEvents !== false;
        const autoTasks = autoTaskEvents ? generateEventTasks(event.date, includePreparation) : [];
-       
+
        const newEvent = {
          id: crypto.randomUUID(),
          title: event.title || 'New Event',
+         artistId: artistId,
          type: event.type || 'Standalone Event',
          date: event.date || '',
          // Section 5.4: Time separate from date
@@ -1458,6 +1465,40 @@ export const StoreProvider = ({ children }) => {
         setData(p => ({ ...p, tags: (p.tags || []).filter(t => t.id !== tagId) }));
       }
     },
+
+    // Artist Mode / Manager Mode CRUD
+    addArtist: async (artist) => {
+      const newArtist = {
+        id: crypto.randomUUID(),
+        name: artist.name || 'New Artist',
+        stageName: artist.stageName || '',
+        bio: artist.bio || '',
+        createdAt: new Date().toISOString()
+      };
+      if (mode === 'cloud') {
+        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'album_artists'), { ...newArtist, createdAt: serverTimestamp() });
+      } else {
+        setData(p => ({ ...p, artists: [...(p.artists || []), newArtist] }));
+      }
+      return newArtist;
+    },
+
+    updateArtist: async (artistId, updates) => {
+      if (mode === 'cloud') {
+        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_artists', artistId), updates);
+      } else {
+        setData(p => ({ ...p, artists: (p.artists || []).map(a => a.id === artistId ? { ...a, ...updates } : a) }));
+      }
+    },
+
+    deleteArtist: async (artistId) => {
+      if (mode === 'cloud') {
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_artists', artistId));
+      } else {
+        setData(p => ({ ...p, artists: (p.artists || []).filter(a => a.id !== artistId) }));
+      }
+    },
+
     addTeamMember: async (member) => {
        // Per APP_ARCHITECTURE.md Section 1.3 and 5.5
        const newMember = {
@@ -1540,6 +1581,8 @@ export const StoreProvider = ({ children }) => {
      // Song-specific actions - per APP_ARCHITECTURE.md Section 5.1
     addSong: async (song) => {
       const defaultEraIds = song.eraIds || (data.settings?.defaultEraId ? [data.settings.defaultEraId] : []);
+      // Auto-assign artist in Manager Mode
+      const artistId = song.artistId || (data.settings?.appMode === 'manager' && data.settings?.selectedArtistId ? data.settings.selectedArtistId : '');
       const metaDefaults = {
         eraIds: defaultEraIds,
         stageIds: song.stageIds || [],
@@ -1554,6 +1597,7 @@ export const StoreProvider = ({ children }) => {
     const newSong = propagateSongMetadata({
         id: crypto.randomUUID(),
         title: song.title || 'New Song',
+        artistId: artistId,
         // DEPRECATED: category field kept for backwards compatibility
         category: song.category || 'Album',
         releaseDate: song.releaseDate || '',
@@ -2162,6 +2206,8 @@ export const StoreProvider = ({ children }) => {
      
      // Global task actions
      addGlobalTask: async (task) => {
+       // Auto-assign artist in Manager Mode
+       const artistId = task.artistId || (data.settings?.appMode === 'manager' && data.settings?.selectedArtistId ? data.settings.selectedArtistId : '');
        // Use unified task schema with cost layers
        const newTask = createUnifiedTask({
          type: 'Global',
@@ -2177,7 +2223,8 @@ export const StoreProvider = ({ children }) => {
          quotedCost: task.quotedCost || 0,
          paidCost: task.paidCost || 0,
          notes: task.notes || '',
-         parentType: 'global'
+         parentType: 'global',
+         artistId: artistId
        });
        if (mode === 'cloud') {
          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'album_globalTasks'), { ...newTask, createdAt: serverTimestamp() });
@@ -2386,6 +2433,9 @@ export const StoreProvider = ({ children }) => {
          releaseTasks.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
        }
        
+       // Auto-assign artist in Manager Mode
+       const artistId = release.artistId || (data.settings?.appMode === 'manager' && data.settings?.selectedArtistId ? data.settings.selectedArtistId : '');
+
        const newRelease = {
          id: crypto.randomUUID(),
          name: release.name || 'New Release',
@@ -2393,6 +2443,7 @@ export const StoreProvider = ({ children }) => {
          // Phase 3.3: If type is 'Other', store details
          typeDetails: release.typeDetails || '',
          releaseDate: release.releaseDate || '',
+         artistId: artistId,
          // Cost layers with precedence: paidCost > quotedCost > estimatedCost
          estimatedCost: release.estimatedCost || 0,
          quotedCost: release.quotedCost || 0,
@@ -3122,10 +3173,14 @@ export const StoreProvider = ({ children }) => {
       // Phase 1.1: Convert single type to types object for backwards compatibility
       const typesObject = primaryVideoType ? { [primaryVideoType]: true } : {};
       
+      // Auto-assign artist in Manager Mode
+      const artistId = video.artistId || (data.settings?.appMode === 'manager' && data.settings?.selectedArtistId ? data.settings.selectedArtistId : '');
+
       const newVideo = {
         id: crypto.randomUUID(),
         title: video.title || 'New Standalone Video',
         isStandalone: true,
+        artistId: artistId,
         releaseDate: releaseDate,
         // Phase 1.1: Single video type (primary field)
         videoType: primaryVideoType || '',
