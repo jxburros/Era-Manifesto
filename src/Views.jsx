@@ -761,9 +761,10 @@ export const GalleryView = () => {
 };
 
 export const FilesView = () => {
-    const { data, actions } = useStore();
+    const { data, actions, mode } = useStore();
     const [selectedFile, setSelectedFile] = useState(null);
     const [editingFile, setEditingFile] = useState(null);
+    const isConnected = mode === 'cloud';
 
     // Helper to determine if file is an image (previewable)
     const isImageFile = (file) => {
@@ -875,10 +876,16 @@ export const FilesView = () => {
                             <Icon name="Download" size={16}/> Download All
                         </button>
                     )}
-                    <label className={cn("px-4 py-2 cursor-pointer bg-white flex items-center gap-2", THEME.punk.btn)}>
-                        <Icon name="Upload" size={16}/> Upload
-                        <input type="file" className="hidden" onChange={handleUpload} />
-                    </label>
+                    {isConnected ? (
+                      <label className={cn("px-4 py-2 cursor-pointer bg-white flex items-center gap-2", THEME.punk.btn)}>
+                          <Icon name="Upload" size={16}/> Upload
+                          <input type="file" className="hidden" onChange={handleUpload} />
+                      </label>
+                    ) : (
+                      <div className="px-4 py-2 text-xs opacity-70 border-2 border-dashed border-gray-400 flex items-center gap-2">
+                          <Icon name="Cloud" size={16}/> Connect Firebase to upload files
+                      </div>
+                    )}
                 </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -911,7 +918,7 @@ export const FilesView = () => {
                         </div>
                     </div>
                 ))}
-                {data.files.length === 0 && <div className="col-span-full py-20 text-center opacity-50">No files yet. Upload any file type.</div>}
+                {data.files.length === 0 && <div className="col-span-full py-20 text-center opacity-50">{isConnected ? 'No files yet. Upload any file type.' : 'No files yet. Connect Firebase in Settings to enable file uploads.'}</div>}
             </div>
 
             {/* File Detail Modal */}
@@ -2053,8 +2060,6 @@ export const SettingsView = () => {
     const isLoading = mode === 'loading';
     const [templateDrafts, setTemplateDrafts] = useState(settings.templates || []);
     const [importText, setImportText] = useState('');
-    const [migrationNotes, setMigrationNotes] = useState(settings.migrationNotes || '');
-    const [migrationRanAt, setMigrationRanAt] = useState(settings.migrationRanAt || '');
     const [modImportText, setModImportText] = useState('');
     const [modStatus, setModStatus] = useState('');
 
@@ -2147,15 +2152,6 @@ export const SettingsView = () => {
       actions.removeMod(modId);
     };
 
-    const migrationPreview = {
-      tasks: data.tasks.length,
-      songs: (data.songs || []).length,
-      releases: (data.releases || []).length,
-      globalTasks: (data.globalTasks || []).length,
-      templates: templateDrafts.length,
-      storage: mode === 'cloud' ? 'Cloud' : 'Local'
-    };
-
     // Enhanced export with version metadata
     const exportAllData = () => {
       const basePayload = actions.getExportPayload();
@@ -2175,9 +2171,6 @@ export const SettingsView = () => {
       setImportStatus('Data exported successfully!');
       setTimeout(() => setImportStatus(''), 3000);
     };
-
-    // Legacy backup function (kept for compatibility with migration section)
-    const backupAllData = exportAllData;
 
     // Handle file selection for import
     const handleImportFileSelect = (e) => {
@@ -2268,10 +2261,6 @@ export const SettingsView = () => {
       if (fileInput) fileInput.value = '';
     };
 
-    const runMigrationFlow = async () => {
-      const marker = await actions.runMigration(migrationNotes);
-      setMigrationRanAt(marker.migrationRanAt);
-    };
 
     return (
         <div className="p-6 max-w-xl">
@@ -2367,19 +2356,19 @@ export const SettingsView = () => {
                     </div>
                 </div>
 
-                {/* Default Era */}
+                {/* Focus Mode */}
                 <div className="pt-4 border-t-4 border-black">
-                  <h3 className="font-black text-xs uppercase mb-2">Default Era</h3>
-                  <select
-                    value={settings.defaultEra || 'Modern'}
-                    onChange={e => actions.saveSettings({ defaultEra: e.target.value })}
-                    className={cn("w-full", THEME.punk.input)}
-                  >
-                    {['Debut', 'Fearless', 'Speak Now', 'Red', '1989', 'Reputation', 'Lover', 'Folklore', 'Evermore', 'Midnights', 'Modern'].map(era => (
-                      <option key={era} value={era}>{era}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs opacity-70 mt-2">Used as the fallback era for new templates and migration previews.</p>
+                  <h3 className="font-black text-xs uppercase mb-2">Focus Mode</h3>
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input
+                      type="checkbox"
+                      checked={settings.focusMode || false}
+                      onChange={e => actions.saveSettings({ focusMode: e.target.checked })}
+                      className="w-5 h-5"
+                    />
+                    Enable Focus Mode
+                  </label>
+                  <p className="text-xs opacity-70 mt-2">Simplifies the UI with reduced borders, shadows, and textures for a cleaner look.</p>
                 </div>
 
                 {/* Feature 4: Era Mode - Focus on a single era */}
@@ -2428,7 +2417,7 @@ export const SettingsView = () => {
                 {/* Auto Task Toggles */}
                 <div className="pt-4 border-t-4 border-black space-y-3">
                   <h3 className="font-black text-xs uppercase">Auto-Generated Tasks</h3>
-                  {[{ key: 'autoTaskSongs', label: 'Auto-generate song tasks' }, { key: 'autoTaskVideos', label: 'Auto-generate video tasks' }, { key: 'autoTaskReleases', label: 'Auto-generate release tasks' }].map(toggle => (
+                  {[{ key: 'autoTaskSongs', label: 'Auto-generate song tasks' }, { key: 'autoTaskVideos', label: 'Auto-generate video tasks' }, { key: 'autoTaskReleases', label: 'Auto-generate release tasks' }, { key: 'autoTaskEvents', label: 'Auto-generate event tasks' }].map(toggle => (
                     <label key={toggle.key} className="flex items-center gap-2 text-sm font-bold">
                       <input
                         type="checkbox"
@@ -2450,9 +2439,10 @@ export const SettingsView = () => {
                     {templateDrafts.map(t => (
                       <div key={t.id} className={cn("p-3 space-y-2", THEME.punk.card)}>
                         <input value={t.name} onChange={e => handleTemplateChange(t.id, 'name', e.target.value)} className={cn("w-full", THEME.punk.input)} placeholder="Template name" />
-                        <select value={t.era || settings.defaultEra || 'Modern'} onChange={e => handleTemplateChange(t.id, 'era', e.target.value)} className={cn("w-full", THEME.punk.input)}>
-                          {['Debut', 'Fearless', 'Speak Now', 'Red', '1989', 'Reputation', 'Lover', 'Folklore', 'Evermore', 'Midnights', 'Modern'].map(era => (
-                            <option key={era} value={era}>{era}</option>
+                        <select value={t.era || ''} onChange={e => handleTemplateChange(t.id, 'era', e.target.value)} className={cn("w-full", THEME.punk.input)}>
+                          <option value="">No era</option>
+                          {(data.eras || []).map(era => (
+                            <option key={era.id} value={era.name}>{era.name}</option>
                           ))}
                         </select>
                         <textarea value={t.body || ''} onChange={e => handleTemplateChange(t.id, 'body', e.target.value)} className={cn("w-full", THEME.punk.input)} rows={3} placeholder="Template body" />
@@ -2747,31 +2737,6 @@ export const SettingsView = () => {
                   
                   {/* Storage Info */}
                   <StorageInfo actions={actions} />
-                </div>
-
-                {/* Migration Onboarding */}
-                <div className="pt-4 border-t-4 border-black space-y-3">
-                  <h3 className="font-black text-xs uppercase">Migration Onboarding</h3>
-                  <div className={cn("p-3 text-xs space-y-2", THEME.punk.card)}>
-                    <div className="font-bold">Preview</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {Object.entries(migrationPreview).map(([key, value]) => (
-                        <div key={key} className="flex justify-between border-b border-dashed border-black/30 pb-1">
-                          <span className="uppercase font-bold">{key}</span>
-                          <span>{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="pt-2">
-                      <label className="block font-bold mb-1">Notes</label>
-                      <textarea value={migrationNotes} onChange={e => setMigrationNotes(e.target.value)} className={cn("w-full", THEME.punk.input)} rows={3} placeholder="Add any migration notes or blockers" />
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={backupAllData} className={cn("flex-1 px-3 py-2 text-xs", THEME.punk.btn, "bg-purple-600 text-white")}>Backup ({mode === 'cloud' ? 'Cloud' : 'Local'})</button>
-                      <button onClick={runMigrationFlow} className={cn("flex-1 px-3 py-2 text-xs", THEME.punk.btn, "bg-amber-500 text-white")}>Run Migration</button>
-                    </div>
-                    {migrationRanAt && <div className="text-[10px] opacity-70">Last migration: {new Date(migrationRanAt).toLocaleString()}</div>}
-                  </div>
                 </div>
 
                 {/* Stages */}
