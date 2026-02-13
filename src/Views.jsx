@@ -1987,7 +1987,7 @@ const WipeDataButton = ({ actions, setImportStatus }) => {
 
   return (
     <div className="space-y-2">
-      <label className="text-xs font-bold">Type "WIPE ALL DATA" to confirm:</label>
+      <label className="text-xs font-bold">Type &quot;WIPE ALL DATA&quot; to confirm:</label>
       <input 
         type="text"
         value={confirmText}
@@ -2068,6 +2068,8 @@ export const SettingsView = () => {
     const [importMode, setImportMode] = useState('replace');
     const [importStatus, setImportStatus] = useState('');
     const [isImporting, setIsImporting] = useState(false);
+    const [financialPresetName, setFinancialPresetName] = useState('');
+    const [selectedFinancialPreset, setSelectedFinancialPreset] = useState('');
 
     useEffect(() => {
       setTemplateDrafts(settings.templates || []);
@@ -2262,6 +2264,40 @@ export const SettingsView = () => {
     };
 
 
+
+    const dashboardWidgets = settings.dashboardWidgets || {
+      notifications: true,
+      spotlight: true,
+      budget: true,
+      categoryBreakdown: true,
+      photos: true,
+      upcomingTable: true
+    };
+
+    const deadlineOffsets = settings.deadlineOffsets || {};
+    const defaultOffsetRows = [
+      { key: 'Demo', value: 100 },
+      { key: 'Record', value: 70 },
+      { key: 'Mix', value: 42 },
+      { key: 'Master', value: 21 },
+      { key: 'Release', value: 0 },
+      { key: 'Plan Video', value: 60 },
+      { key: 'Release Video', value: 0 }
+    ];
+
+    const allStatuses = [];
+    (data.globalTasks || []).forEach(t => allStatuses.push(t.status));
+    (data.songs || []).forEach(song => {
+      (song.deadlines || []).forEach(t => allStatuses.push(t.status));
+      (song.customTasks || []).forEach(t => allStatuses.push(t.status));
+      (song.versions || []).forEach(v => (v.tasks || []).forEach(t => allStatuses.push(t.status)));
+    });
+    (data.releases || []).forEach(r => (r.tasks || []).forEach(t => allStatuses.push(t.status)));
+    (data.events || []).forEach(e => (e.tasks || []).forEach(t => allStatuses.push(t.status)));
+    const invalidStatusCount = allStatuses.filter(Boolean).filter(s => !STATUS_OPTIONS.includes(s) && s !== 'Done' && s !== 'In Progress' && s !== 'Delayed').length;
+
+    const financialPresets = settings.financialPresets || [];
+
     return (
         <div className="p-6 max-w-xl">
             <h2 className={cn("mb-6", THEME.punk.textStyle)}>Settings</h2>
@@ -2427,6 +2463,71 @@ export const SettingsView = () => {
                       {toggle.label}
                     </label>
                   ))}
+                </div>
+
+
+                {/* Dashboard Customization */}
+                <div className="pt-4 border-t-4 border-black space-y-3">
+                  <h3 className="font-black text-xs uppercase">Dashboard Widgets</h3>
+                  {Object.entries(dashboardWidgets).map(([key, value]) => (
+                    <label key={key} className="flex items-center gap-2 text-sm font-bold">
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={e => actions.saveSettings({ dashboardWidgets: { ...dashboardWidgets, [key]: e.target.checked } })}
+                      />
+                      Show {key}
+                    </label>
+                  ))}
+                </div>
+
+                {/* Deadline Offset Editor */}
+                <div className="pt-4 border-t-4 border-black space-y-3">
+                  <h3 className="font-black text-xs uppercase">Auto-Deadline Offsets (days before release)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {defaultOffsetRows.map(row => (
+                      <label key={row.key} className="text-sm font-bold flex items-center justify-between gap-2">
+                        <span>{row.key}</span>
+                        <input
+                          type="number"
+                          className={cn("w-24", THEME.punk.input)}
+                          value={deadlineOffsets[row.key] ?? row.value}
+                          onChange={e => actions.saveSettings({ deadlineOffsets: { ...deadlineOffsets, [row.key]: Number(e.target.value || 0) } })}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Financial Filter Presets */}
+                <div className="pt-4 border-t-4 border-black space-y-3">
+                  <h3 className="font-black text-xs uppercase">Financial Filter Presets</h3>
+                  <div className="flex gap-2">
+                    <input value={financialPresetName} onChange={e => setFinancialPresetName(e.target.value)} placeholder="Preset name" className={cn("flex-1", THEME.punk.input)} />
+                    <button
+                      onClick={() => {
+                        if (!financialPresetName.trim()) return;
+                        const next = [...financialPresets, { id: crypto.randomUUID(), name: financialPresetName.trim(), createdAt: new Date().toISOString() }];
+                        actions.saveSettings({ financialPresets: next });
+                        setFinancialPresetName('');
+                      }}
+                      className={cn("px-3 py-2 text-xs", THEME.punk.btn, "bg-black text-white")}
+                    >Save</button>
+                  </div>
+                  <select value={selectedFinancialPreset} onChange={e => setSelectedFinancialPreset(e.target.value)} className={cn("w-full", THEME.punk.input)}>
+                    <option value="">Select preset…</option>
+                    {financialPresets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  {selectedFinancialPreset && <div className="text-xs opacity-70">Preset selected. Apply it from Financials view.</div>}
+                </div>
+
+                {/* Data Quality Diagnostics */}
+                <div className="pt-4 border-t-4 border-black space-y-2">
+                  <h3 className="font-black text-xs uppercase">Data Diagnostics</h3>
+                  <div className={cn("p-3", THEME.punk.card)}>
+                    <div className="text-sm font-bold">Invalid task status values: {invalidStatusCount}</div>
+                    <div className="text-xs opacity-70 mt-1">Legacy values Done / In Progress / Delayed are tolerated; any other unknown value is flagged.</div>
+                  </div>
                 </div>
 
                 {/* Templates */}

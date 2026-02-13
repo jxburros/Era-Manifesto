@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useStore, STATUS_OPTIONS, RELEASE_TYPES, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence, getPrimaryDate, getTaskDueDate, generateEventTasks, itemBelongsToEra, isEraLocked } from './Store';
+import { useStore, STATUS_OPTIONS, RELEASE_TYPES, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence, getPrimaryDate, getTaskDueDate, generateEventTasks, itemBelongsToEra, isEraLocked, collectAllTasks } from './Store';
 import { THEME, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 import { DetailPane, EraStageTagsModule, StandardListPage, StandardDetailPage, DisplayInfoSection, AutocompleteInput } from './ItemComponents';
@@ -3858,80 +3858,21 @@ export const TaskDashboardView = () => {
   const nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   // Collect all tasks from all sources
-  const allTasks = useMemo(() => {
-    const tasks = [];
-    
-    // Song tasks
-    (data.songs || []).forEach(song => {
-      (song.deadlines || []).forEach(task => {
-        tasks.push({
-          id: 'song-' + task.id,
-          type: task.type,
-          category: task.category || 'Production',
-          date: task.date,
-          status: task.status,
-          estimatedCost: task.estimatedCost,
-          source: 'Song',
-          sourceName: song.title,
-          sourceType: 'song',
-          sourceId: song.id,
-          stageId: task.stageId || ''
-        });
-      });
-      (song.customTasks || []).forEach(task => {
-        tasks.push({
-          id: 'custom-' + task.id,
-          type: task.title,
-          category: 'Custom',
-          date: task.date,
-          status: task.status,
-          estimatedCost: task.estimatedCost,
-          source: 'Song',
-          sourceName: song.title,
-          sourceType: 'song',
-          sourceId: song.id
-        });
-      });
-    });
-    
-    // Global tasks
-    (data.globalTasks || []).forEach(task => {
-      tasks.push({
-        id: 'global-' + task.id,
-        type: task.taskName,
-        category: task.category,
-        date: task.date,
-        status: task.status,
-        estimatedCost: task.estimatedCost,
-        source: 'Global',
-        sourceName: task.taskName,
-        sourceType: 'global',
-        sourceId: task.id,
-        stageId: task.stageId || ''
-      });
-    });
-    
-    // Release tasks
-    (data.releases || []).forEach(release => {
-      (release.tasks || []).forEach(task => {
-        tasks.push({
-          id: 'release-' + task.id,
-          type: task.type,
-          category: task.category,
-          date: task.date,
-          status: task.status,
-          estimatedCost: task.estimatedCost,
-          source: 'Release',
-          sourceName: release.name,
-        sourceType: 'release',
-        sourceId: release.id,
-        stageId: task.stageId || ''
-      });
-    });
-    });
-    
-    return tasks;
-  }, [data.songs, data.globalTasks, data.releases]);
+  const allTasks = useMemo(() => collectAllTasks(data).map(task => ({
+    id: task.id,
+    type: task.title,
+    category: task.category || 'Other',
+    date: task.date,
+    status: task.status,
+    estimatedCost: task.estimatedCost,
+    quotedCost: task.quotedCost,
+    paidCost: task.paidCost,
+    source: task.source,
+    sourceName: task.sourceName,
+    sourceType: task.source.toLowerCase().replace(/\s+/g, '-'),
+    sourceId: task.sourceId,
+    stageId: task.stageId || ''
+  })), [data]);
 
   // Filter tasks based on view
   const filteredTasks = useMemo(() => {
@@ -4393,7 +4334,8 @@ export const TaskDashboardView = () => {
 // Build filter panel for Stage/Era/Release/Song/Version/Item Type + paid/quoted/projected toggles
 // Render tables and charts based on cost precedence
 export const FinancialsView = () => {
-  const { data } = useStore();
+  const { data, actions } = useStore();
+  const settings = data.settings || {};
   const [filterStage, setFilterStage] = useState('all');
   const [filterEra, setFilterEra] = useState('all');
   const [filterRelease, setFilterRelease] = useState('all');
@@ -4401,6 +4343,18 @@ export const FinancialsView = () => {
   const [filterItemType, setFilterItemType] = useState('all');
   const [costMode, setCostMode] = useState('effective'); // 'paid', 'quoted', 'estimated', 'effective'
   const [showVisualize, setShowVisualize] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const savedPresets = settings.financialPresets || [];
+
+  const activePreset = {
+    filterStage,
+    filterEra,
+    filterRelease,
+    filterSong,
+    filterItemType,
+    costMode
+  };
+
   
   // Chart colors for brutalist theme
   const CHART_COLORS = ['#f472b6', '#facc15', '#22d3ee', '#a78bfa', '#fb923c', '#4ade80', '#f87171'];
@@ -4716,6 +4670,21 @@ export const FinancialsView = () => {
     ];
   }, [totals]);
 
+  const exportFinancialCsv = () => {
+    const rows = [
+      ['Name', 'Source', 'Date', 'Estimated', 'Quoted', 'Paid', 'Effective'],
+      ...costItems.map(i => [i.name, i.source, i.date || '', i.estimatedCost || 0, i.quotedCost || 0, i.paidCost || 0, i.effectiveCost || 0])
+    ];
+    const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `financials-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
@@ -4728,11 +4697,45 @@ export const FinancialsView = () => {
             <Icon name="BarChart2" size={16} className="inline mr-2" />
             {showVisualize ? 'Hide Charts' : 'Visualize'}
           </button>
+          <button onClick={exportFinancialCsv} className={cn("px-4 py-2", THEME.punk.btn, "bg-white")}>Export CSV</button>
           <select value={costMode} onChange={e => setCostMode(e.target.value)} className={cn("px-3 py-2", THEME.punk.input)}>
             <option value="effective">Effective Cost (Paid → Quoted → Estimated)</option>
             <option value="paid">Paid Only</option>
             <option value="quoted">Quoted Only</option>
             <option value="estimated">Estimated Only</option>
+          </select>
+        </div>
+      </div>
+
+
+      <div className={cn("p-3 mb-4", THEME.punk.card)}>
+        <div className="flex flex-wrap gap-2 items-center">
+          <input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Preset name" className={cn("px-3 py-2", THEME.punk.input)} />
+          <button
+            onClick={() => {
+              if (!presetName.trim()) return;
+              const next = [...savedPresets.filter(p => p.name !== presetName.trim()), { id: crypto.randomUUID(), name: presetName.trim(), filters: activePreset }];
+              actions.saveSettings({ financialPresets: next });
+              setPresetName('');
+            }}
+            className={cn("px-3 py-2", THEME.punk.btn, "bg-black text-white")}
+          >Save Preset</button>
+          <select
+            className={cn("px-3 py-2", THEME.punk.input)}
+            defaultValue=""
+            onChange={e => {
+              const found = savedPresets.find(p => p.id === e.target.value);
+              if (!found) return;
+              setFilterStage(found.filters.filterStage || 'all');
+              setFilterEra(found.filters.filterEra || 'all');
+              setFilterRelease(found.filters.filterRelease || 'all');
+              setFilterSong(found.filters.filterSong || 'all');
+              setFilterItemType(found.filters.filterItemType || 'all');
+              setCostMode(found.filters.costMode || 'effective');
+            }}
+          >
+            <option value="">Load preset…</option>
+            {savedPresets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
       </div>

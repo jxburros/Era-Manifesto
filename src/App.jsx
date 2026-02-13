@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react';
-import { StoreProvider, useStore } from './Store';
+import { StoreProvider, useStore, collectAllTasks } from './Store';
 import { Sidebar, Editor, Icon } from './Components';
 import { ListView, CalendarView, GalleryView, FilesView, TeamView, MiscView, ArchiveView, ActiveView, SettingsView } from './Views';
 import { SongListView, SongDetailView, ReleasesListView, ReleaseDetailView, CombinedTimelineView, TaskDashboardView, FinancialsView, ProgressView, EventsListView, EventDetailView, ExpensesListView, ExpenseDetailView, VideosListView, VideoDetailView, GlobalTasksListView, GlobalTaskDetailView } from './SpecViews';
@@ -461,9 +461,9 @@ const FloatingActionButton = () => {
 const TodayView = ({ onNavigate }) => {
   const { data } = useStore();
   const today = new Date().toISOString().split('T')[0];
-  const tasks = data.globalTasks || [];
-  const overdue = tasks.filter(t => t.date && t.date < today && t.status !== 'Complete' && t.status !== 'Done' && !t.isArchived);
-  const upcoming = tasks.filter(t => t.date && t.date >= today && t.status !== 'Complete' && t.status !== 'Done' && !t.isArchived).slice(0, 5);
+  const tasks = collectAllTasks(data);
+  const overdue = tasks.filter(t => t.date && t.date < today && t.status !== 'Complete' && t.status !== 'Done');
+  const upcoming = tasks.filter(t => t.date && t.date >= today && t.status !== 'Complete' && t.status !== 'Done').slice(0, 5);
   const recentlyEdited = [...tasks].reverse().slice(0, 5);
 
   return (
@@ -487,7 +487,7 @@ const TodayView = ({ onNavigate }) => {
         <div className="font-bold uppercase mb-2">Recent activity</div>
         <div className="space-y-1 text-sm">
           {recentlyEdited.length === 0 ? <div className="opacity-60">No tasks yet.</div> : recentlyEdited.map(item => (
-            <div key={item.id} className="flex justify-between"><span>{item.taskName}</span><span className="opacity-60">{item.status}</span></div>
+            <div key={item.id} className="flex justify-between gap-2"><span>{item.title} <span className="opacity-50">({item.source})</span></span><span className="opacity-60">{item.status}</span></div>
           ))}
         </div>
       </div>
@@ -526,6 +526,54 @@ function AppInner() {
     { key: 'task', label: 'Add one global task', done: (data.globalTasks || []).length > 0, action: () => setTab('globalTasks') },
   ];
   const onboardingComplete = onboardingSteps.every(step => step.done);
+
+  // Route-backed navigation (hash-based) for deep-linking and refresh persistence
+  useEffect(() => {
+    const applyHashRoute = () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (!hash) return;
+      const params = new URLSearchParams(hash);
+      const nextTab = params.get('tab');
+      if (nextTab) setTab(nextTab);
+
+      const songId = params.get('songId');
+      const releaseId = params.get('releaseId');
+      const eventId = params.get('eventId');
+      const expenseId = params.get('expenseId');
+      const videoId = params.get('videoId');
+      const taskId = params.get('taskId');
+
+      if (songId) setSelectedSong((data.songs || []).find(s => s.id === songId) || null);
+      if (releaseId) setSelectedRelease((data.releases || []).find(r => r.id === releaseId) || null);
+      if (eventId) setSelectedEvent((data.events || []).find(e => e.id === eventId) || null);
+      if (expenseId) setSelectedExpense((data.expenses || []).find(e => e.id === expenseId) || null);
+      if (videoId) {
+        const standalone = (data.standaloneVideos || []).find(v => v.id === videoId);
+        const attached = (data.songs || []).flatMap(song => song.videos || []).find(v => v.id === videoId);
+        setSelectedVideo(standalone || attached || null);
+      }
+      if (taskId) setSelectedGlobalTask((data.globalTasks || []).find(t => t.id === taskId) || null);
+    };
+
+    applyHashRoute();
+    window.addEventListener('hashchange', applyHashRoute);
+    return () => window.removeEventListener('hashchange', applyHashRoute);
+  }, [data.songs, data.releases, data.events, data.expenses, data.standaloneVideos, data.globalTasks]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('tab', tab);
+    if (selectedSong?.id) params.set('songId', selectedSong.id);
+    if (selectedRelease?.id) params.set('releaseId', selectedRelease.id);
+    if (selectedEvent?.id) params.set('eventId', selectedEvent.id);
+    if (selectedExpense?.id) params.set('expenseId', selectedExpense.id);
+    if (selectedVideo?.id) params.set('videoId', selectedVideo.id);
+    if (selectedGlobalTask?.id) params.set('taskId', selectedGlobalTask.id);
+    const nextHash = `#${params.toString()}`;
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, '', nextHash);
+    }
+  }, [tab, selectedSong, selectedRelease, selectedEvent, selectedExpense, selectedVideo, selectedGlobalTask]);
 
   // Phase 10: Apply dark class to html element for Tailwind dark mode
   useEffect(() => {
