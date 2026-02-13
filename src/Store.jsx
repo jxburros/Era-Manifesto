@@ -239,6 +239,39 @@ export const createUnifiedTask = (overrides = {}) => ({
 // Resolve a task's due date - supports both new unified schema (due_date) and legacy fields
 export const getTaskDueDate = (task = {}) => task.due_date || task.dueDate || task.date || '';
 
+export const collectAllTasks = (data = {}) => {
+  const rows = [];
+  const pushTask = (task, meta) => {
+    if (!task || task.isArchived) return;
+    rows.push({
+      id: task.id || crypto.randomUUID(),
+      title: task.taskName || task.title || task.type || task.name || 'Untitled Task',
+      status: task.status || 'Not Started',
+      date: getTaskDueDate(task),
+      source: meta.source,
+      sourceName: meta.sourceName,
+      sourceId: meta.sourceId,
+      estimatedCost: task.estimatedCost ?? task.estimated_cost ?? 0,
+      quotedCost: task.quotedCost ?? task.quoted_cost ?? 0,
+      paidCost: task.paidCost ?? task.amount_paid ?? 0,
+      stageId: task.stageId || (task.stageIds || [])[0] || ''
+    });
+  };
+
+  (data.globalTasks || []).forEach(task => pushTask(task, { source: 'Global Task', sourceName: task.taskName, sourceId: task.id }));
+  (data.releases || []).forEach(release => (release.tasks || []).forEach(task => pushTask(task, { source: 'Release', sourceName: release.name, sourceId: release.id })));
+  (data.events || []).forEach(event => (event.tasks || []).forEach(task => pushTask(task, { source: 'Event', sourceName: event.name, sourceId: event.id })));
+  (data.songs || []).forEach(song => {
+    (song.deadlines || []).forEach(task => pushTask(task, { source: 'Song', sourceName: song.title, sourceId: song.id }));
+    (song.customTasks || []).forEach(task => pushTask(task, { source: 'Song', sourceName: song.title, sourceId: song.id }));
+    (song.versions || []).forEach(version => (version.tasks || []).forEach(task => pushTask(task, { source: 'Version', sourceName: `${song.title} / ${version.name || 'Version'}`, sourceId: version.id || song.id })));
+    (song.videos || []).forEach(video => (video.tasks || []).forEach(task => pushTask(task, { source: 'Video', sourceName: video.title || song.title, sourceId: video.id || song.id })));
+  });
+  (data.standaloneVideos || []).forEach(video => (video.tasks || []).forEach(task => pushTask(task, { source: 'Video', sourceName: video.title, sourceId: video.id })));
+
+  return rows;
+};
+
 // Resolve the primary date for any item based on overrides, direct dates, and attached releases
 export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = []) => {
   if (!item) return '';
@@ -367,7 +400,7 @@ export const VIDEO_TASK_TYPES = [
 ];
 
 // Generate tasks for a video based on its type
-export const generateVideoTasks = (releaseDate, videoTypeKey) => {
+export const generateVideoTasks = (releaseDate, videoTypeKey, deadlineOffsets = {}) => {
   if (!releaseDate) return [];
   
   const release = new Date(releaseDate);
@@ -376,7 +409,8 @@ export const generateVideoTasks = (releaseDate, videoTypeKey) => {
   VIDEO_TASK_TYPES.forEach(taskType => {
     if (taskType.videoTypes.includes(videoTypeKey)) {
       const taskDate = new Date(release);
-      taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+      const offset = deadlineOffsets[taskType.type] ?? taskType.daysBeforeRelease;
+    taskDate.setDate(taskDate.getDate() - offset);
       
       tasks.push(createUnifiedTask({
         type: taskType.type,
@@ -480,7 +514,7 @@ export const GLOBAL_TASK_CATEGORIES = ['Branding', 'Web', 'Legal', 'Visuals', 'M
 
 // Helper function to calculate task dates based on release date
 // Per APP_ARCHITECTURE.md Section 3.1 and 3.2
-export const calculateSongTasks = (releaseDate, isSingle, videoType, stemsNeeded = false) => {
+export const calculateSongTasks = (releaseDate, isSingle, videoType, stemsNeeded = false, deadlineOffsets = {}) => {
   if (!releaseDate) return [];
   
   const release = new Date(releaseDate);
@@ -492,7 +526,8 @@ export const calculateSongTasks = (releaseDate, isSingle, videoType, stemsNeeded
     if (taskType.appliesTo === 'single' && !isSingle) return;
     
     const taskDate = new Date(release);
-    taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+    const offset = deadlineOffsets[taskType.type] ?? taskType.daysBeforeRelease;
+    taskDate.setDate(taskDate.getDate() - offset);
     
     // Use unified task schema
     tasks.push(createUnifiedTask({
@@ -508,7 +543,8 @@ export const calculateSongTasks = (releaseDate, isSingle, videoType, stemsNeeded
   if (stemsNeeded) {
     STEMS_TASK_TYPES.forEach(taskType => {
       const taskDate = new Date(release);
-      taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+      const offset = deadlineOffsets[taskType.type] ?? taskType.daysBeforeRelease;
+    taskDate.setDate(taskDate.getDate() - offset);
       
       tasks.push(createUnifiedTask({
         type: taskType.type,
@@ -525,7 +561,8 @@ export const calculateSongTasks = (releaseDate, isSingle, videoType, stemsNeeded
     VIDEO_TASK_TYPES.forEach(taskType => {
       if (taskType.videoTypes.includes(videoType)) {
         const taskDate = new Date(release);
-        taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+        const offset = deadlineOffsets[taskType.type] ?? taskType.daysBeforeRelease;
+    taskDate.setDate(taskDate.getDate() - offset);
         
         tasks.push(createUnifiedTask({
           type: taskType.type,
@@ -545,12 +582,12 @@ export const calculateSongTasks = (releaseDate, isSingle, videoType, stemsNeeded
 };
 
 // Legacy function - calls the new one for backwards compatibility
-export const calculateDeadlines = (releaseDate, isSingle, videoType, stemsNeeded = false) => {
-  return calculateSongTasks(releaseDate, isSingle, videoType, stemsNeeded);
+export const calculateDeadlines = (releaseDate, isSingle, videoType, stemsNeeded = false, deadlineOffsets = {}) => {
+  return calculateSongTasks(releaseDate, isSingle, videoType, stemsNeeded, deadlineOffsets);
 };
 
 // Helper function to calculate release tasks
-export const calculateReleaseTasks = (releaseDate) => {
+export const calculateReleaseTasks = (releaseDate, deadlineOffsets = {}) => {
   if (!releaseDate) return [];
   
   const release = new Date(releaseDate);
@@ -558,7 +595,8 @@ export const calculateReleaseTasks = (releaseDate) => {
   
   RELEASE_TASK_TYPES.forEach(taskType => {
     const taskDate = new Date(release);
-    taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+    const offset = deadlineOffsets[taskType.type] ?? taskType.daysBeforeRelease;
+    taskDate.setDate(taskDate.getDate() - offset);
 
     // Use unified task schema
     tasks.push(createUnifiedTask({
@@ -577,7 +615,7 @@ export const calculateReleaseTasks = (releaseDate) => {
 };
 
 // Recalculate deadlines from release date (only non-overridden ones)
-export const recalculateDeadlines = (existingDeadlines, releaseDate, isSingle, videoType) => {
+export const recalculateDeadlines = (existingDeadlines, releaseDate, isSingle, videoType, deadlineOffsets = {}) => {
   if (!releaseDate) return existingDeadlines;
   
   const release = new Date(releaseDate);
@@ -587,12 +625,12 @@ export const recalculateDeadlines = (existingDeadlines, releaseDate, isSingle, v
   const offsets = {};
   SONG_TASK_TYPES.forEach(task => {
     if (task.appliesTo === 'all' || (task.appliesTo === 'single' && isSingle)) {
-      offsets[task.type] = -task.daysBeforeRelease;
+      offsets[task.type] = -(deadlineOffsets[task.type] ?? task.daysBeforeRelease);
     }
   });
   VIDEO_TASK_TYPES.forEach(task => {
     if (videoType && task.videoTypes.includes(videoType)) {
-      offsets[task.type] = -task.daysBeforeRelease;
+      offsets[task.type] = -(deadlineOffsets[task.type] ?? task.daysBeforeRelease);
     }
   });
   
@@ -719,6 +757,7 @@ export const StoreProvider = ({ children }) => {
   const [db, setDb] = useState(null);
   const [storage, setStorage] = useState(null);
   const appId = "album-tracker-v2";
+  const deadlineOffsets = data.settings?.deadlineOffsets || {};
 
   useEffect(() => {
     const init = async () => {
@@ -1753,7 +1792,8 @@ export const StoreProvider = ({ children }) => {
         const release = new Date(releaseDate);
         return versionTaskTypes.map(taskType => {
           const taskDate = new Date(release);
-          taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+          const offset = deadlineOffsets[taskType.type] ?? taskType.daysBeforeRelease;
+    taskDate.setDate(taskDate.getDate() - offset);
           return createUnifiedTask({
             type: taskType.type,
             category: taskType.category,
@@ -2107,7 +2147,7 @@ export const StoreProvider = ({ children }) => {
            newDeadlines = calculateDeadlines(song.releaseDate, song.isSingle, song.videoType);
          } else {
            // Recalculate existing deadlines
-           newDeadlines = recalculateDeadlines(song.deadlines, song.releaseDate, song.isSingle, song.videoType);
+           newDeadlines = recalculateDeadlines(song.deadlines, song.releaseDate, song.isSingle, song.videoType, data.settings?.deadlineOffsets || {});
          }
          if (mode === 'cloud') {
            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_songs', songId), { deadlines: newDeadlines });
@@ -2325,14 +2365,15 @@ export const StoreProvider = ({ children }) => {
      addRelease: async (release) => {
        // Auto-spawn release tasks based on release date (respects autoTaskReleases setting)
        const autoTaskReleases = data.settings?.autoTaskReleases !== false;
-       let releaseTasks = autoTaskReleases ? calculateReleaseTasks(release.releaseDate) : [];
+       let releaseTasks = autoTaskReleases ? calculateReleaseTasks(release.releaseDate, deadlineOffsets) : [];
        
        // Phase 3.6: If hasPhysicalCopies, add physical release tasks (only if auto-tasks enabled)
        if (autoTaskReleases && release.hasPhysicalCopies && release.releaseDate) {
          const releaseDate = new Date(release.releaseDate);
          PHYSICAL_RELEASE_TASK_TYPES.forEach(taskType => {
            const taskDate = new Date(releaseDate);
-           taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+           const offset = deadlineOffsets[taskType.type] ?? taskType.daysBeforeRelease;
+    taskDate.setDate(taskDate.getDate() - offset);
            releaseTasks.push(createUnifiedTask({
              type: taskType.type,
              category: taskType.category,
@@ -2412,7 +2453,8 @@ export const StoreProvider = ({ children }) => {
         const newTasks = [...existingTasks];
         PHYSICAL_RELEASE_TASK_TYPES.forEach(taskType => {
           const taskDate = new Date(releaseDateObj);
-          taskDate.setDate(taskDate.getDate() - taskType.daysBeforeRelease);
+          const offset = deadlineOffsets[taskType.type] ?? taskType.daysBeforeRelease;
+    taskDate.setDate(taskDate.getDate() - offset);
           newTasks.push(createUnifiedTask({
             type: taskType.type,
             category: taskType.category,
@@ -2440,7 +2482,7 @@ export const StoreProvider = ({ children }) => {
             });
             const effectiveSongDate = song.releaseDate && song.releaseDate <= releaseDate ? song.releaseDate : releaseDate;
             const updatedDeadlines = song.releaseDate
-              ? recalculateDeadlines(song.deadlines || [], effectiveSongDate, song.isSingle, song.videoType)
+              ? recalculateDeadlines(song.deadlines || [], effectiveSongDate, song.isSingle, song.videoType, data.settings?.deadlineOffsets || {})
               : song.deadlines;
             return { ...song, releaseDate: effectiveSongDate, versions: updatedVersions, deadlines: updatedDeadlines };
           });
@@ -2892,7 +2934,7 @@ export const StoreProvider = ({ children }) => {
       
       // Phase 1.8: Auto-generate video tasks (respects autoTaskVideos setting)
       const autoTaskVideos = data.settings?.autoTaskVideos !== false;
-      const autoTasks = (autoTaskVideos && primaryVideoType) ? generateVideoTasks(releaseDate, primaryVideoType) : [];
+      const autoTasks = (autoTaskVideos && primaryVideoType) ? generateVideoTasks(releaseDate, primaryVideoType, deadlineOffsets) : [];
       
       // Phase 1.1: Convert single type to types object for backwards compatibility
       const typesObject = primaryVideoType ? { [primaryVideoType]: true } : {};
@@ -3075,7 +3117,7 @@ export const StoreProvider = ({ children }) => {
       
       // Phase 1.8: Auto-generate video tasks (respects autoTaskVideos setting)
       const autoTaskVideos = data.settings?.autoTaskVideos !== false;
-      const autoTasks = (autoTaskVideos && primaryVideoType) ? generateVideoTasks(releaseDate, primaryVideoType) : [];
+      const autoTasks = (autoTaskVideos && primaryVideoType) ? generateVideoTasks(releaseDate, primaryVideoType, deadlineOffsets) : [];
       
       // Phase 1.1: Convert single type to types object for backwards compatibility
       const typesObject = primaryVideoType ? { [primaryVideoType]: true } : {};
@@ -3233,7 +3275,7 @@ export const StoreProvider = ({ children }) => {
        if (release && release.releaseDate) {
          let newTasks;
          if (!release.tasks || release.tasks.length === 0) {
-           newTasks = calculateReleaseTasks(release.releaseDate);
+           newTasks = calculateReleaseTasks(release.releaseDate, deadlineOffsets);
          } else {
            newTasks = recalculateReleaseTasks(release.tasks, release.releaseDate);
          }
