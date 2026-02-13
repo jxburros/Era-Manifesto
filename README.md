@@ -15,7 +15,7 @@ A comprehensive web application for musicians to manage album creation, release 
 - **Auto-generated Tasks**: Tasks automatically created for songs, versions, videos, releases, and events
 - **Manual Override**: Edit, customize, or disable any auto-generated task
 - **Progress System**: Point-based progress tracking (Complete=1, In-Progress/Waiting=0.5)
-- **Status Tracking**: Not Started, In-Progress, Waiting on Someone Else, Paid But Not Complete, Complete But Not Paid, Complete, Delayed, Other
+- **Status Tracking**: Not Started, In-Progress, Waiting on Someone Else, Paid But Not Complete, Complete But Not Paid, Complete, Other (legacy values like Delayed are still recognized)
 - **Task Dashboard**: Overview of overdue, due soon, and in-progress tasks with notifications
 
 ### Budget & Financial Management
@@ -73,8 +73,8 @@ A comprehensive web application for musicians to manage album creation, release 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/jxburros/era-manifesto.git
-   cd era-manifesto
+   git clone https://github.com/jxburros/Era-Manifesto.git
+   cd Era-Manifesto
    ```
 
 2. **Install dependencies**

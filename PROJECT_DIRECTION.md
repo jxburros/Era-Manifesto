@@ -166,7 +166,7 @@ Tasks have:
 - Title and description
 - Due date
 - Category/type
-- Status tracking (Not Started, In-Progress, Waiting on Someone Else, Paid But Not Complete, Complete But Not Paid, Complete, Delayed, Other)
+- Status tracking (Not Started, In-Progress, Waiting on Someone Else, Paid But Not Complete, Complete But Not Paid, Complete, Other; legacy values like Delayed are still recognized)
 - Three-tier cost tracking (estimated/quoted/paid)
 - Team member assignments with cost allocation
 - Notes
