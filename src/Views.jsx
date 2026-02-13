@@ -239,82 +239,90 @@ export const CalendarView = ({ onEdit, onSelectEvent }) => {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 pb-24">
+        <div className="h-full flex flex-col p-6 pb-24 max-w-[1600px] mx-auto">
             {/* Header with navigation */}
             <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
                 <h2 className={THEME.punk.textStyle}>{monthNames[month]} {year}</h2>
-                <div className={cn("flex gap-2 border-4 p-1", "bg-pink-100 dark:bg-slate-700 border-black dark:border-slate-600 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(100,116,139,1)]")}>
-                    <button onClick={() => setDate(new Date(year - 1, month, 1))} className={cn("p-2 w-10 text-xs font-bold border-4 border-black dark:border-slate-600", "bg-pink-300 dark:bg-slate-600 dark:text-white hover:bg-pink-200 dark:hover:bg-slate-500")} title="Previous Year">‹‹</button>
-                    <button onClick={() => setDate(new Date(year, month - 1, 1))} className={cn("p-2 w-10 border-4 border-black dark:border-slate-600", "bg-pink-500 text-white hover:bg-pink-400 dark:bg-pink-600 dark:hover:bg-pink-500")}><Icon name="ChevronLeft" /></button>
-                    <button onClick={goToToday} className={cn("px-3 py-2 text-xs font-bold border-4 border-black dark:border-slate-600", "bg-white dark:bg-slate-700 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-600")}>Today</button>
-                    <button onClick={() => setDate(new Date(year, month + 1, 1))} className={cn("p-2 w-10 border-4 border-black dark:border-slate-600", "bg-pink-500 text-white hover:bg-pink-400 dark:bg-pink-600 dark:hover:bg-pink-500")}><Icon name="ChevronRight" /></button>
-                    <button onClick={() => setDate(new Date(year + 1, month, 1))} className={cn("p-2 w-10 text-xs font-bold border-4 border-black dark:border-slate-600", "bg-pink-300 dark:bg-slate-600 dark:text-white hover:bg-pink-200 dark:hover:bg-slate-500")} title="Next Year">››</button>
+                <div className="flex items-center gap-2">
+                    <div className={cn("flex gap-2 border-4 p-1", "bg-pink-100 dark:bg-slate-700 border-black dark:border-slate-600 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(100,116,139,1)]")}>
+                        <button onClick={() => setDate(new Date(year - 1, month, 1))} className={cn("p-2 w-10 text-xs font-bold border-4 border-black dark:border-slate-600", "bg-pink-300 dark:bg-slate-600 dark:text-white hover:bg-pink-200 dark:hover:bg-slate-500")} title="Previous Year">‹‹</button>
+                        <button onClick={() => setDate(new Date(year, month - 1, 1))} className={cn("p-2 w-10 border-4 border-black dark:border-slate-600", "bg-pink-500 text-white hover:bg-pink-400 dark:bg-pink-600 dark:hover:bg-pink-500")}><Icon name="ChevronLeft" /></button>
+                        <button onClick={goToToday} className={cn("px-3 py-2 text-xs font-bold border-4 border-black dark:border-slate-600", "bg-white dark:bg-slate-700 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-600")}>Today</button>
+                        <button onClick={() => setDate(new Date(year, month + 1, 1))} className={cn("p-2 w-10 border-4 border-black dark:border-slate-600", "bg-pink-500 text-white hover:bg-pink-400 dark:bg-pink-600 dark:hover:bg-pink-500")}><Icon name="ChevronRight" /></button>
+                        <button onClick={() => setDate(new Date(year + 1, month, 1))} className={cn("p-2 w-10 text-xs font-bold border-4 border-black dark:border-slate-600", "bg-pink-300 dark:bg-slate-600 dark:text-white hover:bg-pink-200 dark:hover:bg-slate-500")} title="Next Year">››</button>
+                    </div>
+                    <button
+                        onClick={async () => {
+                            // Create a new blank event with today's date
+                            const todayStr = new Date().toISOString().split('T')[0];
+                            const newEvent = await actions.addEvent({
+                                title: 'New Event',
+                                date: todayStr,
+                                description: ''
+                            }, false);
+                            // Navigate to event detail page if callback provided
+                            if (onSelectEvent && newEvent) {
+                                onSelectEvent(newEvent);
+                            }
+                        }}
+                        className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-black text-white")}
+                    >
+                        <Icon name="Plus" size={16} /> Add Event
+                    </button>
                 </div>
             </div>
 
-            {/* Add Event Button - Creates a new blank event and navigates to detail page */}
-            <div className={cn("mb-4 p-4 flex justify-end", THEME.punk.card)}>
-                <button
-                    onClick={async () => {
-                        // Create a new blank event with today's date
-                        const todayStr = new Date().toISOString().split('T')[0];
-                        const newEvent = await actions.addEvent({ 
-                            title: 'New Event', 
-                            date: todayStr,
-                            description: '' 
-                        }, false);
-                        // Navigate to event detail page if callback provided
-                        if (onSelectEvent && newEvent) {
-                            onSelectEvent(newEvent);
-                        }
-                    }}
-                    className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}
-                >
-                    + Add Event
-                </button>
-            </div>
-
             {/* Legend */}
-            <div className="flex flex-wrap gap-2 mb-4 text-[10px] font-bold">
-                <span className="px-2 py-1 bg-green-400 border border-black">Release</span>
-                <span className="px-2 py-1 bg-blue-500 text-white border border-black">Event</span>
-                <span className="px-2 py-1 bg-pink-500 text-white border border-black">Task</span>
-                <span className="px-2 py-1 bg-purple-500 text-white border border-black">Song</span>
-                <span className="px-2 py-1 bg-indigo-400 text-white border border-black">Version</span>
-                <span className="px-2 py-1 bg-orange-500 text-white border border-black">Video</span>
-                <span className="px-2 py-1 bg-yellow-400 border border-black">Global Task</span>
+            <div className={cn("flex flex-wrap gap-2 mb-4 p-3 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(100,116,139,1)]")}>
+                <div className="text-xs font-black uppercase mr-2 dark:text-white">Legend:</div>
+                <span className="px-2 py-1 bg-green-400 border-2 border-black text-[10px] font-bold">Release</span>
+                <span className="px-2 py-1 bg-blue-500 text-white border-2 border-black text-[10px] font-bold">Event</span>
+                <span className="px-2 py-1 bg-pink-500 text-white border-2 border-black text-[10px] font-bold">Task</span>
+                <span className="px-2 py-1 bg-purple-500 text-white border-2 border-black text-[10px] font-bold">Song</span>
+                <span className="px-2 py-1 bg-indigo-400 text-white border-2 border-black text-[10px] font-bold">Version</span>
+                <span className="px-2 py-1 bg-orange-500 text-white border-2 border-black text-[10px] font-bold">Video</span>
+                <span className="px-2 py-1 bg-yellow-400 border-2 border-black text-[10px] font-bold">Global Task</span>
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-px bg-black border-4 border-black text-center font-black text-white mb-px">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i} className="py-3">{d}</div>)}
-            </div>
-            <div className="grid grid-cols-7 gap-px bg-black border-4 border-black flex-1 overflow-y-auto shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} className="bg-gray-100 h-24"></div>)}
-                {Array.from({ length: daysInMonth }).map((_, i) => {
-                    const d = i + 1;
-                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    const list = items[dateStr] || [];
-                    const isToday = dateStr === new Date().toISOString().split('T')[0];
-                    return (
-                        <div key={d} className={cn("bg-white h-24 p-1 overflow-y-auto border-r border-b border-black hover:bg-yellow-50", isToday && "ring-2 ring-inset ring-pink-500")}>
-                            <div className={cn("text-xs font-bold mb-1", isToday && "text-pink-600")}>{d}</div>
-                            {list.map(t => (
-                                <div
-                                    key={t.id}
-                                    onClick={() => handleItemClick(t)}
-                                    className={cn(
-                                        "text-[10px] p-1 mb-1 font-bold uppercase truncate border border-black cursor-pointer hover:opacity-80",
-                                        getItemColor(t._kind)
-                                    )}
-                                    title={t.description || t.title}
-                                >
-                                    {t.title}
-                                </div>
-                            ))}
+            <div className={cn("border-4 border-black dark:border-slate-600 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(100,116,139,1)] bg-white dark:bg-slate-800 flex-1 flex flex-col")}>
+                <div className="grid grid-cols-7 gap-px bg-black dark:bg-slate-600 text-center font-black text-white">
+                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => (
+                        <div key={i} className="py-3 bg-black dark:bg-slate-700">
+                            <span className="hidden md:inline">{d}</span>
+                            <span className="md:hidden">{d[0]}</span>
                         </div>
-                    );
-                })}
+                    ))}
+                </div>
+                <div className="grid grid-cols-7 gap-px bg-black dark:bg-slate-600 flex-1 overflow-hidden">
+                    {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} className="bg-gray-100 dark:bg-slate-900 min-h-[100px]"></div>)}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const d = i + 1;
+                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                        const list = items[dateStr] || [];
+                        const isToday = dateStr === new Date().toISOString().split('T')[0];
+                        return (
+                            <div key={d} className={cn("bg-white dark:bg-slate-800 min-h-[100px] p-2 overflow-y-auto hover:bg-yellow-50 dark:hover:bg-slate-700 transition-colors", isToday && "ring-4 ring-inset ring-pink-500 dark:ring-pink-400 bg-pink-50 dark:bg-slate-700")}>
+                                <div className={cn("text-sm font-bold mb-2 pb-1 border-b-2", isToday ? "text-pink-600 dark:text-pink-400 border-pink-300" : "border-gray-200 dark:border-slate-600 dark:text-white")}>{d}</div>
+                                <div className="space-y-1">
+                                    {list.map(t => (
+                                        <div
+                                            key={t.id}
+                                            onClick={() => handleItemClick(t)}
+                                            className={cn(
+                                                "text-[10px] p-1.5 font-bold uppercase truncate border-2 border-black cursor-pointer hover:scale-105 transition-transform shadow-sm",
+                                                getItemColor(t._kind)
+                                            )}
+                                            title={t.description || t.title}
+                                        >
+                                            {t.title}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Detail Modal for clicked items */}
@@ -2304,7 +2312,7 @@ export const SettingsView = () => {
             <div className={cn("p-6 space-y-6", THEME.punk.card)}>
                 {/* Project Info */}
                 <div>
-                    <label className="font-bold block mb-1">Album</label>
+                    <label className="font-bold block mb-1">Project Name</label>
                     <input
                         value={settings.albumTitle || ''}
                         onChange={e => actions.saveSettings({ albumTitle: e.target.value })}
@@ -2319,6 +2327,95 @@ export const SettingsView = () => {
                         className={cn("w-full", THEME.punk.input)}
                     />
                 </div>
+
+                {/* Mode Selection - Artist vs Manager */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600">
+                    <h3 className="font-black text-xs uppercase mb-2">Mode</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => actions.saveSettings({ appMode: 'artist' })}
+                            className={cn(
+                                "py-3 px-2 text-xs font-black uppercase",
+                                THEME.punk.btn,
+                                (settings.appMode || 'artist') === 'artist' ? "bg-black text-white dark:bg-white dark:text-black" : "bg-white dark:bg-slate-700 dark:text-white"
+                            )}
+                        >
+                            Artist Mode
+                        </button>
+                        <button
+                            onClick={() => actions.saveSettings({ appMode: 'manager' })}
+                            className={cn(
+                                "py-3 px-2 text-xs font-black uppercase",
+                                THEME.punk.btn,
+                                settings.appMode === 'manager' ? "bg-black text-white dark:bg-white dark:text-black" : "bg-white dark:bg-slate-700 dark:text-white"
+                            )}
+                        >
+                            Manager Mode
+                        </button>
+                    </div>
+                    <div className="text-[10px] mt-2 opacity-60">
+                        {(settings.appMode || 'artist') === 'artist'
+                            ? "Artist Mode: Single artist pipeline (current artist)"
+                            : "Manager Mode: Manage multiple artists with separate pipelines"}
+                    </div>
+                </div>
+
+                {/* Artists Management (Manager Mode Only) */}
+                {settings.appMode === 'manager' && (
+                    <div className="pt-4 border-t-4 border-black dark:border-slate-600">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-black text-xs uppercase">Artists</h3>
+                            <button
+                                onClick={async () => {
+                                    const newArtist = await actions.addArtist({ name: 'New Artist' });
+                                    if (newArtist && (data.artists || []).length === 1) {
+                                        actions.saveSettings({ selectedArtistId: newArtist.id });
+                                    }
+                                }}
+                                className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-green-600 text-white")}
+                            >
+                                + Add Artist
+                            </button>
+                        </div>
+                        {(data.artists || []).length === 0 ? (
+                            <div className="text-xs opacity-60 mb-2">No artists yet. Click + Add Artist to create one.</div>
+                        ) : (
+                            <div className="space-y-2">
+                                {(data.artists || []).map(artist => (
+                                    <div key={artist.id} className={cn("p-3 flex justify-between items-center", THEME.punk.card, "border-2", artist.id === settings.selectedArtistId ? "border-green-500 bg-green-50 dark:bg-green-900" : "border-black dark:border-slate-600")}>
+                                        <div>
+                                            <div className="font-bold text-sm">{artist.name}</div>
+                                            {artist.stageName && <div className="text-xs opacity-60">{artist.stageName}</div>}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {settings.selectedArtistId !== artist.id && (
+                                                <button
+                                                    onClick={() => actions.saveSettings({ selectedArtistId: artist.id })}
+                                                    className={cn("px-2 py-1 text-xs", THEME.punk.btn, "bg-blue-500 text-white")}
+                                                >
+                                                    Select
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm(`Delete artist "${artist.name}"? This will not delete their content.`)) {
+                                                        actions.deleteArtist(artist.id);
+                                                        if (settings.selectedArtistId === artist.id) {
+                                                            actions.saveSettings({ selectedArtistId: (data.artists || []).find(a => a.id !== artist.id)?.id || '' });
+                                                        }
+                                                    }
+                                                }}
+                                                className={cn("px-2 py-1 text-xs", THEME.punk.btn, "bg-red-500 text-white")}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Default Era */}
                 <div>

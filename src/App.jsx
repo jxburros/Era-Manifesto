@@ -518,12 +518,13 @@ function AppInner() {
   const eraModeActive = settings.eraModeActive && settings.eraModeEraId;
   const eraModeEra = eraModeActive ? (data.eras || []).find(e => e.id === settings.eraModeEraId) : null;
   const onboardingDismissed = settings.onboardingDismissed || false;
+  const isManagerMode = settings.appMode === 'manager';
+
   const onboardingSteps = [
-    { key: 'artist', label: 'Set artist and album info', done: Boolean(settings.artistName && settings.albumTitle), action: () => setTab('settings') },
+    { key: 'settings', label: 'Set project name and artist info', done: Boolean(settings.artistName && settings.albumTitle), action: () => setTab('settings') },
+    ...(isManagerMode ? [{ key: 'artist', label: 'Add your first artist in Manager Mode', done: (data.artists || []).length > 0, action: () => setTab('settings') }] : []),
     { key: 'song', label: 'Create your first song', done: (data.songs || []).length > 0, action: () => setTab('songs') },
     { key: 'release', label: 'Create your first release', done: (data.releases || []).length > 0, action: () => setTab('releases') },
-    { key: 'event', label: 'Add one event', done: (data.events || []).length > 0, action: () => setTab('events') },
-    { key: 'task', label: 'Add one global task', done: (data.globalTasks || []).length > 0, action: () => setTab('globalTasks') },
   ];
   const onboardingComplete = onboardingSteps.every(step => step.done);
 
@@ -706,7 +707,26 @@ function AppInner() {
           
           {/* Spacer to push focus mode toggle to the right */}
           <div className="flex-1" />
-          
+
+          {/* Manager Mode Artist Selector */}
+          {data.settings?.appMode === 'manager' && (
+            <div className="hidden md:block">
+              <select
+                value={data.settings?.selectedArtistId || 'all'}
+                onChange={(e) => actions.saveSettings({ selectedArtistId: e.target.value === 'all' ? '' : e.target.value })}
+                className={cn(
+                  "px-3 py-2 font-bold uppercase text-xs transition-transform hover:-translate-y-0.5 border-[3px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.85)]",
+                  isDark ? "bg-slate-800 text-slate-50 border-slate-600" : "bg-white text-slate-900 border-black"
+                )}
+              >
+                <option value="all">All Artists</option>
+                {(data.artists || []).map(artist => (
+                  <option key={artist.id} value={artist.id}>{artist.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button
             onClick={() => setCommandOpen(true)}
             title="Quick actions"
@@ -779,7 +799,12 @@ function AppInner() {
               isDark ? "bg-slate-800 border-slate-600" : "bg-white border-black"
             )}>
               <div className="flex items-center justify-between mb-2">
-                <div className="font-black uppercase">Launch checklist</div>
+                <div>
+                  <div className="font-black uppercase">Welcome to Era Manifesto!</div>
+                  <div className="text-xs opacity-70 mt-1">
+                    {isManagerMode ? "Let's set up your first artist pipeline" : "Let's get your music project started"}
+                  </div>
+                </div>
                 <button onClick={() => actions.saveSettings({ onboardingDismissed: true })} className="text-xs opacity-70 hover:opacity-100">Dismiss</button>
               </div>
               <div className="grid md:grid-cols-2 gap-2 text-sm">
