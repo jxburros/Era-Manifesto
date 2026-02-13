@@ -5619,10 +5619,18 @@ export const EventDetailView = ({ event, onBack }) => {
             })}
             {/* Videos */}
             {(form.linkedVideoIds || []).map(videoId => {
-              const video = (data.standaloneVideos || []).find(v => v.id === videoId);
+              // Search in standalone videos and song videos
+              let video = (data.standaloneVideos || []).find(v => v.id === videoId);
+              let videoLabel = video?.title;
+              if (!video) {
+                for (const song of (data.songs || [])) {
+                  const sv = (song.videos || []).find(v => v.id === videoId);
+                  if (sv) { video = sv; videoLabel = `${sv.title} (${song.title})`; break; }
+                }
+              }
               return video ? (
                 <div key={videoId} className="flex items-center gap-1 px-2 py-1 bg-red-100 border-2 border-red-500 text-xs font-bold">
-                  <span>🎬 {video.title}</span>
+                  <span>🎬 {videoLabel}</span>
                   <button onClick={() => {
                     const newLinkedVideoIds = (form.linkedVideoIds || []).filter(id => id !== videoId);
                     handleFieldChange('linkedVideoIds', newLinkedVideoIds);
@@ -5706,9 +5714,16 @@ export const EventDetailView = ({ event, onBack }) => {
               className={cn("w-full", THEME.punk.input)}
             >
               <option value="">Select video...</option>
+              {/* Standalone videos */}
               {(data.standaloneVideos || []).filter(v => !(form.linkedVideoIds || []).includes(v.id)).map(video => (
                 <option key={video.id} value={video.id}>{video.title}</option>
               ))}
+              {/* Song videos */}
+              {(data.songs || []).flatMap(song => 
+                (song.videos || []).filter(v => !(form.linkedVideoIds || []).includes(v.id)).map(video => (
+                  <option key={video.id} value={video.id}>{video.title} ({song.title})</option>
+                ))
+              )}
             </select>
           </div>
           <div>
