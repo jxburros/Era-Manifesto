@@ -126,11 +126,9 @@ Complete But Not Paid
 
 Complete
 
-Delayed
-
 Other
 
-Note: Legacy data may contain 'Done' (alias for 'Complete') and 'In Progress' (alias for 'In-Progress'). Both canonical and legacy values are accepted throughout the application.
+Note: Legacy data may contain 'Done' (alias for 'Complete'), 'In Progress' (alias for 'In-Progress'), and 'Delayed'. Both canonical and legacy values are accepted throughout the application.
 
 Progress Calculation:
 
