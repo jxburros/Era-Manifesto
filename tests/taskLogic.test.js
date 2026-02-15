@@ -1,0 +1,62 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  getStatusPoints,
+  calculateTaskProgress,
+  getTaskDueDate,
+  getPrimaryDate,
+  resolveCostPrecedence,
+  getEffectiveCost,
+} from '../src/domain/taskLogic.js';
+
+test('status points handles canonical and legacy statuses', () => {
+  assert.equal(getStatusPoints('Complete'), 1);
+  assert.equal(getStatusPoints('Done'), 1);
+  assert.equal(getStatusPoints('In Progress'), 0.5);
+  assert.equal(getStatusPoints('Delayed'), 0);
+  assert.equal(getStatusPoints('Unknown'), 0);
+});
+
+test('calculateTaskProgress computes weighted percent', () => {
+  const result = calculateTaskProgress([
+    { status: 'Complete' },
+    { status: 'In-Progress' },
+    { status: 'Not Started' },
+  ]);
+
+  assert.deepEqual(result, {
+    pointsEarned: 1.5,
+    totalTasks: 3,
+    progress: 50,
+  });
+});
+
+test('getTaskDueDate supports legacy and unified fields', () => {
+  assert.equal(getTaskDueDate({ due_date: '2026-01-01' }), '2026-01-01');
+  assert.equal(getTaskDueDate({ dueDate: '2026-01-02' }), '2026-01-02');
+  assert.equal(getTaskDueDate({ date: '2026-01-03' }), '2026-01-03');
+});
+
+test('getPrimaryDate resolves overrides and release lookup', () => {
+  const releases = [
+    { id: 'r1', releaseDate: '2026-08-01' },
+    { id: 'r2', releaseDate: '2026-07-15' },
+  ];
+
+  const item = {
+    releaseIds: ['r1', 'r2'],
+    releaseOverrides: { r2: '2026-07-01' },
+  };
+
+  assert.equal(getPrimaryDate(item, releases), '2026-07-01');
+  assert.equal(getPrimaryDate({ releaseIds: ['r1', 'r2'] }, releases), '2026-07-15');
+});
+
+test('cost precedence prefers actual > paid > partial > quoted > estimated', () => {
+  assert.deepEqual(resolveCostPrecedence({ estimatedCost: 100 }), { value: 100, source: 'estimated' });
+  assert.deepEqual(resolveCostPrecedence({ estimatedCost: 100, quotedCost: 120 }), { value: 120, source: 'quoted' });
+  assert.deepEqual(resolveCostPrecedence({ quotedCost: 120, partially_paid: 50 }), { value: 50, source: 'partially_paid' });
+  assert.deepEqual(resolveCostPrecedence({ quotedCost: 120, paidCost: 150 }), { value: 150, source: 'paid' });
+  assert.deepEqual(resolveCostPrecedence({ paidCost: 150, actualCost: 180 }), { value: 180, source: 'actual' });
+  assert.equal(getEffectiveCost({ estimated_cost: 99 }), 99);
+});

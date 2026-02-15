@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate, getEffectiveCost, EXPORT_VERSION } from './Store';
 import { THEME, COLORS, formatMoney, cn } from './utils';
 import { Icon } from './Components';
@@ -1775,16 +1775,16 @@ const BackupList = ({ actions, setImportStatus }) => {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadBackups();
-  }, []);
-
-  const loadBackups = async () => {
+  const loadBackups = useCallback(async () => {
     setLoading(true);
     const list = await actions.getBackupList();
     setBackups(list);
     setLoading(false);
-  };
+  }, [actions]);
+
+  useEffect(() => {
+    loadBackups();
+  }, [loadBackups]);
 
   const handleRestore = async (backupId) => {
     if (!confirm('Restore from this backup? This will replace all current data!')) return;
@@ -1891,16 +1891,16 @@ const ArchiveList = ({ actions, setImportStatus }) => {
   const [archives, setArchives] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadArchives();
-  }, []);
-
-  const loadArchives = async () => {
+  const loadArchives = useCallback(async () => {
     setLoading(true);
     const list = await actions.getArchiveList();
     setArchives(list);
     setLoading(false);
-  };
+  }, [actions]);
+
+  useEffect(() => {
+    loadArchives();
+  }, [loadArchives]);
 
   const handleRestore = async (archiveId, mode) => {
     const modeText = mode === 'replace' ? 'REPLACE all current data' : 'MERGE with current data';
@@ -2025,15 +2025,15 @@ const StorageInfo = ({ actions }) => {
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadInfo();
-  }, []);
-
-  const loadInfo = async () => {
+  const loadInfo = useCallback(async () => {
     const storageInfo = await actions.getStorageInfo();
     setInfo(storageInfo);
     setLoading(false);
-  };
+  }, [actions]);
+
+  useEffect(() => {
+    loadInfo();
+  }, [loadInfo]);
 
   if (loading) return <div className="text-xs opacity-60">Loading storage info...</div>;
   if (!info) return null;
