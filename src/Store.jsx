@@ -31,13 +31,6 @@ export { STATUS_OPTIONS, STATUS_POINTS, getStatusPoints, calculateTaskProgress, 
 // In-Progress, Waiting on Someone Else, Paid But Not Complete, Complete But Not Paid = 0.5 points
 // All others = 0
 
-// Song categories - DEPRECATED: Phase 0 removes category-based filtering
-// Keeping for backwards compatibility but not used in new features
-export const SONG_CATEGORIES = ['Album', 'Bonus', 'Christmas EP', 'EP', 'Other'];
-
-// Video types - DEPRECATED: Use video type checkboxes on video entities instead
-export const VIDEO_TYPES = ['None', 'Lyric', 'Enhanced', 'Enhanced + Loop', 'Full'];
-
 // Unified Item schema - per APP_ARCHITECTURE.md Section 6
 // All Items (Song, Version, Video, Release, Event, Standalone Task Category, Global Task Item) share this base
 // Unified Item schema - per APP_ARCHITECTURE.md Section 6
