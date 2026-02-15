@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { cn, THEME } from './utils';
 import { Icon } from './Components';
 import { useStore, STATUS_OPTIONS } from './Store';
 
 // Shared card for songs, versions, videos, releases, and tasks
-export const ItemCard = ({ item, onClick }) => (
+export const ItemCard = memo(({ item, onClick }) => (
   <button
       onClick={() => onClick?.(item)}
       className={cn(
@@ -36,10 +36,10 @@ export const ItemCard = ({ item, onClick }) => (
       </div>
     )}
   </button>
-);
+));
 
 // List row version of ItemCard
-export const ItemRow = ({ item, onClick }) => (
+export const ItemRow = memo(({ item, onClick }) => (
   <div
     className={cn('p-3 grid grid-cols-6 gap-3 items-center border-b border-gray-200 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 cursor-pointer', item.accent)}
     onClick={() => onClick?.(item)}
@@ -61,10 +61,10 @@ export const ItemRow = ({ item, onClick }) => (
       ))}
     </div>
   </div>
-);
+));
 
 // Timeline entry component to align date/status/progress across entity types
-export const ItemTimelineEntry = ({ item, onClick }) => (
+export const ItemTimelineEntry = memo(({ item, onClick }) => (
   <div
     className={cn(
       'p-3 mb-2 border-2 border-black bg-white dark:bg-slate-800 dark:border-slate-600 flex flex-col gap-2 hover:-translate-y-0.5 transition-transform cursor-pointer',
@@ -95,7 +95,7 @@ export const ItemTimelineEntry = ({ item, onClick }) => (
       </div>
     )}
   </div>
-);
+));
 
 // Simple detail pane wrapper to provide consistent headings
 export const DetailPane = ({ title, children }) => (

@@ -273,7 +273,8 @@ export const collectAllTasks = (data = {}) => {
 };
 
 // Resolve the primary date for any item based on overrides, direct dates, and attached releases
-export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = []) => {
+// releaseMap: Map<id, release> for O(1) lookups instead of O(n) array.find()
+export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = [], releaseMap = null) => {
   if (!item) return '';
   if (item.primary_date) return item.primary_date;
   if (item.primaryDate) return item.primaryDate;
@@ -289,8 +290,10 @@ export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = []) =
     ...extraReleaseIds
   ];
 
+  // Use releaseMap if provided for O(1) lookups, fallback to array.find() for backward compatibility
+  const map = releaseMap || new Map(releases.map(r => [r.id, r]));
   const releaseDates = collectedReleaseIds
-    .map(id => releases.find(r => r.id === id)?.releaseDate)
+    .map(id => map.get(id)?.releaseDate)
     .filter(Boolean)
     .sort();
 
@@ -338,12 +341,14 @@ export const itemBelongsToEra = (item, eraModeEraId) => {
 
 // Helper function to check if any of an item's eras are locked
 // Returns true if at least one era in itemEraIds has isLocked: true
-export const isEraLocked = (itemEraIds, eras) => {
+// eraMap: Map<id, era> for O(1) lookups instead of O(n) array.find()
+export const isEraLocked = (itemEraIds, eras, eraMap = null) => {
   if (!itemEraIds || !Array.isArray(itemEraIds) || itemEraIds.length === 0) return false;
   if (!eras || !Array.isArray(eras)) return false;
-  
+
+  const map = eraMap || new Map(eras.map(e => [e.id, e]));
   return itemEraIds.some(eraId => {
-    const era = eras.find(e => e.id === eraId);
+    const era = map.get(eraId);
     return era?.isLocked === true;
   });
 };
@@ -3991,8 +3996,15 @@ export const StoreProvider = ({ children }) => {
 
   const mods = data.settings?.mods || [];
 
+  // Memoized lookup Maps for O(1) access instead of O(n) array.find()
+  const releaseMap = useMemo(() => new Map((data.releases || []).map(r => [r.id, r])), [data.releases]);
+  const teamMemberMap = useMemo(() => new Map((data.teamMembers || []).map(m => [m.id, m])), [data.teamMembers]);
+  const eraMap = useMemo(() => new Map((data.eras || []).map(e => [e.id, e])), [data.eras]);
+  const stageMap = useMemo(() => new Map((data.stages || []).map(s => [s.id, s])), [data.stages]);
+  const tagMap = useMemo(() => new Map((data.tags || []).map(t => [t.id, t])), [data.tags]);
+
   return (
-    <StoreContext.Provider value={{ data, actions, mode, stats, mods, undoStack }}>
+    <StoreContext.Provider value={{ data, actions, mode, stats, mods, undoStack, releaseMap, teamMemberMap, eraMap, stageMap, tagMap }}>
       {children}
     </StoreContext.Provider>
   );

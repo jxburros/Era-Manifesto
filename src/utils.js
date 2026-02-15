@@ -49,3 +49,29 @@ export const STAGES = {
   review: { label: 'Review', icon: 'Activity' },
   done: { label: 'Done', icon: 'CheckCircle' }
 };
+
+// Task budget resolver - returns the best available cost value
+// Priority: paidCost > actualCost > quotedCost > estimatedCost
+export const getTaskBudget = (task = {}) => {
+  if (task.paidCost !== undefined && task.paidCost > 0) return task.paidCost;
+  if (task.actualCost !== undefined && task.actualCost > 0) return task.actualCost;
+  if (task.quotedCost !== undefined && task.quotedCost > 0) return task.quotedCost;
+  return task.estimatedCost || 0;
+};
+
+// Status filter helper - combine multiple filter criteria into single pass
+export const filterTasksByStatus = (tasks = [], activeStatus = 'all', archivedFilter = 'all') => {
+  if (!Array.isArray(tasks)) return [];
+
+  return tasks.filter(t => {
+    // Filter archived status
+    if (archivedFilter === 'active' && (t.isArchived || t.status === 'Done' || t.status === 'Complete')) {
+      return false;
+    }
+    // Filter by specific status
+    if (activeStatus !== 'all' && t.status !== activeStatus) {
+      return false;
+    }
+    return true;
+  });
+};
