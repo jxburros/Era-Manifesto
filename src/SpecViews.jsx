@@ -616,9 +616,9 @@ export const SongDetailView = ({ song, onBack }) => {
   );
 
   return (
-    <div className="p-6 pb-24">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
+    <div className="p-3 sm:p-4 md:p-6 pb-24">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
             <Icon name="ChevronLeft" size={16} /> Back to Songs
           </button>
@@ -629,7 +629,7 @@ export const SongDetailView = ({ song, onBack }) => {
             </span>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => exportSongPDF(currentSong, teamMembers, data.eras || [])} 
             className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-600 text-white")}
@@ -713,7 +713,7 @@ export const SongDetailView = ({ song, onBack }) => {
           </div>
           <div>
             <label className="block text-xs font-bold uppercase mb-1">Release Date</label>
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center overflow-x-auto pb-1 w-full md:w-auto">
               <input 
                 type="date" 
                 value={form.releaseDateOverride ? form.releaseDate : (earliestReleaseDate || form.releaseDate || '')} 
@@ -1116,7 +1116,7 @@ export const SongDetailView = ({ song, onBack }) => {
                           const displayDate = v.releaseDateOverride ? (v.releaseDate || '') : (derivedDate || v.releaseDate || '');
                           
                           return (
-                            <div className="flex gap-2 items-center">
+                            <div className="flex flex-wrap gap-2 items-center">
                               <input 
                                 type="date" 
                                 value={displayDate} 
@@ -1433,7 +1433,7 @@ export const SongDetailView = ({ song, onBack }) => {
                     );
                   })}
                 </div>
-                <div className="flex gap-2 items-center">
+                <div className="flex flex-wrap gap-2 items-center">
                   <select 
                     value={newAssignments.modal?.memberId || ''} 
                     onChange={e => setNewAssignments(prev => ({ ...prev, modal: { ...(prev.modal || {}), memberId: e.target.value } }))} 
@@ -1710,8 +1710,8 @@ export const GlobalTasksView = () => {
   };
 
   return (
-    <div className="p-6 pb-24">
-      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+    <div className="p-3 md:p-6 pb-24">
+      <div className="flex flex-col md:flex-row md:flex-wrap justify-between md:items-center mb-4 md:mb-6 gap-3">
         <h2 className={THEME.punk.textStyle}>Global Tasks</h2>
         <div className="flex gap-2">
           <button onClick={() => setShowCategoryManager(!showCategoryManager)} className={cn("px-4 py-2", THEME.punk.btn, showCategoryManager ? "bg-purple-500 text-white" : "bg-white")}>
@@ -1836,7 +1836,7 @@ export const GlobalTasksView = () => {
         </div>
       )}
 
-      <div className={cn("overflow-x-auto", THEME.punk.card)}>
+      <div className={cn("overflow-x-auto -mx-1 sm:mx-0", THEME.punk.card)}>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-black text-white">
@@ -2317,9 +2317,9 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
   );
 
   return (
-    <div className="p-6 pb-24">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
+    <div className="p-3 sm:p-4 md:p-6 pb-24">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}><Icon name="ChevronLeft" size={16} /> Back to Releases</button>
           {/* Lock Era indicator */}
           {isReleaseLocked && (
@@ -3373,7 +3373,7 @@ export const CombinedTimelineView = () => {
   const sourceTypes = ['Song Task', 'Song Custom', 'Version Task', 'Video Task', 'Video', 'Global', 'Release', 'Release Task', 'Event', 'Event Task', 'Exclusivity'];
 
   return (
-    <div className="p-6 pb-24">
+    <div className="p-3 sm:p-4 md:p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className={THEME.punk.textStyle}>Combined Timeline</h2>
         <div className="flex gap-2">
@@ -3489,7 +3489,7 @@ export const CombinedTimelineView = () => {
         <span className="px-2 py-1 bg-red-100 border-l-4 border-l-red-500 border border-black">Exclusivity</span>
       </div>
 
-      <div className={cn("overflow-x-auto", THEME.punk.card)}>
+      <div className={cn("overflow-x-auto -mx-1 sm:mx-0", THEME.punk.card)}>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-black text-white">
@@ -3604,7 +3604,7 @@ export const VideosView = ({ onSelectSong }) => {
   };
 
   return (
-    <div className="p-6 pb-24 space-y-6">
+    <div className="p-3 sm:p-4 md:p-6 pb-24 space-y-4 md:space-y-6">
       <div className="flex flex-wrap items-center justify-between border-b-4 border-black pb-3 gap-3">
         <h2 className={THEME.punk.textStyle}>Videos</h2>
         <div className="flex gap-2">
@@ -3846,6 +3846,15 @@ export const VideosView = ({ onSelectSong }) => {
 // Task Dashboard View - Shows tasks in progress, due soon, and macro overview
 export const TaskDashboardView = () => {
   const { data } = useStore();
+  const settings = data.settings || {};
+  const dashboardWidgets = settings.dashboardWidgets || {
+    notifications: true,
+    spotlight: true,
+    budget: true,
+    categoryBreakdown: true,
+    photos: true,
+    upcomingTable: true
+  };
   const [view, setView] = useState('upcoming'); // 'upcoming', 'inProgress', 'overview'
   const [stageFilter, setStageFilter] = useState('all');
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -4037,38 +4046,64 @@ export const TaskDashboardView = () => {
   const isOverdue = (date) => date && date < today;
   const isDueSoon = (date) => date && date >= today && date <= nextWeek;
 
+
+  const exportTaskCsv = () => {
+    const rows = [
+      ['Date', 'Task', 'Category', 'Source', 'Source Name', 'Status', 'Estimated Cost']
+    ];
+    filteredTasks.forEach(task => {
+      rows.push([
+        task.date || '',
+        task.type || '',
+        task.category || '',
+        task.source || '',
+        task.sourceName || '',
+        task.status || '',
+        String(task.estimatedCost || 0)
+      ]);
+    });
+    const csvContent = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', `task-dashboard-${view}.csv`);
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   return (
-    <div className="p-6 pb-24">
-      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+    <div className="p-3 md:p-6 pb-24">
+      <div className="flex flex-col md:flex-row md:flex-wrap justify-between md:items-center mb-4 md:mb-6 gap-3">
         <h2 className={THEME.punk.textStyle}>Task Dashboard</h2>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center overflow-x-auto pb-1 w-full md:w-auto">
           <select value={stageFilter} onChange={e => setStageFilter(e.target.value)} className={cn("px-3 py-2", THEME.punk.input)}>
             <option value="all">All Stages</option>
             {(data.stages || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
           <button
             onClick={() => setView('upcoming')}
-            className={cn("px-4 py-2", THEME.punk.btn, view === 'upcoming' ? "bg-black text-white" : "bg-white")}
+            className={cn("px-3 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap", THEME.punk.btn, view === 'upcoming' ? "bg-black text-white" : "bg-white")}
           >
             Upcoming
           </button>
           <button 
             onClick={() => setView('inProgress')} 
-            className={cn("px-4 py-2", THEME.punk.btn, view === 'inProgress' ? "bg-black text-white" : "bg-white")}
+            className={cn("px-3 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap", THEME.punk.btn, view === 'inProgress' ? "bg-black text-white" : "bg-white")}
           >
             In Progress
           </button>
           <button 
             onClick={() => setView('overview')} 
-            className={cn("px-4 py-2", THEME.punk.btn, view === 'overview' ? "bg-black text-white" : "bg-white")}
+            className={cn("px-3 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap", THEME.punk.btn, view === 'overview' ? "bg-black text-white" : "bg-white")}
           >
             Overview
           </button>
+          <button onClick={exportTaskCsv} className={cn("px-3 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap", THEME.punk.btn, "bg-white")}>Export CSV</button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-4 mb-4 md:mb-6">
         <div className={cn("p-4 text-center", THEME.punk.card)}>
           <div className="text-3xl font-black text-gray-600">{stats.total}</div>
           <div className="text-xs font-bold uppercase">Total Tasks</div>
@@ -4104,7 +4139,7 @@ export const TaskDashboardView = () => {
       </div>
 
       {/* Photo Carousel - Only show if user has photos */}
-      {photos.length > 0 && (
+      {dashboardWidgets.photos && photos.length > 0 && (
         <div className={cn("p-4 mb-6", THEME.punk.card)}>
           <h3 className="font-black uppercase mb-3 border-b-2 border-black pb-2">📷 Photo Gallery</h3>
           <div className="relative h-48 overflow-hidden rounded">
@@ -4148,7 +4183,7 @@ export const TaskDashboardView = () => {
       )}
 
       {/* Phase 9: Notifications/Alerts Section */}
-      {notifications.length > 0 && (
+      {dashboardWidgets.notifications && notifications.length > 0 && (
         <div className={cn("p-4 mb-6", THEME.punk.card)}>
           <h3 className="font-black uppercase mb-3 border-b-2 border-black pb-2">🔔 Notifications</h3>
           <div className="space-y-2">
@@ -4179,7 +4214,7 @@ export const TaskDashboardView = () => {
       )}
 
       {/* Tier 1.4: Random Item Spotlight */}
-      {(() => {
+      {dashboardWidgets.spotlight && (() => {
         // Collect all items for random spotlight
         const spotlightItems = [];
         (data.songs || []).forEach(song => spotlightItems.push({ type: 'Song', name: song.title, date: song.releaseDate, progress: calculateTaskProgress([...(song.deadlines || []), ...(song.customTasks || [])]).progress, category: song.category }));
@@ -4225,6 +4260,7 @@ export const TaskDashboardView = () => {
       })()}
 
       {view === 'overview' ? (
+        dashboardWidgets.categoryBreakdown ? (
         /* Overview by Category */
         <div className={cn("p-6", THEME.punk.card)}>
           <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Progress by Category</h3>
@@ -4273,66 +4309,94 @@ export const TaskDashboardView = () => {
             </div>
           </div>
         </div>
+        ) : (
+          <div className={cn("p-6 text-sm", THEME.punk.card)}>Category breakdown widget is disabled in Settings.</div>
+        )
       ) : (
         /* Task List */
-        <div className={cn("overflow-x-auto", THEME.punk.card)}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-black text-white">
-                <th className="p-3 text-left">Date</th>
-                <th className="p-3 text-left">Task</th>
-                <th className="p-3 text-left">Category</th>
-                <th className="p-3 text-left">Source</th>
-                <th className="p-3 text-left">Status</th>
-                <th className="p-3 text-right">Est. Cost</th>
-              </tr>
-            </thead>
-            <tbody>
+        dashboardWidgets.upcomingTable ? (
+          <>
+            <div className="space-y-3 md:hidden">
               {filteredTasks.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="p-10 text-center opacity-50">
-                    {view === 'upcoming' ? 'No upcoming tasks in the next 30 days.' : 'No tasks in progress.'}
-                  </td>
-                </tr>
+                <div className={cn("p-6 text-center text-sm opacity-50", THEME.punk.card)}>
+                  {view === 'upcoming' ? 'No upcoming tasks in the next 30 days.' : 'No tasks in progress.'}
+                </div>
               ) : filteredTasks.map(task => (
-                <tr 
-                  key={task.id} 
-                  className={cn(
-                    "border-b border-gray-200",
-                    isOverdue(task.date) ? "bg-red-50" : isDueSoon(task.date) ? "bg-yellow-50" : ""
-                  )}
-                >
-                  <td className="p-3">
-                    <span className={cn(
-                      "font-bold",
-                      isOverdue(task.date) ? "text-red-600" : isDueSoon(task.date) ? "text-yellow-600" : ""
-                    )}>
-                      {task.date || '-'}
-                    </span>
-                    {isOverdue(task.date) && <span className="ml-2 text-xs bg-red-500 text-white px-1">OVERDUE</span>}
-                    {isDueSoon(task.date) && !isOverdue(task.date) && <span className="ml-2 text-xs bg-yellow-500 text-white px-1">SOON</span>}
-                  </td>
-                  <td className="p-3 font-bold">{task.type}</td>
-                  <td className="p-3"><span className="px-2 py-1 text-xs bg-gray-200">{task.category}</span></td>
-                  <td className="p-3">
-                    <span className={cn(
-                      "px-2 py-1 text-xs font-bold",
-                      task.source === 'Song' ? "bg-blue-100" : task.source === 'Release' ? "bg-green-100" : "bg-orange-100"
-                    )}>
-                      {task.source}: {task.sourceName}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span className={cn("px-2 py-1 text-xs font-bold", getStatusColor(task.status))}>
-                      {task.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">{formatMoney(task.estimatedCost || 0)}</td>
-                </tr>
+                <div key={`mobile-${task.id}`} className={cn("p-3", THEME.punk.card, isOverdue(task.date) ? "bg-red-50" : isDueSoon(task.date) ? "bg-yellow-50" : "")}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-bold text-sm">{task.type}</div>
+                    <span className={cn("px-2 py-1 text-[10px] font-bold", getStatusColor(task.status))}>{task.status}</span>
+                  </div>
+                  <div className="text-xs mt-1 opacity-80">{task.source}: {task.sourceName}</div>
+                  <div className="flex justify-between text-xs mt-2">
+                    <span>{task.date || '-'}</span>
+                    <span className="font-bold">{formatMoney(task.estimatedCost || 0)}</span>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+            <div className={cn("overflow-x-auto hidden md:block", THEME.punk.card)}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-black text-white">
+                  <th className="p-3 text-left">Date</th>
+                  <th className="p-3 text-left">Task</th>
+                  <th className="p-3 text-left">Category</th>
+                  <th className="p-3 text-left">Source</th>
+                  <th className="p-3 text-left">Status</th>
+                  <th className="p-3 text-right">Est. Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTasks.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="p-10 text-center opacity-50">
+                      {view === 'upcoming' ? 'No upcoming tasks in the next 30 days.' : 'No tasks in progress.'}
+                    </td>
+                  </tr>
+                ) : filteredTasks.map(task => (
+                  <tr 
+                    key={task.id} 
+                    className={cn(
+                      "border-b border-gray-200",
+                      isOverdue(task.date) ? "bg-red-50" : isDueSoon(task.date) ? "bg-yellow-50" : ""
+                    )}
+                  >
+                    <td className="p-3">
+                      <span className={cn(
+                        "font-bold",
+                        isOverdue(task.date) ? "text-red-600" : isDueSoon(task.date) ? "text-yellow-600" : ""
+                      )}>
+                        {task.date || '-'}
+                      </span>
+                      {isOverdue(task.date) && <span className="ml-2 text-xs bg-red-500 text-white px-1">OVERDUE</span>}
+                      {isDueSoon(task.date) && !isOverdue(task.date) && <span className="ml-2 text-xs bg-yellow-500 text-white px-1">SOON</span>}
+                    </td>
+                    <td className="p-3 font-bold">{task.type}</td>
+                    <td className="p-3"><span className="px-2 py-1 text-xs bg-gray-200">{task.category}</span></td>
+                    <td className="p-3">
+                      <span className={cn(
+                        "px-2 py-1 text-xs font-bold",
+                        task.source === 'Song' ? "bg-blue-100" : task.source === 'Release' ? "bg-green-100" : "bg-orange-100"
+                      )}>
+                        {task.source}: {task.sourceName}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className={cn("px-2 py-1 text-xs font-bold", getStatusColor(task.status))}>
+                        {task.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">{formatMoney(task.estimatedCost || 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+          </>
+        ) : (
+          <div className={cn("p-6 text-sm", THEME.punk.card)}>Task table widget is disabled in Settings.</div>
+        )
       )}
     </div>
   );
@@ -4694,7 +4758,7 @@ export const FinancialsView = () => {
   };
 
   return (
-    <div className="p-6 pb-24">
+    <div className="p-3 sm:p-4 md:p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className={THEME.punk.textStyle}>Financials</h2>
         <div className="flex gap-2">
@@ -4916,7 +4980,7 @@ export const FinancialsView = () => {
       </div>
 
       {/* Detailed Cost Table */}
-      <div className={cn("overflow-x-auto", THEME.punk.card)}>
+      <div className={cn("overflow-x-auto -mx-1 sm:mx-0", THEME.punk.card)}>
         <h3 className="font-black uppercase p-4 border-b-4 border-black">Detailed Costs</h3>
         <table className="w-full text-sm">
           <thead>
@@ -5125,7 +5189,7 @@ export const ProgressView = () => {
   };
 
   return (
-    <div className="p-6 pb-24">
+    <div className="p-3 sm:p-4 md:p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className={THEME.punk.textStyle}>Progress</h2>
         <div className="text-right">
@@ -5203,7 +5267,7 @@ export const ProgressView = () => {
       </div>
 
       {/* Progress Table */}
-      <div className={cn("overflow-x-auto", THEME.punk.card)}>
+      <div className={cn("overflow-x-auto -mx-1 sm:mx-0", THEME.punk.card)}>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-black text-white">
@@ -6776,8 +6840,8 @@ export const VideoDetailView = ({ video, onBack }) => {
   );
 
   return (
-    <div className="p-6 pb-24">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-3 sm:p-4 md:p-6 pb-24">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-3">
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
           <Icon name="ChevronLeft" size={16} /> Back to Videos
         </button>
@@ -7535,7 +7599,7 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
 
   // List View Component - renders a table of tasks
   const ListView = () => (
-    <div className={cn("overflow-x-auto", THEME.punk.card)}>
+    <div className={cn("overflow-x-auto -mx-1 sm:mx-0", THEME.punk.card)}>
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-black text-white">
@@ -7589,7 +7653,7 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
 
   // Main render - all views use consistent header
   return (
-    <div className="p-6 pb-24">
+    <div className="p-3 sm:p-4 md:p-6 pb-24">
       {/* Header */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className={cn(THEME.punk.textStyle, "punk-accent-underline text-2xl")}>Global Tasks</h2>

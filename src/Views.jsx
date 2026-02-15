@@ -39,11 +39,11 @@ export const ListView = ({ onEdit }) => {
     };
 
     return (
-        <div className="p-6 pb-24">
-            <div className="flex justify-between mb-6">
+        <div className="p-3 sm:p-4 md:p-6 pb-24">
+            <div className="flex flex-col sm:flex-row sm:justify-between mb-6 gap-3">
                 <div className="flex items-center gap-2">
                    <label htmlFor="list-stage-filter" className="text-xs font-bold uppercase">Filter:</label>
-                   <select id="list-stage-filter" value={filter} onChange={e => setFilter(e.target.value)} className={cn("w-40", THEME.punk.inputCompact)}>
+                   <select id="list-stage-filter" value={filter} onChange={e => setFilter(e.target.value)} className={cn("w-full sm:w-40", THEME.punk.inputCompact)}>
                        <option value="all">All Stages</option>
                        {(data.stages || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                    </select>
@@ -239,7 +239,7 @@ export const CalendarView = ({ onEdit, onSelectEvent }) => {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 pb-24 max-w-[1600px] mx-auto">
+        <div className="h-full flex flex-col p-3 sm:p-4 md:p-6 pb-24 max-w-[1600px] mx-auto">
             {/* Header with navigation */}
             <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
                 <h2 className={THEME.punk.textStyle}>{monthNames[month]} {year}</h2>
@@ -618,7 +618,7 @@ export const GalleryView = () => {
     const isCloudMode = mode === 'cloud';
 
     return (
-        <div className="p-6 pb-24">
+        <div className="p-3 sm:p-4 md:p-6 pb-24">
             <div className="flex flex-wrap justify-between items-center mb-8 border-b-4 border-black pb-4 gap-4">
                 <h2 className={cn("text-3xl flex items-center gap-2", THEME.punk.textStyle)}><Icon name="Image" /> Gallery</h2>
                 <div className="flex gap-2">
@@ -875,7 +875,7 @@ export const FilesView = () => {
     };
 
     return (
-        <div className="p-6 pb-24">
+        <div className="p-3 sm:p-4 md:p-6 pb-24">
             <div className="flex flex-wrap justify-between items-center mb-8 border-b-4 border-black pb-4 gap-4">
                 <h2 className={cn("text-3xl flex items-center gap-2", THEME.punk.textStyle)}><Icon name="File" /> Files</h2>
                 <div className="flex gap-2">
@@ -1119,7 +1119,7 @@ export const TeamView = () => {
     }, [data.tasks, data.globalTasks, data.releases, data.songs]);
 
     return (
-        <div className="p-6 pb-24">
+        <div className="p-3 sm:p-4 md:p-6 pb-24">
             <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
                 <h2 className={THEME.punk.textStyle}>Team</h2>
                 <div className="flex gap-2">
@@ -1138,7 +1138,7 @@ export const TeamView = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                     <input value={newMember.name} onChange={e => setNewMember({ ...newMember, name: e.target.value })} placeholder="Name" className={cn("w-full", THEME.punk.input)} />
                     <input value={newMemberRolesText} onChange={e => setNewMemberRolesText(e.target.value)} placeholder="Roles (comma-separated)" className={cn("w-full", THEME.punk.input)} />
-                    <div className="flex gap-2 items-center">
+                    <div className="flex flex-wrap gap-2 items-center">
                         <label className="text-xs font-bold uppercase">Type</label>
                         <select value={newMember.type} onChange={e => setNewMember({ ...newMember, type: e.target.value })} className={cn("w-full", THEME.punk.input)}>
                             <option value="individual">Individual</option>
@@ -1148,7 +1148,7 @@ export const TeamView = () => {
                     </div>
                     {/* Per APP_ARCHITECTURE.md Section 5.5: Work Mode for Individuals */}
                     {newMember.type === 'individual' && (
-                        <div className="flex gap-2 items-center">
+                        <div className="flex flex-wrap gap-2 items-center">
                             <label className="text-xs font-bold uppercase">Work Mode</label>
                             <select value={newMember.workMode || 'In-Person'} onChange={e => setNewMember({ ...newMember, workMode: e.target.value })} className={cn("w-full", THEME.punk.input)}>
                                 <option value="In-Person">In-Person</option>
@@ -1159,7 +1159,7 @@ export const TeamView = () => {
                     )}
                     {/* Per APP_ARCHITECTURE.md Section 5.5: Organization Type */}
                     {newMember.type === 'organization' && (
-                        <div className="flex gap-2 items-center">
+                        <div className="flex flex-wrap gap-2 items-center">
                             <label className="text-xs font-bold uppercase">Org Type</label>
                             <select value={newMember.orgType || 'For-Profit'} onChange={e => setNewMember({ ...newMember, orgType: e.target.value })} className={cn("w-full", THEME.punk.input)}>
                                 <option value="For-Profit">For-Profit</option>
@@ -1170,7 +1170,7 @@ export const TeamView = () => {
                     )}
                     {/* Per APP_ARCHITECTURE.md Section 5.5: Group Type */}
                     {newMember.type === 'group' && (
-                        <div className="flex gap-2 items-center">
+                        <div className="flex flex-wrap gap-2 items-center">
                             <label className="text-xs font-bold uppercase">Group Type</label>
                             <input value={newMember.groupType || ''} onChange={e => setNewMember({ ...newMember, groupType: e.target.value })} placeholder="e.g., Band, Crew" className={cn("w-full", THEME.punk.input)} />
                         </div>
@@ -1464,7 +1464,7 @@ export const MiscView = () => {
     }, [data.expenses, showArchived]);
 
     return (
-        <div className="p-6 pb-24">
+        <div className="p-3 sm:p-4 md:p-6 pb-24">
             <div className="flex flex-wrap justify-between mb-6 items-center gap-4">
                 <h2 className={THEME.punk.textStyle}>Expenses</h2>
                 <div className="flex flex-wrap gap-2 items-center">
@@ -1473,8 +1473,8 @@ export const MiscView = () => {
                         Show Archived
                     </label>
                     <input value={expenseDraft.description} onChange={e => setExpenseDraft(prev => ({ ...prev, description: e.target.value }))} placeholder="Description" className={cn("px-3 py-2 text-sm", THEME.punk.input)} />
-                    <input type="number" value={expenseDraft.amount} onChange={e => setExpenseDraft(prev => ({ ...prev, amount: e.target.value }))} placeholder="$" className={cn("px-3 py-2 text-sm w-28", THEME.punk.input)} />
-                    <input value={expenseDraft.category} onChange={e => setExpenseDraft(prev => ({ ...prev, category: e.target.value }))} placeholder="Category" className={cn("px-3 py-2 text-sm w-32", THEME.punk.input)} />
+                    <input type="number" value={expenseDraft.amount} onChange={e => setExpenseDraft(prev => ({ ...prev, amount: e.target.value }))} placeholder="$" className={cn("px-3 py-2 text-sm w-full sm:w-28", THEME.punk.input)} />
+                    <input value={expenseDraft.category} onChange={e => setExpenseDraft(prev => ({ ...prev, category: e.target.value }))} placeholder="Category" className={cn("px-3 py-2 text-sm w-full sm:w-32", THEME.punk.input)} />
                     <button onClick={addExpenseItem} className={cn("px-4 py-2", THEME.punk.btn, "bg-black text-white")}>+ Add Expense</button>
                 </div>
             </div>
@@ -1513,14 +1513,14 @@ export const MiscView = () => {
             {/* All Costed Items Summary */}
             <div className={cn("mb-4 p-3", THEME.punk.card)}>
                 <h3 className="font-black uppercase mb-4 border-b-4 border-black pb-2">All Costed Items</h3>
-                <div className="grid grid-cols-4 text-[10px] font-black uppercase mb-2 border-b-2 border-black pb-2">
+                <div className="hidden md:grid grid-cols-4 text-[10px] font-black uppercase mb-2 border-b-2 border-black pb-2">
                     <span>Item</span><span>Source</span><span>Date</span><span className="text-right">Cost</span>
                 </div>
                 <div className="divide-y divide-gray-200">
                     {costedItems.length === 0 ? (
                         <div className="p-4 text-center opacity-50">No costed items recorded.</div>
                     ) : costedItems.map(item => (
-                        <div key={item.id} className="grid grid-cols-4 py-2 text-sm gap-2">
+                        <div key={item.id} className="grid grid-cols-2 md:grid-cols-4 py-2 text-sm gap-2">
                             <div>
                                 <div className="font-bold">{item.name}</div>
                                 {item.notes && <div className="text-[11px] opacity-60">{item.notes}</div>}
@@ -1708,7 +1708,7 @@ export const ActiveView = ({ onEdit }) => {
     );
     
     return (
-        <div className="p-6 pb-24">
+        <div className="p-3 sm:p-4 md:p-6 pb-24">
             <h2 className={cn("mb-6", THEME.punk.textStyle)}>Active Tasks</h2>
             
             {/* Summary Stats */}
@@ -2060,7 +2060,7 @@ const StorageInfo = ({ actions }) => {
 };
 
 export const SettingsView = () => {
-    const { data, actions, mode, mods } = useStore();
+    const { data, actions, mode, mods, syncMeta } = useStore();
     const settings = data.settings || {};
     const themeMode = settings.themeMode || 'light';
     const accent = settings.themeColor || 'pink';
@@ -2306,10 +2306,21 @@ export const SettingsView = () => {
 
     const financialPresets = settings.financialPresets || [];
 
+
+    const costPrecedenceOrder = settings.costPrecedenceOrder || ['actual', 'paid', 'partially_paid', 'quoted', 'estimated'];
+    const costOrderLabels = {
+      actual: 'Actual Cost',
+      paid: 'Paid Cost',
+      partially_paid: 'Partially Paid',
+      quoted: 'Quoted Cost',
+      estimated: 'Estimated Cost'
+    };
+
+
     return (
-        <div className="p-6 max-w-xl">
+        <div className="p-3 md:p-6 max-w-3xl mx-auto">
             <h2 className={cn("mb-6", THEME.punk.textStyle)}>Settings</h2>
-            <div className={cn("p-6 space-y-6", THEME.punk.card)}>
+            <div className={cn("p-4 md:p-6 space-y-6", THEME.punk.card)}>
                 {/* Project Info */}
                 <div>
                     <label className="font-bold block mb-1">Project Name</label>
@@ -2596,6 +2607,33 @@ export const SettingsView = () => {
                   </div>
                 </div>
 
+                {/* Cost Precedence Rules */}
+                <div className="pt-4 border-t-4 border-black space-y-3">
+                  <h3 className="font-black text-xs uppercase">Cost Precedence Order</h3>
+                  <p className="text-xs opacity-70">Top-most non-zero value is used throughout dashboards and financial calculations.</p>
+                  <div className="space-y-2">
+                    {costPrecedenceOrder.map((key, index) => (
+                      <div key={`${key}-${index}`} className="flex items-center gap-2">
+                        <span className="w-24 text-xs font-bold uppercase">#{index + 1}</span>
+                        <select
+                          value={key}
+                          onChange={e => {
+                            const next = [...costPrecedenceOrder];
+                            next[index] = e.target.value;
+                            const deduped = [];
+                            next.forEach(entry => { if (!deduped.includes(entry)) deduped.push(entry); });
+                            Object.keys(costOrderLabels).forEach(entry => { if (!deduped.includes(entry)) deduped.push(entry); });
+                            actions.saveSettings({ costPrecedenceOrder: deduped });
+                          }}
+                          className={cn("flex-1", THEME.punk.input)}
+                        >
+                          {Object.entries(costOrderLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Financial Filter Presets */}
                 <div className="pt-4 border-t-4 border-black space-y-3">
                   <h3 className="font-black text-xs uppercase">Financial Filter Presets</h3>
@@ -2707,7 +2745,7 @@ export const SettingsView = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex gap-2 items-center">
+                    <div className="flex flex-wrap gap-2 items-center">
                       <div className="text-[10px] font-black uppercase opacity-60">Import or Author</div>
                       <button onClick={() => setModImportText(modExample)} className={cn("px-3 py-1 text-[10px]", THEME.punk.btn)}>Load Example</button>
                     </div>
@@ -3068,7 +3106,7 @@ export const SettingsView = () => {
                     
                     {/* Connection Status */}
                     <div className={cn("p-3 mb-3 text-xs font-bold border-4 border-black", isConnected ? "bg-green-100" : isLoading ? "bg-yellow-100" : "bg-gray-100")}>
-                        Status: {isLoading ? "Loading..." : isConnected ? "✓ Connected (Cloud Mode)" : "○ Local Storage Only"}
+                        Status: {isLoading ? "Loading..." : isConnected ? `✓ Connected (${syncMeta?.status === 'syncing' ? 'Syncing…' : 'Synced'})` : "○ Local Storage Only"}
                     </div>
                     
                     <p className="text-xs mb-3 opacity-70">
@@ -3076,6 +3114,13 @@ export const SettingsView = () => {
                             ? "Your data is syncing across all devices via Firebase. Disconnect to switch back to local storage." 
                             : "Currently using local storage. Connect to Firebase to sync data across PC and mobile devices."}
                     </p>
+                    {isConnected && (
+                      <div className="text-xs mb-3 p-3 bg-slate-100 dark:bg-slate-800 border-2 border-black dark:border-slate-600">
+                        <div><strong>Last synced:</strong> {syncMeta?.lastSyncedAt ? new Date(syncMeta.lastSyncedAt).toLocaleString() : 'Waiting for first sync'}</div>
+                        <div><strong>Pending writes:</strong> {syncMeta?.pendingWrites ? 'Yes' : 'No'}</div>
+                        <div><strong>Last settings edit:</strong> {settings.settingsUpdatedAt ? `${new Date(settings.settingsUpdatedAt).toLocaleString()} by ${settings.settingsUpdatedBy || 'Unknown'}` : 'No settings edits recorded yet'}</div>
+                      </div>
+                    )}
                     
                     {!isConnected && (
                         <div className="text-xs mb-3 p-3 bg-blue-50 border-2 border-blue-300">
@@ -3102,7 +3147,7 @@ export const SettingsView = () => {
                                 }
                             }
                         }}
-                        className={cn("w-full py-3 mb-2", THEME.punk.btn, "bg-blue-500 text-white")}
+                        className={cn("w-full py-3 mb-2 text-sm", THEME.punk.btn, "bg-blue-500 text-white")}
                         disabled={isConnected}
                     >
                         {isConnected ? "Already Connected" : "Connect to Firebase"}

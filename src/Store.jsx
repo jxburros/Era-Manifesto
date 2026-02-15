@@ -304,18 +304,25 @@ export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = []) =
 // Compute effective cost with precedence: paid > quoted > estimated
 // Supports both new unified schema (amount_paid, quoted_cost, estimated_cost) and legacy fields
 export const resolveCostPrecedence = (entity = {}) => {
-  // Support both new schema and legacy field names
-  const actual = entity.actualCost || 0;
-  const paid = entity.amount_paid || entity.paidCost || entity.amountPaid || 0;
-  const partial = entity.partially_paid || entity.partiallyPaidAmount || entity.partialPaidCost || 0;
-  const quoted = entity.quoted_cost || entity.quotedCost || 0;
-  const estimated = entity.estimated_cost || entity.estimatedCost || 0;
+  const fields = {
+    actual: entity.actualCost || 0,
+    paid: entity.amount_paid || entity.paidCost || entity.amountPaid || 0,
+    partially_paid: entity.partially_paid || entity.partiallyPaidAmount || entity.partialPaidCost || 0,
+    quoted: entity.quoted_cost || entity.quotedCost || 0,
+    estimated: entity.estimated_cost || entity.estimatedCost || 0
+  };
 
-  if (actual > 0) return { value: actual, source: 'actual' };
-  if (paid > 0) return { value: paid, source: 'paid' };
-  if (partial > 0) return { value: partial, source: 'partially_paid' };
-  if (quoted > 0) return { value: quoted, source: 'quoted' };
-  return { value: estimated, source: 'estimated' };
+  const configuredOrder = (typeof window !== 'undefined' && Array.isArray(window.__eraCostPrecedenceOrder))
+    ? window.__eraCostPrecedenceOrder
+    : ['actual', 'paid', 'partially_paid', 'quoted', 'estimated'];
+
+  for (const source of configuredOrder) {
+    if ((fields[source] || 0) > 0) {
+      return { value: fields[source], source };
+    }
+  }
+
+  return { value: fields.estimated, source: 'estimated' };
 };
 
 export const getEffectiveCost = (entity = {}) => resolveCostPrecedence(entity).value;
@@ -758,6 +765,7 @@ export const StoreProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [db, setDb] = useState(null);
   const [storage, setStorage] = useState(null);
+  const [syncMeta, setSyncMeta] = useState({ pendingWrites: false, lastSyncedAt: '', status: 'idle' });
   const appId = "album-tracker-v2";
   const deadlineOffsets = data.settings?.deadlineOffsets || {};
 
@@ -803,7 +811,13 @@ export const StoreProvider = ({ children }) => {
       ];
       const unsubs = collections.map(col => {
         const q = query(collection(db, 'artifacts', appId, 'users', user.uid, col));
-        return onSnapshot(q, (snap) => {
+        return onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
+          const pendingWrites = snap.metadata.hasPendingWrites;
+          setSyncMeta(prev => ({
+            pendingWrites,
+            lastSyncedAt: pendingWrites ? prev.lastSyncedAt : new Date().toISOString(),
+            status: pendingWrites ? 'syncing' : 'synced'
+          }));
           const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           if (col === 'album_items') {
              setData(prev => ({ ...prev, items: list }));
@@ -829,6 +843,12 @@ export const StoreProvider = ({ children }) => {
       localStorage.setItem(appId, JSON.stringify(data));
     }
   }, [data, mode, db, user]);
+
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.__eraCostPrecedenceOrder = data.settings?.costPrecedenceOrder || ['actual', 'paid', 'partially_paid', 'quoted', 'estimated'];
+  }, [data.settings?.costPrecedenceOrder]);
 
   useEffect(() => {
     if (mode === 'local' && (!data.stages || data.stages.length === 0)) {
@@ -1010,8 +1030,10 @@ export const StoreProvider = ({ children }) => {
      },
      add: async (col, item) => {
         const colKey = col === 'misc_expenses' ? 'misc' : col;
-        if (mode === 'cloud') await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, `album_${col}`), { ...item, createdAt: serverTimestamp() });
-        else setData(p => ({...p, [colKey]: [...(p[colKey] || []), {id:crypto.randomUUID(), ...item}]}));
+        const actor = data.settings?.artistName || 'Anonymous';
+        const payload = { id: item.id || crypto.randomUUID(), ...item, updatedBy: actor, updatedAt: new Date().toISOString() };
+        if (mode === 'cloud') await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, `album_${col}`), { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        else setData(p => ({...p, [colKey]: [...(p[colKey] || []), payload]}));
      },
      update: async (col, id, item, skipUndo = false) => {
          const colKey = col === 'misc_expenses' ? 'misc' : col;
@@ -1022,10 +1044,13 @@ export const StoreProvider = ({ children }) => {
              actions.captureSnapshot('update', col, id, existing, `Update ${colKey.replace(/s$/, '')}`);
            }
          }
-         if (mode === 'cloud') await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, `album_${col}`, id), item);
-         else setData(p => {
-             return {...p, [colKey]: (p[colKey] || []).map(i => i.id === id ? { ...i, ...item } : i)};
-         });
+         const actor = data.settings?.artistName || 'Anonymous';
+         const payload = { ...item, updatedBy: actor, updatedAt: new Date().toISOString() };
+         if (mode === 'cloud') await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, `album_${col}`, id), { ...payload, updatedAt: serverTimestamp() });
+         else setData(p => ({
+             ...p,
+             [colKey]: (p[colKey] || []).map(i => i.id === id ? { ...i, ...payload } : i)
+         }));
      },
      delete: async (col, id, skipUndo = false) => {
          const colKey = col === 'misc_expenses' ? 'misc' : col;
@@ -1108,8 +1133,10 @@ export const StoreProvider = ({ children }) => {
         }
      },
      saveSettings: async (newSettings) => {
-         if (mode === 'cloud') await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_tasks', 'settings'), newSettings, { merge: true });
-         else setData(p => ({...p, settings: {...p.settings, ...newSettings}}));
+         const actor = data.settings?.artistName || 'Anonymous';
+         const payload = { ...newSettings, settingsUpdatedAt: new Date().toISOString(), settingsUpdatedBy: actor };
+         if (mode === 'cloud') await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_tasks', 'settings'), payload, { merge: true });
+         else setData(p => ({...p, settings: {...p.settings, ...payload}}));
      },
      runMigration: async (notes = '') => {
         actions.logAudit('migration', 'system', 'onboarding', { notes });
@@ -3992,7 +4019,7 @@ export const StoreProvider = ({ children }) => {
   const mods = data.settings?.mods || [];
 
   return (
-    <StoreContext.Provider value={{ data, actions, mode, stats, mods, undoStack }}>
+    <StoreContext.Provider value={{ data, actions, mode, stats, mods, undoStack, syncMeta }}>
       {children}
     </StoreContext.Provider>
   );
