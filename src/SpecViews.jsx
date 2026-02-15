@@ -199,19 +199,6 @@ export const SongDetailView = ({ song, onBack }) => {
     return true;
   };
 
-  // Assignment function for tasks (used in version task editing)
-  // eslint-disable-next-line no-unused-vars
-  const addAssignment = (taskKey, taskObj, updater) => {
-    const entry = newAssignments[taskKey] || { memberId: '', cost: 0, instrument: '' };
-    const budget = getTaskBudget(taskObj);
-    const current = (taskObj.assignedMembers || []).reduce((s, m) => s + (parseFloat(m.cost) || 0), 0);
-    const nextTotal = current + (parseFloat(entry.cost) || 0);
-    if (budget > 0 && nextTotal > budget) return; // prevent over-allocation
-    const updatedMembers = [...(taskObj.assignedMembers || []), { memberId: entry.memberId, cost: parseFloat(entry.cost) || 0, instrument: entry.instrument || '' }];
-    updater(updatedMembers);
-    setNewAssignments(prev => ({ ...prev, [taskKey]: { memberId: '', cost: 0, instrument: '' } }));
-  };
-
   const handleSave = useCallback(async () => { 
     await actions.updateSong(song.id, form); 
   }, [actions, song.id, form]);
@@ -233,12 +220,6 @@ export const SongDetailView = ({ song, onBack }) => {
 
   const handleDeadlineChange = async (deadlineId, field, value) => {
     await actions.updateSongDeadline(song.id, deadlineId, { [field]: value });
-  };
-
-  // Handler for deleting custom tasks (used in task management UI)
-  // eslint-disable-next-line no-unused-vars
-  const handleDeleteCustomTask = async (taskId) => {
-    if (confirm('Delete this task?')) { await actions.deleteSongCustomTask(song.id, taskId); }
   };
 
   const handleDeleteSong = async () => {
@@ -552,14 +533,6 @@ export const SongDetailView = ({ song, onBack }) => {
     });
     return teamMembers.filter(m => memberIds.has(m.id));
   }, [currentSong, allSongTasks, teamMembers]);
-
-  // Get unique task categories for filter dropdown (reserved for future use)
-  // eslint-disable-next-line no-unused-vars
-  const taskCategories = useMemo(() => {
-    const categories = new Set();
-    songTasks.forEach(t => t.category && categories.add(t.category));
-    return Array.from(categories);
-  }, [songTasks]);
 
   // Calculate overdue tasks for Display Section
   const overdueTasks = useMemo(() => 
@@ -2316,7 +2289,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={() => exportReleasePDF(currentRelease, data.songs || [], teamMembers)} 
+            onClick={() => exportReleasePDF(currentRelease, data.songs || [])} 
             className={cn("px-4 py-2 flex items-center gap-2", THEME.punk.btn, "bg-blue-600 text-white")}
             title="Export to PDF"
           >
@@ -7387,21 +7360,6 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
     { field: 'date', label: 'Date', sortable: true },
     { field: 'status', label: 'Status', sortable: true },
     { field: 'estimatedCost', label: 'Est. Cost', sortable: true, align: 'right', render: (item) => formatMoney(getEffectiveCost(item)) }
-  ];
-
-  // Filter options
-  // eslint-disable-next-line no-unused-vars
-  const filterOptions = [
-    { 
-      field: 'category', 
-      label: 'All Categories', 
-      options: allCategories.map(c => ({ value: c.name, label: c.name })) 
-    },
-    {
-      field: 'status',
-      label: 'All Status',
-      options: STATUS_OPTIONS.map(s => ({ value: s, label: s }))
-    }
   ];
 
   // Render grid card

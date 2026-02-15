@@ -452,8 +452,7 @@ export const exportVideoPDF = (video, teamMembers = []) => {
  * Export Release PDF
  * Contains: Release name, tracklist with song titles, total budget breakdown, release checklist status
  */
-// eslint-disable-next-line no-unused-vars
-export const exportReleasePDF = (release, songs = [], teamMembers = []) => {
+export const exportReleasePDF = (release, songs = []) => {
   if (!release) return;
   
   const { doc, startY } = createPDFDoc(`Release Report: ${release.name || 'Untitled'}`);
