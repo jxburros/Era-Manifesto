@@ -147,6 +147,16 @@ firebase deploy
 - **[Page Architecture](docs/app_architecture_2.md)** - Page types and UI specifications
 - **[Project Direction](PROJECT_DIRECTION.md)** - Project vision and feature details
 - **[Remaining TODO](docs/REMAINING_TODO.md)** - Implementation status and roadmap
+- **[Schema Contracts](docs/SCHEMA_CONTRACTS.md)** - Locked behavior for statuses, dates, and cost precedence
+- **[Pre-QA Checklist](docs/PRE_QA_CHECKLIST.md)** - Readiness gate and smoke scenarios
+
+## Quality Checks
+
+```bash
+npm run lint
+npm run build
+npm test
+```
 
 ## Tech Stack
 

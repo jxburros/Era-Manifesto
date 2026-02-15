@@ -1,0 +1,72 @@
+{
+  "meta": {
+    "name": "Era Manifesto QA Seed",
+    "version": "1.0.0",
+    "description": "Representative campaign sample for manual smoke testing"
+  },
+  "eras": [
+    { "id": "era-nightdrive", "name": "Night Drive" }
+  ],
+  "teamMembers": [
+    { "id": "tm-1", "name": "Ari Vox", "type": "Individual", "isMusician": true, "instruments": ["Vocals"] },
+    { "id": "tm-2", "name": "Niko Pulse", "type": "Individual", "isMusician": true, "instruments": ["Synth"] },
+    { "id": "tm-3", "name": "Signal House Studio", "type": "Organization" }
+  ],
+  "songs": [
+    {
+      "id": "song-1",
+      "title": "Midnight Echo",
+      "category": "Single",
+      "releaseDate": "2026-05-15",
+      "eraIds": ["era-nightdrive"],
+      "deadlines": [
+        { "id": "task-s1-1", "taskName": "Record", "status": "In-Progress", "date": "2026-04-20", "estimatedCost": 400 },
+        { "id": "task-s1-2", "taskName": "Mix", "status": "Not Started", "date": "2026-04-28", "estimatedCost": 250 }
+      ],
+      "versions": [
+        {
+          "id": "ver-1",
+          "name": "Core Version",
+          "tasks": [
+            { "id": "task-v1-1", "taskName": "Master", "status": "Not Started", "date": "2026-05-01", "quotedCost": 150 }
+          ]
+        }
+      ]
+    }
+  ],
+  "releases": [
+    {
+      "id": "release-1",
+      "name": "Midnight Echo",
+      "type": "Single",
+      "releaseDate": "2026-05-15",
+      "attachedSongIds": ["song-1"],
+      "tasks": [
+        { "id": "task-r1-1", "taskName": "Metadata Submission", "status": "Not Started", "date": "2026-05-05", "estimatedCost": 100 }
+      ]
+    }
+  ],
+  "globalTasks": [
+    {
+      "id": "gt-1",
+      "taskName": "Press Outreach",
+      "status": "Waiting on Someone Else",
+      "date": "2026-05-10",
+      "estimatedCost": 300,
+      "assignedMembers": [
+        { "memberId": "tm-3", "cost": 200 }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "event-1",
+      "name": "Release Livestream",
+      "date": "2026-05-16",
+      "location": "Online",
+      "tasks": [
+        { "id": "task-e1-1", "taskName": "Create Run of Show", "status": "Complete", "date": "2026-05-12" }
+      ]
+    }
+  ]
+}

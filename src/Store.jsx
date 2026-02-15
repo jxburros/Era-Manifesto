@@ -4,6 +4,16 @@ import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { saveBackup, saveArchive, getAllBackups, getAllArchives, getBackup, getArchive, deleteBackup, deleteArchive, getStorageSize } from './indexedDB';
+import {
+  STATUS_OPTIONS,
+  STATUS_POINTS,
+  getStatusPoints,
+  calculateTaskProgress,
+  getTaskDueDate,
+  getPrimaryDate,
+  resolveCostPrecedence,
+  getEffectiveCost
+} from './domain/taskLogic';
 
 const StoreContext = createContext();
 
@@ -14,47 +24,12 @@ export const EXPORT_VERSION = '1.0.0';
 export const APP_VERSION = '2.0.0';
 
 // Status enum for consistency across all entities - per APP_ARCHITECTURE.md Section 1.7
-export const STATUS_OPTIONS = [
-  'Not Started',
-  'In-Progress',
-  'Waiting on Someone Else',
-  'Paid But Not Complete',
-  'Complete But Not Paid',
-  'Complete',
-  'Other'
-];
+export { STATUS_OPTIONS, STATUS_POINTS, getStatusPoints, calculateTaskProgress, getTaskDueDate, getPrimaryDate, resolveCostPrecedence, getEffectiveCost };
 
 // Progress Calculation per APP_ARCHITECTURE.md Section 1.7:
 // Complete = 1 point
 // In-Progress, Waiting on Someone Else, Paid But Not Complete, Complete But Not Paid = 0.5 points
 // All others = 0
-export const STATUS_POINTS = {
-  'Complete': 1,
-  'Done': 1, // Legacy alias for backwards compatibility
-  'In-Progress': 0.5,
-  'In Progress': 0.5, // Legacy alias
-  'Waiting on Someone Else': 0.5,
-  'Paid But Not Complete': 0.5,
-  'Complete But Not Paid': 0.5,
-  'Not Started': 0,
-  'Other': 0,
-  'Delayed': 0, // Legacy status
-  default: 0
-};
-
-export const getStatusPoints = (status) => {
-  if (!status) return 0;
-  return STATUS_POINTS[status] ?? STATUS_POINTS.default;
-};
-
-export const calculateTaskProgress = (tasks = []) => {
-  if (!tasks.length) return { pointsEarned: 0, totalTasks: 0, progress: 0 };
-
-  const pointsEarned = tasks.reduce((sum, task) => sum + getStatusPoints(task.status), 0);
-  const progress = Math.round((pointsEarned / tasks.length) * 100);
-
-  return { pointsEarned, totalTasks: tasks.length, progress };
-};
 
 // Song categories - DEPRECATED: Phase 0 removes category-based filtering
 // Keeping for backwards compatibility but not used in new features
@@ -237,8 +212,6 @@ export const createUnifiedTask = (overrides = {}) => ({
 });
 
 // Resolve a task's due date - supports both new unified schema (due_date) and legacy fields
-export const getTaskDueDate = (task = {}) => task.due_date || task.dueDate || task.date || '';
-
 export const collectAllTasks = (data = {}) => {
   const rows = [];
   const pushTask = (task, meta) => {
@@ -271,57 +244,6 @@ export const collectAllTasks = (data = {}) => {
 
   return rows;
 };
-
-// Resolve the primary date for any item based on overrides, direct dates, and attached releases
-// releaseMap: Map<id, release> for O(1) lookups instead of O(n) array.find()
-export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = [], releaseMap = null) => {
-  if (!item) return '';
-  if (item.primary_date) return item.primary_date;
-  if (item.primaryDate) return item.primaryDate;
-  if (item.primaryDateOverride) return item.primaryDateOverride;
-  if (item.releaseDate) return item.releaseDate;
-
-  const overrideDates = item.releaseOverrides ? Object.values(item.releaseOverrides).filter(Boolean) : [];
-  if (overrideDates.length > 0) return overrideDates.sort()[0];
-
-  const collectedReleaseIds = [
-    ...(item.coreReleaseId ? [item.coreReleaseId] : []),
-    ...(item.releaseIds || []),
-    ...extraReleaseIds
-  ];
-
-  // Use releaseMap if provided for O(1) lookups, fallback to array.find() for backward compatibility
-  const map = releaseMap || new Map(releases.map(r => [r.id, r]));
-  const releaseDates = collectedReleaseIds
-    .map(id => map.get(id)?.releaseDate)
-    .filter(Boolean)
-    .sort();
-
-  if (releaseDates.length > 0) return releaseDates[0];
-  if (item.date) return item.date;
-  if (item.exclusiveStartDate) return item.exclusiveStartDate;
-  if (item.exclusiveEndDate) return item.exclusiveEndDate;
-  return '';
-};
-
-// Compute effective cost with precedence: paid > quoted > estimated
-// Supports both new unified schema (amount_paid, quoted_cost, estimated_cost) and legacy fields
-export const resolveCostPrecedence = (entity = {}) => {
-  // Support both new schema and legacy field names
-  const actual = entity.actualCost || 0;
-  const paid = entity.amount_paid || entity.paidCost || entity.amountPaid || 0;
-  const partial = entity.partially_paid || entity.partiallyPaidAmount || entity.partialPaidCost || 0;
-  const quoted = entity.quoted_cost || entity.quotedCost || 0;
-  const estimated = entity.estimated_cost || entity.estimatedCost || 0;
-
-  if (actual > 0) return { value: actual, source: 'actual' };
-  if (paid > 0) return { value: paid, source: 'paid' };
-  if (partial > 0) return { value: partial, source: 'partially_paid' };
-  if (quoted > 0) return { value: quoted, source: 'quoted' };
-  return { value: estimated, source: 'estimated' };
-};
-
-export const getEffectiveCost = (entity = {}) => resolveCostPrecedence(entity).value;
 
 // Feature 4: Era Mode filtering helper
 // Returns true if item belongs to the active era or if Era Mode is not active

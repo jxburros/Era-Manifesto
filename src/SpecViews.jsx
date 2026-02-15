@@ -154,7 +154,7 @@ export const SongDetailView = ({ song, onBack }) => {
   });
 
   // Sync form state when song prop changes (e.g. navigating between songs)
-  useEffect(() => { setForm({ ...song }); }, [song.id]);
+  useEffect(() => { setForm({ ...song }); }, [song]);
 
   // Sync text states with song prop when it changes
   useEffect(() => {
@@ -1863,7 +1863,7 @@ export const GlobalTasksView = () => {
                     <input type="number" value={newAssignments[task.id]?.cost || ''} onChange={e => setNewAssignments(prev => ({ ...prev, [task.id]: { ...(prev[task.id] || {}), cost: e.target.value } }))} placeholder="Cost" className={cn("px-2 py-1 text-xs w-20", THEME.punk.input)} />
                     <input value={newAssignments[task.id]?.instrument || ''} onChange={e => setNewAssignments(prev => ({ ...prev, [task.id]: { ...(prev[task.id] || {}), instrument: e.target.value } }))} placeholder="Instrument" className={cn("px-2 py-1 text-xs w-28", THEME.punk.input)} />
                     <button onClick={() => addAssignment(task.id, task, (assignedMembers) => actions.updateGlobalTask(task.id, { assignedMembers }))} className={cn("px-2 py-1 text-xs", THEME.punk.btn, "bg-pink-600 text-white")}>Add</button>
-                    {taskBudget(task) > 0 && <span className="text-[10px] font-bold">Remaining: {formatMoney(taskBudget(task) - (task.assignedMembers || []).reduce((s, m) => s + (m.cost || 0), 0))}</span>}
+                    {getTaskBudget(task) > 0 && <span className="text-[10px] font-bold">Remaining: {formatMoney(getTaskBudget(task) - (task.assignedMembers || []).reduce((s, m) => s + (m.cost || 0), 0))}</span>}
                   </div>
                 </td>
                 <td className="p-3"><span className={cn(
@@ -2022,7 +2022,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...release });
   // Sync form state when release prop changes
-  useEffect(() => { setForm({ ...release }); }, [release.id]);
+  useEffect(() => { setForm({ ...release }); }, [release]);
   // Phase 3.5: Tracks module state (replaces Required Recordings)
   const [showAddTrack, setShowAddTrack] = useState(false);
   const [newTrack, setNewTrack] = useState({ songId: '', versionIds: [], isExternal: false, externalArtist: '', externalTitle: '' });
@@ -5380,7 +5380,7 @@ export const EventDetailView = ({ event, onBack }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...event });
   // Sync form state when event prop changes
-  useEffect(() => { setForm({ ...event }); }, [event.id]);
+  useEffect(() => { setForm({ ...event }); }, [event]);
   const [taskFilterStatus, setTaskFilterStatus] = useState('all');
   const [taskSortBy, setTaskSortBy] = useState('date');
   const [taskSortDir, setTaskSortDir] = useState('asc');
@@ -6202,7 +6202,7 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...expense });
   // Sync form state when expense prop changes
-  useEffect(() => { setForm({ ...expense }); }, [expense.id]);
+  useEffect(() => { setForm({ ...expense }); }, [expense]);
   const [statusWarning, setStatusWarning] = useState('');
 
   const handleSave = useCallback(async () => { 
@@ -6566,7 +6566,7 @@ export const VideoDetailView = ({ video, onBack }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...video });
   // Sync form state when video prop changes
-  useEffect(() => { setForm({ ...video }); }, [video.id]);
+  useEffect(() => { setForm({ ...video }); }, [video]);
   const [editingTask, setEditingTask] = useState(null); // Phase 1.7: Task editing modal
   const [editingTaskContext, setEditingTaskContext] = useState(null); // { type: 'auto'|'custom'|'new-custom' } - Unified Task Handling
   const [taskFilterStatus, setTaskFilterStatus] = useState('all');
@@ -7797,7 +7797,7 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
   const { data, actions } = useStore();
   const [form, setForm] = useState({ ...task });
   // Sync form state when task prop changes
-  useEffect(() => { setForm({ ...task }); }, [task.id]);
+  useEffect(() => { setForm({ ...task }); }, [task]);
   const [newAssignments, setNewAssignments] = useState({ memberId: '', cost: 0 });
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
