@@ -206,7 +206,6 @@ test.describe('Team Assignment Flow', () => {
     // This depends on UI implementation - look for member assignment section
     const assignSection = await page.locator('text=/assign|team member/i').first();
     if (await assignSection.isVisible().catch(() => false)) {
-      console.log('Team member assignment section found');
       // Assignment flow would happen here
     }
 

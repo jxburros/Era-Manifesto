@@ -8,7 +8,7 @@
  * Generate a unique ID for test data
  */
 export function generateId(prefix = 'test') {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 /**

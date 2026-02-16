@@ -64,7 +64,6 @@ test.describe('Backup & Restore Flow', () => {
       await page.waitForTimeout(1000);
 
       // Backup should be created (may trigger download or save to IndexedDB)
-      console.log('Backup created');
     }
   });
 
@@ -100,7 +99,6 @@ test.describe('Backup & Restore Flow', () => {
 
       const download = await downloadPromise;
       if (download) {
-        console.log('Download triggered:', download.suggestedFilename());
         expect(download.suggestedFilename()).toMatch(/\.json$/i);
       }
     }
@@ -219,7 +217,6 @@ test.describe('Backup & Restore Flow', () => {
     const backupListExists = await isVisible(page, 'text=/backup.*list|available.*backup/i');
     
     if (backupListExists) {
-      console.log('Backup list found');
       // Should show multiple backups
     }
   });
@@ -296,7 +293,6 @@ test.describe('Backup & Restore Flow', () => {
       await page.waitForTimeout(1000);
 
       // Should handle empty backup gracefully
-      console.log('Empty backup attempted');
     }
   });
 
@@ -345,7 +341,6 @@ test.describe('Backup & Restore Flow', () => {
       await waitForDataSave(page, 2000);
 
       // Backup should include songs, tasks, and team members
-      console.log('Complete backup with all data types created');
     }
   });
 });

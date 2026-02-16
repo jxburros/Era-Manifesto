@@ -1,4 +1,12 @@
-import { useState, useEffect, useRef, createContext, useContext, useCallback, useMemo } from 'react';
+import { 
+  useState, 
+  useEffect, 
+  useRef, 
+  createContext, 
+  useContext, 
+  useCallback, 
+  useMemo 
+} from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { StoreProvider, useStore, collectAllTasks } from './Store';
 import { Sidebar, Editor, Icon } from './Components';

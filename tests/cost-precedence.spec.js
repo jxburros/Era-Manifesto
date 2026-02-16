@@ -255,7 +255,6 @@ test.describe('Cost Precedence Flow', () => {
     // Look for total cost display
     await page.textContent('body');
     // Total should reflect cost precedence
-    console.log('Checking for total costs in dashboard');
   });
 
   test('should handle zero and negative costs', async ({ page }) => {

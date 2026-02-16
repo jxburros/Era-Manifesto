@@ -12,6 +12,8 @@ jobs:
     name: Run Playwright E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
@@ -53,6 +55,8 @@ jobs:
   lint:
     name: Lint Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
@@ -73,6 +77,8 @@ jobs:
   build:
     name: Build Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
