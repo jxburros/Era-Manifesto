@@ -112,7 +112,7 @@ Era Manifesto works seamlessly across devices:
 
 To access your data across multiple devices:
 
-1. Follow the **[Firebase Setup Guide](FIREBASE_SETUP.md)**
+1. Follow the **[Firebase Setup Guide](docs/getting-started/FIREBASE_SETUP.md)**
 2. Configure Firebase in your project
 3. Connect from each device using the same Firebase config
 4. Your data will sync automatically
@@ -146,47 +146,38 @@ firebase deploy --only hosting
 
 ## Documentation
 
-### Setup & Deployment
-- **[Firebase Setup Guide](FIREBASE_SETUP.md)** - Set up cloud sync across devices
-- **[Deployment Hub](docs/deployment/)** - Complete deployment guide for web and Android
-- **[Mobile Guide](MOBILE_GUIDE.md)** - Mobile access and PWA installation
+📚 **[Complete Documentation Index](DOCUMENTATION_INDEX.md)** - Comprehensive guide to all documentation
 
-### Architecture & Development
-- **[App Architecture](docs/APP_ARCHITECTURE.md)** - Core data models and system design
-- **[Page Architecture](docs/app_architecture_2.md)** - Page types and UI specifications
-- **[Project Direction](PROJECT_DIRECTION.md)** - Project vision and feature details
-- **[Remaining TODO](docs/REMAINING_TODO.md)** - Implementation status and roadmap
-- **[Schema Contracts](docs/SCHEMA_CONTRACTS.md)** - Locked behavior for statuses, dates, and cost precedence
-- **[Pre-QA Checklist](docs/PRE_QA_CHECKLIST.md)** - Readiness gate and smoke scenarios
+### Quick Links
 
-### React Router Integration
+**Getting Started**
+- **[Installation Checklist](docs/getting-started/INSTALLATION_CHECKLIST.md)** - Step-by-step setup
+- **[Firebase Setup](docs/getting-started/FIREBASE_SETUP.md)** - Cloud sync configuration
 
-- **[React Router Integration](docs/REACT_ROUTER_INTEGRATION.md)** - Technical overview of routing system
-- **[React Router Dev Guide](docs/REACT_ROUTER_DEV_GUIDE.md)** - Guide for adding new routes
-- **[React Router Test Plan](docs/REACT_ROUTER_TEST_PLAN.md)** - Comprehensive testing checklist
-- **[React Router Quick Ref](docs/REACT_ROUTER_QUICK_REF.md)** - Quick reference card
+**Features & Usage**
+- **[Today Dashboard Guide](docs/features/TODAY_DASHBOARD_README.md)** - Daily task management
+- **[Mobile Guide](docs/features/MOBILE_GUIDE.md)** - PWA and mobile features
 
-### Today/Dashboard Enhancements
+**Development**
+- **[React Router Guide](docs/development/REACT_ROUTER_GUIDE.md)** - Navigation and routing
+- **[Quick Reference](docs/development/QUICK_REFERENCE.md)** - Code patterns
+- **[Architecture](docs/architecture/)** - System design documentation
 
-- **[Today Dashboard README](TODAY_DASHBOARD_README.md)** - Enhanced task views with source filtering
-- **[Enhancement Summary](ENHANCEMENT_SUMMARY.md)** - Technical specifications
-- **[Testing Guide](TESTING_GUIDE.md)** - Task aggregation testing
-- **[Quick Reference](QUICK_REFERENCE.md)** - Developer reference
+**Deployment**
+- **[Deployment Hub](docs/deployment/)** - All deployment guides
+- **[Web Deployment](docs/deployment/web.md)** - Firebase, Netlify, Vercel, GitHub Pages
+- **[Android PWA](docs/deployment/android.md)** - Install as app
 
-### Performance Optimization
+**Testing & QA**
+- **[Testing Guide](docs/qa/TESTING_GUIDE.md)** - Comprehensive test cases
+- **[Pre-QA Checklist](docs/qa/PRE_QA_CHECKLIST.md)** - Developer checklist
+- **[Test Suite](tests/README.md)** - Unit testing guide
 
-- **[Performance README](PERFORMANCE_README.md)** - Performance improvements overview
-- **[Performance Optimization](PERFORMANCE_OPTIMIZATION.md)** - Technical details
-- **[Performance Testing](PERFORMANCE_TESTING.md)** - Testing procedures
-- **[Performance Quick Ref](PERFORMANCE_QUICK_REFERENCE.md)** - Developer guide
+**Performance & Project**
+- **[Performance Guide](PERFORMANCE_GUIDE.md)** - Optimization strategies
+- **[Project Direction](PROJECT_DIRECTION.md)** - Vision and roadmap
 
-### Testing
-
-- **[Test Suite](tests/README.md)** - Unit testing guide and best practices
-- **[Test Migration](E2E_TO_UNIT_MIGRATION.md)** - Migration from E2E to unit tests
-- **[Test Summary](TEST_REPLACEMENT_SUMMARY.md)** - Complete testing approach
-
-**Note:** Previous E2E tests were replaced with fast, reliable unit tests. See migration docs for details.
+**Note:** Previous E2E tests were replaced with fast, reliable unit tests (Feb 2026). See [history](docs/history/) for details.
 
 ## Quality Checks
 
@@ -224,7 +215,12 @@ npm test
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
+- Code of conduct
+- Development setup
+- Coding standards
+- Pull request process
+- Testing requirements
 
 ## License
 
@@ -234,9 +230,12 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 If you encounter any issues or have questions:
 
-1. Check the [Firebase Setup Guide](FIREBASE_SETUP.md) and [Deployment Hub](docs/deployment/)
-2. Review existing GitHub Issues
-3. Open a new issue with details
+1. Check the [Documentation Index](DOCUMENTATION_INDEX.md)
+2. Review the [Getting Started Guide](docs/getting-started/)
+3. Search existing [GitHub Issues](https://github.com/jxburros/Era-Manifesto/issues)
+4. Open a new issue with details
+
+For deployment issues, see the [Deployment Hub](docs/deployment/).
 
 ---
 
