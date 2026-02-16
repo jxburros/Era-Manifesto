@@ -1,4 +1,5 @@
 import { useState, useMemo, memo } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import { cn, THEME } from './utils';
 import { Icon } from './Components';
 import { useStore, STATUS_OPTIONS } from './Store';
@@ -1035,6 +1036,70 @@ export const DisplayInfoSection = ({ item, fields }) => (
 );
 
 /**
+ * VirtualizedTableBody - Virtualized table body for large lists (50+ items)
+ * Uses react-window to render only visible rows for better performance
+ * 
+ * @param {Array} items - Array of items to render
+ * @param {Array} columns - Column configuration
+ * @param {Function} onSelectItem - Callback when item is clicked
+ * @param {Function} renderActions - Optional function to render row actions
+ * @param {number} itemHeight - Height of each row in pixels (default: 60)
+ * @param {number} maxHeight - Maximum height of virtualized list (default: 600)
+ */
+const VirtualizedTableBody = memo(function VirtualizedTableBody({
+  items,
+  columns,
+  onSelectItem,
+  renderActions,
+  itemHeight = 60,
+  maxHeight = 600
+}) {
+  const Row = ({ index, style }) => {
+    const item = items[index];
+    return (
+      <div 
+        style={style}
+        className={cn("flex border-b border-gray-200 hover:bg-yellow-50 dark:hover:bg-yellow-900/20", item.isArchived && "opacity-50")}
+      >
+        {columns.map((col, colIndex) => (
+          <div
+            key={col.field}
+            className={cn(
+              "p-3 flex items-center",
+              col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : '',
+              col.clickable !== false && "cursor-pointer",
+              colIndex === 0 ? 'flex-1' : 'w-32'
+            )}
+            onClick={col.clickable !== false ? () => onSelectItem?.(item) : undefined}
+          >
+            {col.render ? col.render(item) : (item[col.field] ?? '-')}
+          </div>
+        ))}
+        {renderActions && (
+          <div className="p-3 w-32 flex items-center justify-center" onClick={e => e.stopPropagation()}>
+            {renderActions(item, e => e.stopPropagation())}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const height = Math.min(items.length * itemHeight, maxHeight);
+
+  return (
+    <List
+      height={height}
+      itemCount={items.length}
+      itemSize={itemHeight}
+      width="100%"
+      className="scrollbar-thin"
+    >
+      {Row}
+    </List>
+  );
+});
+
+/**
  * StandardListPage - Generic list page for any item type with grid/list toggle
  * 
  * @param {string} title - Page title (e.g., "Songs", "Releases")
@@ -1048,6 +1113,7 @@ export const DisplayInfoSection = ({ item, fields }) => (
  * @param {Function} renderActions - Function to render row actions (item, e) => JSX
  * @param {React.Component} headerExtra - Extra header content (e.g., total summary)
  * @param {string} emptyMessage - Message when no items
+ * @param {boolean} enableVirtualization - Use virtualization for lists > 50 items (default: true)
  */
 export const StandardListPage = ({
   title,
@@ -1061,7 +1127,8 @@ export const StandardListPage = ({
   renderActions,
   headerExtra,
   emptyMessage,
-  emptyStateActions = []
+  emptyStateActions = [],
+  enableVirtualization = true
 }) => {
   const [viewMode, setViewMode] = useState('list');
   const [sortBy, setSortBy] = useState(columns[0]?.field || 'name');
@@ -1077,7 +1144,7 @@ export const StandardListPage = ({
     <span>{sortBy === field ? (sortDir === 'asc' ? '↑' : '↓') : ''}</span>
   );
 
-  // Filter and sort items
+  // Filter and sort items - memoized for performance
   const filteredItems = useMemo(() => {
     let result = [...items];
     
@@ -1198,11 +1265,23 @@ export const StandardListPage = ({
                 {renderActions && <th className="p-3 text-center">Actions</th>}
               </tr>
             </thead>
-            <tbody>
-              {filteredItems.length === 0 ? (
-                <tr><td colSpan={columns.length + (renderActions ? 1 : 0)} className="p-4">{renderEmptyState()}</td></tr>
-              ) : (
-                filteredItems.map(item => (
+          </table>
+          
+          {filteredItems.length === 0 ? (
+            renderEmptyState()
+          ) : enableVirtualization && filteredItems.length > 50 ? (
+            /* Use virtualization for large lists */
+            <VirtualizedTableBody
+              items={filteredItems}
+              columns={columns}
+              onSelectItem={onSelectItem}
+              renderActions={renderActions}
+            />
+          ) : (
+            /* Use regular table body for small lists */
+            <table className="w-full text-sm">
+              <tbody>
+                {filteredItems.map(item => (
                   <tr 
                     key={item.id} 
                     className={cn("border-b border-gray-200 hover:bg-yellow-50 dark:hover:bg-yellow-900/20", item.isArchived && "opacity-50")}
@@ -1226,10 +1305,10 @@ export const StandardListPage = ({
                       </td>
                     )}
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
     </div>

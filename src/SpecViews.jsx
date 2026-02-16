@@ -4,7 +4,8 @@ import { THEME, formatMoney, cn, getTaskBudget } from './utils';
 import { Icon } from './Components';
 import { DetailPane, EraStageTagsModule, StandardListPage, StandardDetailPage, DisplayInfoSection, AutocompleteInput } from './ItemComponents';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { exportSongPDF, exportVideoPDF, exportReleasePDF } from './pdfExport';
+// Lazy load PDF export to reduce initial bundle size
+import { exportSongPDF, exportVideoPDF, exportReleasePDF } from './pdfExportLazy';
 // Helper to calculate minimum end date (one day after start date)
 const getMinEndDate = (startDate) => {
   if (!startDate) return '';
@@ -3838,8 +3839,11 @@ export const VideosView = ({ onSelectSong }) => {
 // Task Dashboard View - Shows tasks in progress, due soon, and macro overview
 export const TaskDashboardView = () => {
   const { data } = useStore();
+  const settings = data.settings || {};
+  const isDark = settings.themeMode === 'dark';
   const [view, setView] = useState('upcoming'); // 'upcoming', 'inProgress', 'overview'
   const [stageFilter, setStageFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all'); // New source filter
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   
   // Photo carousel rotation - every 4 seconds
@@ -3881,6 +3885,11 @@ export const TaskDashboardView = () => {
       filtered = filtered.filter(t => (t.stageId || '') === stageFilter);
     }
     
+    // New source filter
+    if (sourceFilter !== 'all') {
+      filtered = filtered.filter(t => t.source === sourceFilter);
+    }
+    
     if (view === 'upcoming') {
       // Tasks due in next 30 days that are not done
       filtered = filtered.filter(t => 
@@ -3897,7 +3906,7 @@ export const TaskDashboardView = () => {
     }
     
     return filtered;
-  }, [allTasks, view, today, nextMonth, stageFilter]);
+  }, [allTasks, view, today, nextMonth, stageFilter, sourceFilter]);
 
   // Calculate overview statistics
   const stats = useMemo(() => {
@@ -3933,6 +3942,28 @@ export const TaskDashboardView = () => {
     });
     return groups;
   }, [allTasks]);
+
+  // NEW: Group tasks by source for breakdown
+  const sourceGroups = useMemo(() => {
+    const groups = {
+      'Song': { total: 0, done: 0, inProgress: 0, overdue: 0, icon: 'Music', color: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-500' },
+      'Version': { total: 0, done: 0, inProgress: 0, overdue: 0, icon: 'Music2', color: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-500' },
+      'Release': { total: 0, done: 0, inProgress: 0, overdue: 0, icon: 'Disc', color: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border-purple-500' },
+      'Video': { total: 0, done: 0, inProgress: 0, overdue: 0, icon: 'Video', color: 'bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200 border-pink-500' },
+      'Event': { total: 0, done: 0, inProgress: 0, overdue: 0, icon: 'Calendar', color: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-500' },
+      'Global Task': { total: 0, done: 0, inProgress: 0, overdue: 0, icon: 'CheckCircle', color: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-500' }
+    };
+    allTasks.forEach(task => {
+      const source = task.source;
+      if (groups[source]) {
+        groups[source].total++;
+        if ((task.status === 'Done' || task.status === 'Complete')) groups[source].done++;
+        if ((task.status === 'In Progress' || task.status === 'In-Progress')) groups[source].inProgress++;
+        if (task.date && task.date < today && task.status !== 'Done' && task.status !== 'Complete') groups[source].overdue++;
+      }
+    });
+    return groups;
+  }, [allTasks, today]);
 
   // Phase 9: Generate notifications/alerts
   const notifications = useMemo(() => {
@@ -4033,26 +4064,35 @@ export const TaskDashboardView = () => {
     <div className="p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className={THEME.punk.textStyle}>Task Dashboard</h2>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
           <select value={stageFilter} onChange={e => setStageFilter(e.target.value)} className={cn("px-3 py-2", THEME.punk.input)}>
             <option value="all">All Stages</option>
             {(data.stages || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
+          <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} className={cn("px-3 py-2", THEME.punk.input)}>
+            <option value="all">All Sources</option>
+            <option value="Song">🎵 Songs</option>
+            <option value="Version">🎵 Versions</option>
+            <option value="Release">💿 Releases</option>
+            <option value="Video">🎬 Videos</option>
+            <option value="Event">📅 Events</option>
+            <option value="Global Task">✅ Global Tasks</option>
+          </select>
           <button
             onClick={() => setView('upcoming')}
-            className={cn("px-4 py-2", THEME.punk.btn, view === 'upcoming' ? "bg-black text-white" : "bg-white")}
+            className={cn("px-4 py-2", THEME.punk.btn, view === 'upcoming' ? (isDark ? "bg-slate-600 text-white" : "bg-black text-white") : (isDark ? "bg-slate-800" : "bg-white"))}
           >
             Upcoming
           </button>
           <button 
             onClick={() => setView('inProgress')} 
-            className={cn("px-4 py-2", THEME.punk.btn, view === 'inProgress' ? "bg-black text-white" : "bg-white")}
+            className={cn("px-4 py-2", THEME.punk.btn, view === 'inProgress' ? (isDark ? "bg-slate-600 text-white" : "bg-black text-white") : (isDark ? "bg-slate-800" : "bg-white"))}
           >
             In Progress
           </button>
           <button 
             onClick={() => setView('overview')} 
-            className={cn("px-4 py-2", THEME.punk.btn, view === 'overview' ? "bg-black text-white" : "bg-white")}
+            className={cn("px-4 py-2", THEME.punk.btn, view === 'overview' ? (isDark ? "bg-slate-600 text-white" : "bg-black text-white") : (isDark ? "bg-slate-800" : "bg-white"))}
           >
             Overview
           </button>
@@ -4062,36 +4102,96 @@ export const TaskDashboardView = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
         <div className={cn("p-4 text-center", THEME.punk.card)}>
-          <div className="text-3xl font-black text-gray-600">{stats.total}</div>
+          <div className={cn("text-3xl font-black", isDark ? "text-slate-400" : "text-gray-600")}>{stats.total}</div>
           <div className="text-xs font-bold uppercase">Total Tasks</div>
         </div>
-        <div className={cn("p-4 text-center", THEME.punk.card, "bg-blue-50")}>
-          <div className="text-3xl font-black text-blue-600">{stats.inProgress}</div>
+        <div className={cn("p-4 text-center", THEME.punk.card, isDark ? "bg-blue-900" : "bg-blue-50")}>
+          <div className={cn("text-3xl font-black", isDark ? "text-blue-300" : "text-blue-600")}>{stats.inProgress}</div>
           <div className="text-xs font-bold uppercase">In Progress</div>
         </div>
-        <div className={cn("p-4 text-center", THEME.punk.card, "bg-yellow-50")}>
-          <div className="text-3xl font-black text-yellow-600">{stats.dueSoon}</div>
+        <div className={cn("p-4 text-center", THEME.punk.card, isDark ? "bg-yellow-900" : "bg-yellow-50")}>
+          <div className={cn("text-3xl font-black", isDark ? "text-yellow-300" : "text-yellow-600")}>{stats.dueSoon}</div>
           <div className="text-xs font-bold uppercase">Due This Week</div>
         </div>
-        <div className={cn("p-4 text-center", THEME.punk.card, "bg-red-50")}>
-          <div className="text-3xl font-black text-red-600">{stats.overdue}</div>
+        <div className={cn("p-4 text-center", THEME.punk.card, isDark ? "bg-red-900" : "bg-red-50")}>
+          <div className={cn("text-3xl font-black", isDark ? "text-red-300" : "text-red-600")}>{stats.overdue}</div>
           <div className="text-xs font-bold uppercase">Overdue</div>
         </div>
-        <div className={cn("p-4 text-center", THEME.punk.card, "bg-green-50")}>
-          <div className="text-3xl font-black text-green-600">{stats.done}</div>
+        <div className={cn("p-4 text-center", THEME.punk.card, isDark ? "bg-green-900" : "bg-green-50")}>
+          <div className={cn("text-3xl font-black", isDark ? "text-green-300" : "text-green-600")}>{stats.done}</div>
           <div className="text-xs font-bold uppercase">Completed</div>
         </div>
         <div className={cn("p-4 text-center", THEME.punk.card)}>
-          <div className="text-2xl font-black text-pink-600">{formatMoney(stats.totalPaid)}</div>
+          <div className={cn("text-2xl font-black", isDark ? "text-pink-400" : "text-pink-600")}>{formatMoney(stats.totalPaid)}</div>
           <div className="text-xs font-bold uppercase">Paid</div>
         </div>
         <div className={cn("p-4 text-center", THEME.punk.card)}>
-          <div className="text-2xl font-black text-indigo-600">{formatMoney(stats.remaining)}</div>
+          <div className={cn("text-2xl font-black", isDark ? "text-indigo-400" : "text-indigo-600")}>{formatMoney(stats.remaining)}</div>
           <div className="text-xs font-bold uppercase">Estimated Remaining</div>
         </div>
-        <div className={cn("p-4 text-center", THEME.punk.card, "bg-purple-50")}>
-          <div className="text-2xl font-black text-purple-600">{formatMoney(stats.totalCost)}</div>
+        <div className={cn("p-4 text-center", THEME.punk.card, isDark ? "bg-purple-900" : "bg-purple-50")}>
+          <div className={cn("text-2xl font-black", isDark ? "text-purple-300" : "text-purple-600")}>{formatMoney(stats.totalCost)}</div>
           <div className="text-xs font-bold uppercase">Total Estimated</div>
+        </div>
+      </div>
+
+      {/* NEW: Tasks by Source Breakdown */}
+      <div className={cn("p-6 mb-6", THEME.punk.card)}>
+        <h3 className={cn("font-black uppercase mb-4 border-b-4 pb-2", isDark ? "border-slate-600" : "border-black")}>
+          📊 Tasks by Source
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Object.entries(sourceGroups).map(([source, data]) => {
+            const progressPct = data.total > 0 ? Math.round((data.done / data.total) * 100) : 0;
+            return (
+              <button
+                key={source}
+                onClick={() => setSourceFilter(sourceFilter === source ? 'all' : source)}
+                className={cn(
+                  "p-4 text-left transition-all hover:scale-105",
+                  THEME.punk.card,
+                  sourceFilter === source && cn(data.color, "border-4")
+                )}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Icon name={data.icon} size={20} />
+                    <span className="font-bold text-sm">{source}</span>
+                  </div>
+                  <span className={cn("text-2xl font-black", isDark ? "text-slate-300" : "text-slate-700")}>
+                    {data.total}
+                  </span>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className={cn("h-4 relative overflow-hidden mb-2", isDark ? "bg-slate-700" : "bg-gray-200")}>
+                  <div 
+                    className={cn("absolute inset-y-0 left-0 transition-all", isDark ? "bg-green-500" : "bg-green-500")}
+                    style={{ width: `${progressPct}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black">
+                    {progressPct}% Complete
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="text-center">
+                    <div className={cn("font-black", isDark ? "text-green-400" : "text-green-600")}>{data.done}</div>
+                    <div className="text-[10px] opacity-60">Done</div>
+                  </div>
+                  <div className="text-center">
+                    <div className={cn("font-black", isDark ? "text-blue-400" : "text-blue-600")}>{data.inProgress}</div>
+                    <div className="text-[10px] opacity-60">Active</div>
+                  </div>
+                  <div className="text-center">
+                    <div className={cn("font-black", isDark ? "text-red-400" : "text-red-600")}>{data.overdue}</div>
+                    <div className="text-[10px] opacity-60">Overdue</div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -4219,18 +4319,18 @@ export const TaskDashboardView = () => {
       {view === 'overview' ? (
         /* Overview by Category */
         <div className={cn("p-6", THEME.punk.card)}>
-          <h3 className="font-black uppercase mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Progress by Category</h3>
+          <h3 className={cn("font-black uppercase mb-4 border-b-4 pb-2", isDark ? "border-slate-600" : "border-black")}>Progress by Category</h3>
           <div className="space-y-4">
             {Object.entries(categoryGroups).map(([category, data]) => (
               <div key={category} className="flex items-center gap-4">
                 <div className="w-32 font-bold text-sm truncate">{category}</div>
-                <div className="flex-1 h-6 bg-gray-200 relative overflow-hidden">
+                <div className={cn("flex-1 h-6 relative overflow-hidden", isDark ? "bg-slate-700" : "bg-gray-200")}>
                   <div 
-                    className="absolute inset-y-0 left-0 bg-green-500 transition-all"
+                    className={cn("absolute inset-y-0 left-0 transition-all", isDark ? "bg-green-500" : "bg-green-500")}
                     style={{ width: `${(data.done / data.total) * 100}%` }}
                   />
                   <div 
-                    className="absolute inset-y-0 bg-blue-500 transition-all"
+                    className={cn("absolute inset-y-0 transition-all", isDark ? "bg-blue-500" : "bg-blue-500")}
                     style={{ 
                       left: `${(data.done / data.total) * 100}%`,
                       width: `${(data.inProgress / data.total) * 100}%` 
@@ -4245,21 +4345,21 @@ export const TaskDashboardView = () => {
           </div>
           
           {/* Status Distribution */}
-          <h3 className="font-black uppercase mt-8 mb-4 border-b-4 border-black dark:border-slate-600 pb-2">Status Distribution</h3>
+          <h3 className={cn("font-black uppercase mt-8 mb-4 border-b-4 pb-2", isDark ? "border-slate-600" : "border-black")}>Status Distribution</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-3 bg-gray-100 dark:bg-slate-700 border-4 border-black dark:border-slate-600">
+            <div className={cn("p-3 border-4", isDark ? "bg-slate-700 border-slate-600" : "bg-gray-100 border-black")}>
               <div className="text-2xl font-black">{stats.notStarted}</div>
               <div className="text-xs font-bold uppercase">Not Started</div>
             </div>
-            <div className="p-3 bg-blue-100 dark:bg-blue-900 border-4 border-black dark:border-slate-600">
+            <div className={cn("p-3 border-4", isDark ? "bg-blue-900 border-slate-600" : "bg-blue-100 border-black")}>
               <div className="text-2xl font-black">{stats.inProgress}</div>
               <div className="text-xs font-bold uppercase">In Progress</div>
             </div>
-            <div className="p-3 bg-green-100 dark:bg-green-900 border-4 border-black dark:border-slate-600">
+            <div className={cn("p-3 border-4", isDark ? "bg-green-900 border-slate-600" : "bg-green-100 border-black")}>
               <div className="text-2xl font-black">{stats.done}</div>
               <div className="text-xs font-bold uppercase">Done</div>
             </div>
-            <div className="p-3 bg-red-100 dark:bg-red-900 border-4 border-black dark:border-slate-600">
+            <div className={cn("p-3 border-4", isDark ? "bg-red-900 border-slate-600" : "bg-red-100 border-black")}>
               <div className="text-2xl font-black">{stats.delayed}</div>
               <div className="text-xs font-bold uppercase">Delayed</div>
             </div>
@@ -4270,11 +4370,11 @@ export const TaskDashboardView = () => {
         <div className={cn("overflow-x-auto", THEME.punk.card)}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-black text-white">
+              <tr className={cn("text-white", isDark ? "bg-slate-700" : "bg-black")}>
                 <th className="p-3 text-left">Date</th>
                 <th className="p-3 text-left">Task</th>
-                <th className="p-3 text-left">Category</th>
                 <th className="p-3 text-left">Source</th>
+                <th className="p-3 text-left">From</th>
                 <th className="p-3 text-left">Status</th>
                 <th className="p-3 text-right">Est. Cost</th>
               </tr>
@@ -4286,42 +4386,57 @@ export const TaskDashboardView = () => {
                     {view === 'upcoming' ? 'No upcoming tasks in the next 30 days.' : 'No tasks in progress.'}
                   </td>
                 </tr>
-              ) : filteredTasks.map(task => (
-                <tr 
-                  key={task.id} 
-                  className={cn(
-                    "border-b border-gray-200",
-                    isOverdue(task.date) ? "bg-red-50" : isDueSoon(task.date) ? "bg-yellow-50" : ""
-                  )}
-                >
-                  <td className="p-3">
-                    <span className={cn(
-                      "font-bold",
-                      isOverdue(task.date) ? "text-red-600" : isDueSoon(task.date) ? "text-yellow-600" : ""
-                    )}>
-                      {task.date || '-'}
-                    </span>
-                    {isOverdue(task.date) && <span className="ml-2 text-xs bg-red-500 text-white px-1">OVERDUE</span>}
-                    {isDueSoon(task.date) && !isOverdue(task.date) && <span className="ml-2 text-xs bg-yellow-500 text-white px-1">SOON</span>}
-                  </td>
-                  <td className="p-3 font-bold">{task.type}</td>
-                  <td className="p-3"><span className="px-2 py-1 text-xs bg-gray-200">{task.category}</span></td>
-                  <td className="p-3">
-                    <span className={cn(
-                      "px-2 py-1 text-xs font-bold",
-                      task.source === 'Song' ? "bg-blue-100" : task.source === 'Release' ? "bg-green-100" : "bg-orange-100"
-                    )}>
-                      {task.source}: {task.sourceName}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span className={cn("px-2 py-1 text-xs font-bold", getStatusColor(task.status))}>
-                      {task.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">{formatMoney(task.estimatedCost || 0)}</td>
-                </tr>
-              ))}
+              ) : filteredTasks.map(task => {
+                const sourceInfo = sourceGroups[task.source];
+                return (
+                  <tr 
+                    key={task.id} 
+                    className={cn(
+                      "border-b transition-colors",
+                      isDark ? "border-slate-700" : "border-gray-200",
+                      isOverdue(task.date) 
+                        ? (isDark ? "bg-red-900 hover:bg-red-800" : "bg-red-50 hover:bg-red-100") 
+                        : isDueSoon(task.date) 
+                        ? (isDark ? "bg-yellow-900 hover:bg-yellow-800" : "bg-yellow-50 hover:bg-yellow-100")
+                        : (isDark ? "hover:bg-slate-800" : "hover:bg-gray-50")
+                    )}
+                  >
+                    <td className="p-3">
+                      <span className={cn(
+                        "font-bold",
+                        isOverdue(task.date) 
+                          ? (isDark ? "text-red-300" : "text-red-600")
+                          : isDueSoon(task.date) 
+                          ? (isDark ? "text-yellow-300" : "text-yellow-600") 
+                          : ""
+                      )}>
+                        {task.date || 'No date'}
+                      </span>
+                      {isOverdue(task.date) && <span className={cn("px-1 py-0.5 text-[10px] font-bold border ml-1", isDark ? "bg-red-800 text-red-200 border-red-600" : "bg-red-200 text-red-800 border-red-500")}>OVERDUE</span>}
+                    </td>
+                    <td className="p-3 font-bold">{task.type}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-1">
+                        <Icon name={sourceInfo?.icon || 'Circle'} size={14} />
+                        <span className={cn("px-2 py-1 text-[10px] font-bold border", sourceInfo?.color || "bg-gray-100")}>
+                          {task.source}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-3 text-xs max-w-[200px] truncate" title={task.sourceName}>
+                      {task.sourceName}
+                    </td>
+                    <td className="p-3">
+                      <span className={cn("px-2 py-1 text-xs font-bold", getStatusColor(task.status))}>
+                        {task.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right font-bold">
+                      {formatMoney(getEffectiveCost(task))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

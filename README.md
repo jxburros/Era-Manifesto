@@ -150,6 +150,13 @@ firebase deploy
 - **[Schema Contracts](docs/SCHEMA_CONTRACTS.md)** - Locked behavior for statuses, dates, and cost precedence
 - **[Pre-QA Checklist](docs/PRE_QA_CHECKLIST.md)** - Readiness gate and smoke scenarios
 
+### React Router Integration
+
+- **[React Router Integration](docs/REACT_ROUTER_INTEGRATION.md)** - Technical overview of routing system
+- **[React Router Dev Guide](docs/REACT_ROUTER_DEV_GUIDE.md)** - Guide for adding new routes
+- **[React Router Test Plan](docs/REACT_ROUTER_TEST_PLAN.md)** - Comprehensive testing checklist
+- **[React Router Quick Ref](docs/REACT_ROUTER_QUICK_REF.md)** - Quick reference card
+
 ## Quality Checks
 
 ```bash
@@ -161,6 +168,7 @@ npm test
 ## Tech Stack
 
 - **Frontend**: React 18 + Vite
+- **Routing**: React Router v7 with hybrid hash-based fallback
 - **Styling**: TailwindCSS with custom punk/brutalist design system
 - **State Management**: React Context API
 - **Cloud Sync**: Firebase (Firestore + Anonymous Authentication + Storage)

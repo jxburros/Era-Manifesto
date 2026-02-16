@@ -3,7 +3,8 @@ import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate, getEffectiveC
 import { THEME, COLORS, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 import { DetailPane } from './ItemComponents';
-import { exportEraPDF } from './pdfExport';
+// Lazy load PDF export to reduce initial bundle size
+import { exportEraPDF } from './pdfExportLazy';
 
 export const ListView = ({ onEdit }) => {
     const { data, actions } = useStore();
