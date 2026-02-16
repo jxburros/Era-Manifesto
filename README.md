@@ -121,18 +121,33 @@ To access your data across multiple devices:
 
 ## Deployment
 
-You can deploy Era Manifesto to various platforms:
+### 🚀 Ready for Android!
 
-- **Firebase Hosting** (Recommended)
-- **Netlify**
-- **Vercel**
-- **GitHub Pages**
+Era Manifesto is fully configured as a Progressive Web App (PWA) and ready for Android deployment.
 
-The app is fully PWA-ready for Android installation!
+**Quick Start:**
+```bash
+npm run build
+firebase deploy --only hosting
+# Then install on Android: Open URL → Menu → "Install app"
+```
+
+📱 **[Android Quick Start](docs/deployment/ANDROID_QUICK_START.md)** - Deploy in 5 minutes
+📋 **[Android Deployment Checklist](docs/deployment/ANDROID_DEPLOYMENT_CHECKLIST.md)** - Complete guide
+✅ **[Android Deployment Ready](ANDROID_DEPLOYMENT_READY.md)** - What's included
+
+### Web Deployment Platforms
+
+Deploy to any of these platforms:
+
+- **Firebase Hosting** (Recommended) - HTTPS, CDN, easy deployment
+- **Netlify** - Automatic builds and deployments
+- **Vercel** - Fast global CDN with GitHub integration
+- **GitHub Pages** - Free for public repositories
 
 📦 **[Deployment Hub](docs/deployment/)** - Complete deployment documentation
-- **[Web Deployment](docs/deployment/web.md)** - Deploy to Firebase, Netlify, Vercel, GitHub Pages
-- **[Android PWA](docs/deployment/android.md)** - Install as native-like app on Android
+- **[Web Deployment](docs/deployment/web.md)** - Platform-specific guides
+- **[Android PWA](docs/deployment/android.md)** - Detailed PWA features
 
 ### Quick Deploy to Firebase
 
