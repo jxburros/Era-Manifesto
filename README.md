@@ -150,24 +150,65 @@ firebase deploy
 - **[Schema Contracts](docs/SCHEMA_CONTRACTS.md)** - Locked behavior for statuses, dates, and cost precedence
 - **[Pre-QA Checklist](docs/PRE_QA_CHECKLIST.md)** - Readiness gate and smoke scenarios
 
+### React Router Integration
+
+- **[React Router Integration](docs/REACT_ROUTER_INTEGRATION.md)** - Technical overview of routing system
+- **[React Router Dev Guide](docs/REACT_ROUTER_DEV_GUIDE.md)** - Guide for adding new routes
+- **[React Router Test Plan](docs/REACT_ROUTER_TEST_PLAN.md)** - Comprehensive testing checklist
+- **[React Router Quick Ref](docs/REACT_ROUTER_QUICK_REF.md)** - Quick reference card
+
+### Today/Dashboard Enhancements
+
+- **[Today Dashboard README](TODAY_DASHBOARD_README.md)** - Enhanced task views with source filtering
+- **[Enhancement Summary](ENHANCEMENT_SUMMARY.md)** - Technical specifications
+- **[Testing Guide](TESTING_GUIDE.md)** - Task aggregation testing
+- **[Quick Reference](QUICK_REFERENCE.md)** - Developer reference
+
+### Performance Optimization
+
+- **[Performance README](PERFORMANCE_README.md)** - Performance improvements overview
+- **[Performance Optimization](PERFORMANCE_OPTIMIZATION.md)** - Technical details
+- **[Performance Testing](PERFORMANCE_TESTING.md)** - Testing procedures
+- **[Performance Quick Ref](PERFORMANCE_QUICK_REFERENCE.md)** - Developer guide
+
+### End-to-End Testing
+
+- **[E2E Testing Guide](docs/E2E_TESTING.md)** - Complete E2E testing documentation
+- **[E2E Setup](E2E_SETUP.md)** - Installation and configuration
+- **[E2E Test Checklist](E2E_TEST_CHECKLIST.md)** - Test execution checklist
+- **[E2E Quick Ref](docs/E2E_TESTING_QUICK_REF.md)** - Quick reference guide
+
 ## Quality Checks
 
 ```bash
+# Linting
 npm run lint
+
+# Production build
 npm run build
+
+# Unit tests
 npm test
+
+# End-to-end tests
+npm run test:e2e
+npm run test:e2e:ui      # Interactive UI mode
+npm run test:e2e:debug   # Debug mode
 ```
 
 ## Tech Stack
 
-- **Frontend**: React 18 + Vite
+- **Frontend**: React 18 + Vite 5
+- **Routing**: React Router v7 with hybrid hash-based fallback
 - **Styling**: TailwindCSS with custom punk/brutalist design system
 - **State Management**: React Context API
+- **Performance**: React.memo, react-window virtualization, code splitting
 - **Cloud Sync**: Firebase (Firestore + Anonymous Authentication + Storage)
+- **Testing**: Node.js native test runner + Playwright E2E
 - **Icons**: Lucide React
 - **Charts**: Recharts
-- **PDF Export**: jsPDF
-- **Build Tool**: Vite 5
+- **PDF Export**: jsPDF (lazy-loaded)
+- **Build Tool**: Vite 5 with optimized chunking
 
 ## Privacy & Security
 
