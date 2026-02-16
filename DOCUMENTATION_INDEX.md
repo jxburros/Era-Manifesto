@@ -211,7 +211,7 @@ This documentation structure was reorganized in February 2026 to:
 - **Enhance discoverability** - Easy to find information
 
 For details on the reorganization:
-- See [DOCUMENTATION_CLEANUP_START_HERE.md](DOCUMENTATION_CLEANUP_START_HERE.md)
+- See [docs/history/documentation-reorganization/](docs/history/documentation-reorganization/)
 - See [docs/history/](docs/history/) for archived content
 
 ---

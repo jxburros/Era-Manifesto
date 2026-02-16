@@ -55,7 +55,7 @@ See [Android Deployment Guide](./android.md) for complete details.
 
 Before deploying:
 
-- [ ] Firebase configuration set up (see `FIREBASE_SETUP.md` in project root)
+- [ ] Firebase configuration set up (see [Firebase Setup Guide](../getting-started/FIREBASE_SETUP.md))
 - [ ] Environment variables configured
 - [ ] Build succeeds locally: `npm run build`
 - [ ] Preview works: `npm run preview`
@@ -131,17 +131,20 @@ The PWA provides:
 
 ## 📚 Related Documentation
 
-### In Project Root
-- `FIREBASE_SETUP.md` - Firebase configuration guide
-- `MOBILE_GUIDE.md` - Mobile usage instructions
-- `README.md` - Project overview
+### Getting Started
+- [Firebase Setup Guide](../getting-started/FIREBASE_SETUP.md) - Firebase configuration guide
+- [Installation Checklist](../getting-started/INSTALLATION_CHECKLIST.md) - Setup instructions
+
+### Features
+- [Mobile Guide](../features/MOBILE_GUIDE.md) - Mobile usage and PWA
+- Main [README](../../README.md) - Project overview
 
 ### In This Directory
 - `web.md` - Web deployment platforms and instructions
 - `android.md` - Android PWA deployment
 
-### In `/docs/history/phases/`
-- `ANDROID_IMPLEMENTATION_SUMMARY.md` - Historical details of Android implementation
+### Historical
+- [Android Implementation Summary](../history/phases/ANDROID_IMPLEMENTATION_SUMMARY.md) - Historical details
 
 ---
 
