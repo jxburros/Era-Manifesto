@@ -173,7 +173,14 @@ Tests run automatically in GitHub Actions on:
 - Pull requests
 - Manual workflow dispatch
 
-View results in the **Actions** tab.
+**Parallel Test Execution**: E2E tests are split into 5 parallel jobs for faster execution:
+1. Backup & Restore tests
+2. Cost Precedence tests
+3. Song Release Flow tests
+4. Task Override tests
+5. Team Assignment tests
+
+Each job runs independently with a 10-minute timeout. View results in the **Actions** tab.
 
 ## Test Coverage
 
@@ -212,10 +219,12 @@ test.beforeEach(async ({ page }) => {
 
 ## Performance
 
-- Tests run in **parallel** by default
-- Expected total runtime: **2-4 minutes**
-- CI runs with 1 worker (serial) for stability
+- Tests run in **parallel** by default locally
+- Expected total runtime: **2-4 minutes** locally
+- **CI runs 5 parallel jobs** - each test suite runs independently
+- Each CI job has a 10-minute timeout with retries enabled
 - Local development uses all available workers
+- CI parallelization prevents timeout issues while maintaining test isolation
 
 ## Best Practices
 
