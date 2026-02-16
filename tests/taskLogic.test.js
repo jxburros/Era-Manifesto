@@ -60,3 +60,15 @@ test('cost precedence prefers actual > paid > partial > quoted > estimated', () 
   assert.deepEqual(resolveCostPrecedence({ paidCost: 150, actualCost: 180 }), { value: 180, source: 'actual' });
   assert.equal(getEffectiveCost({ estimated_cost: 99 }), 99);
 });
+
+test('cost precedence handles string values and prefers explicit zero values over legacy aliases', () => {
+  assert.deepEqual(
+    resolveCostPrecedence({ amount_paid: '0', paidCost: '75', quotedCost: '40' }),
+    { value: 40, source: 'quoted' }
+  );
+
+  assert.deepEqual(
+    resolveCostPrecedence({ actualCost: '250.50', paidCost: '100' }),
+    { value: 250.5, source: 'actual' }
+  );
+});

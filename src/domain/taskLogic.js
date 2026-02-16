@@ -68,11 +68,20 @@ export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = [], r
 };
 
 export const resolveCostPrecedence = (entity = {}) => {
-  const actual = entity.actualCost || 0;
-  const paid = entity.amount_paid || entity.paidCost || entity.amountPaid || 0;
-  const partial = entity.partially_paid || entity.partiallyPaidAmount || entity.partialPaidCost || 0;
-  const quoted = entity.quoted_cost || entity.quotedCost || 0;
-  const estimated = entity.estimated_cost || entity.estimatedCost || 0;
+  const normalizeCost = (...values) => {
+    for (const value of values) {
+      if (value === null || value === undefined || value === '') continue;
+      const numericValue = typeof value === 'number' ? value : Number(value);
+      if (Number.isFinite(numericValue)) return numericValue;
+    }
+    return 0;
+  };
+
+  const actual = normalizeCost(entity.actualCost, entity.actual_cost);
+  const paid = normalizeCost(entity.amount_paid, entity.paidCost, entity.amountPaid);
+  const partial = normalizeCost(entity.partially_paid, entity.partiallyPaidAmount, entity.partialPaidCost);
+  const quoted = normalizeCost(entity.quoted_cost, entity.quotedCost);
+  const estimated = normalizeCost(entity.estimated_cost, entity.estimatedCost);
 
   if (actual > 0) return { value: actual, source: 'actual' };
   if (paid > 0) return { value: paid, source: 'paid' };
