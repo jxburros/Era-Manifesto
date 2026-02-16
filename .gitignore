@@ -42,3 +42,12 @@ playwright/.cache/
 screenshots/
 
 generate-icons.cjs
+
+# Capacitor
+android/build
+android/app/build
+android/.gradle
+android/.idea
+android/local.properties
+android/app/src/main/assets/public/*
+!android/app/src/main/assets/public/.gitkeep

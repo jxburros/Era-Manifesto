@@ -1,6 +1,45 @@
 # Android Deployment Ready ✅
 
-Era Manifesto is now fully configured and ready for Android deployment as a Progressive Web App (PWA).
+Era Manifesto is now fully configured and ready for Android deployment both as a Progressive Web App (PWA) and as a native Android app via Capacitor.
+
+## Deployment Options
+
+### Option 1: Native Android App (NEW!)
+
+The app is now wrapped with Capacitor, allowing it to run as a native Android app in Android Studio.
+
+**Quick Start:**
+```bash
+npm run android:sync    # Build and sync to Android
+npm run android:open    # Open in Android Studio
+```
+
+See **[Android Studio Guide](docs/development/ANDROID_STUDIO_GUIDE.md)** for complete instructions.
+
+**Benefits:**
+- Native Android app performance
+- Access to native device APIs
+- Can be distributed via Google Play Store
+- Full control over app behavior
+- Better integration with Android ecosystem
+
+### Option 2: Progressive Web App (PWA)
+
+Deploy as a web app that can be installed on Android devices.
+
+**Quick Start:**
+```bash
+npm run build
+firebase deploy --only hosting
+# Users can install via browser menu
+```
+
+**Benefits:**
+- No app store approval needed
+- Instant updates
+- Cross-platform (works on any device with a browser)
+- Smaller installation size
+- No Play Store fees
 
 ## What Was Done
 
@@ -34,11 +73,30 @@ Added to `index.html`:
 - **robots.txt**: Search engine configuration
 - **.well-known/assetlinks.json**: Trusted Web Activity support (template for Play Store)
 
-### 5. Documentation Created ✅
+### 5. Capacitor Native Android Wrapper ✅ (NEW!)
 
-Three comprehensive guides:
+- **Capacitor Installed**: Added `@capacitor/core`, `@capacitor/cli`, and `@capacitor/android`
+- **Android Platform Created**: Full Android Studio project in `android/` directory
+- **Configuration**: Created `capacitor.config.ts` with proper app ID and settings
+- **Build Scripts**: Added npm scripts for Android development:
+  - `android:sync` - Build web app and sync to Android
+  - `android:open` - Open project in Android Studio
+  - `android:run` - One-command build, sync, and open
+- **Git Configuration**: Updated `.gitignore` to exclude Android build artifacts
+- **TypeScript Support**: Added TypeScript as dev dependency for Capacitor config
 
-1. **ANDROID_DEPLOYMENT_CHECKLIST.md**: Complete deployment checklist
+### 6. Documentation Created ✅
+
+Four comprehensive guides:
+
+1. **ANDROID_STUDIO_GUIDE.md**: Complete native Android development guide
+   - Prerequisites and setup
+   - Development workflow
+   - Building and debugging
+   - Release APK generation
+   - Troubleshooting
+
+2. **ANDROID_DEPLOYMENT_CHECKLIST.md**: Complete deployment checklist
    - Pre-deployment requirements
    - Testing procedures
    - Post-deployment monitoring
@@ -53,7 +111,34 @@ Three comprehensive guides:
    - Notes on optional PNG conversion
    - Tool recommendations
 
-## Quick Deployment
+## Quick Start - Native Android App
+
+### Prerequisites
+
+- Node.js and npm installed
+- Android Studio installed
+- JDK 17 or later
+
+### Steps
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Build web app and sync to Android
+npm run android:sync
+
+# 3. Open in Android Studio
+npm run android:open
+
+# 4. In Android Studio, click the Run button (▶)
+```
+
+The app will launch on your connected device or emulator!
+
+See **[Android Studio Guide](docs/development/ANDROID_STUDIO_GUIDE.md)** for detailed instructions.
+
+## Quick Deployment - PWA
 
 ```bash
 # 1. Build
@@ -70,6 +155,12 @@ firebase deploy --only hosting
 
 ### New Files
 ```
+# Native Android
+android/                                      # Complete Android Studio project
+capacitor.config.ts                           # Capacitor configuration
+docs/development/ANDROID_STUDIO_GUIDE.md      # Android Studio guide
+
+# PWA (existing)
 public/icons/icon-512x512-maskable.svg
 public/robots.txt
 public/.well-known/assetlinks.json
@@ -80,10 +171,26 @@ docs/deployment/ANDROID_QUICK_START.md
 
 ### Modified Files
 ```
+package.json          # Added Capacitor dependencies and Android scripts
+.gitignore            # Added Android build artifacts exclusions
+README.md             # Added Android Studio documentation links
+ANDROID_DEPLOYMENT_READY.md  # Updated with native app information
+
+# PWA (existing modifications)
 public/manifest.json
 index.html
 firebase.json
 ```
+
+## Native Android Features
+
+✅ **Fully Native**: Runs as true Android app
+✅ **Android Studio Compatible**: Opens and runs in Android Studio
+✅ **Native Performance**: Hardware acceleration, native navigation
+✅ **Google Play Ready**: Can be submitted to Play Store
+✅ **Device APIs**: Access to camera, filesystem, etc. via Capacitor plugins
+✅ **Offline First**: Full functionality without internet
+✅ **Auto-Update**: Can implement over-the-air updates
 
 ## PWA Features Included
 
