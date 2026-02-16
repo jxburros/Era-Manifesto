@@ -617,36 +617,257 @@ const useRouteSync = (setTab, setSelectedSong, setSelectedRelease, setSelectedEv
 
 const TodayView = ({ onNavigate }) => {
   const { data } = useStore();
+  const navigate = useNavigate();
+  const settings = data.settings || {};
+  const isDark = settings.themeMode === 'dark';
   const today = new Date().toISOString().split('T')[0];
+  const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  
+  // Collect all tasks from all sources
   const tasks = collectAllTasks(data);
-  const overdue = tasks.filter(t => t.date && t.date < today && t.status !== 'Complete' && t.status !== 'Done');
-  const upcoming = tasks.filter(t => t.date && t.date >= today && t.status !== 'Complete' && t.status !== 'Done').slice(0, 5);
-  const recentlyEdited = [...tasks].reverse().slice(0, 5);
+  
+  // Filter state for sources
+  const [sourceFilters, setSourceFilters] = useState({
+    'Song': true,
+    'Version': true,
+    'Release': true,
+    'Video': true,
+    'Event': true,
+    'Global Task': true
+  });
+
+  // Get source icon and color
+  const getSourceBadge = (source) => {
+    const badges = {
+      'Song': { icon: 'Music', label: '🎵 Song', color: 'bg-blue-100 text-blue-800 border-blue-500' },
+      'Version': { icon: 'Music2', label: '🎵 Version', color: 'bg-blue-100 text-blue-800 border-blue-500' },
+      'Release': { icon: 'Disc', label: '💿 Release', color: 'bg-purple-100 text-purple-800 border-purple-500' },
+      'Video': { icon: 'Video', label: '🎬 Video', color: 'bg-pink-100 text-pink-800 border-pink-500' },
+      'Event': { icon: 'Calendar', label: '📅 Event', color: 'bg-green-100 text-green-800 border-green-500' },
+      'Global Task': { icon: 'CheckCircle', label: '✅ Task', color: 'bg-yellow-100 text-yellow-800 border-yellow-500' }
+    };
+    return badges[source] || { icon: 'Circle', label: source, color: 'bg-gray-100 text-gray-800 border-gray-500' };
+  };
+
+  // Navigate to source
+  const navigateToSource = (task) => {
+    if (task.source === 'Song' || task.source === 'Version') {
+      navigate(`/songs/${task.sourceId}`);
+    } else if (task.source === 'Release') {
+      navigate(`/releases/${task.sourceId}`);
+    } else if (task.source === 'Video') {
+      // Videos can be standalone or part of songs - for now go to videos list
+      navigate('/videos');
+    } else if (task.source === 'Event') {
+      navigate(`/events/${task.sourceId}`);
+    } else if (task.source === 'Global Task') {
+      navigate(`/tasks/${task.sourceId}`);
+    }
+  };
+
+  // Filter tasks by selected sources
+  const filteredTasks = tasks.filter(t => sourceFilters[t.source]);
+  
+  // Separate overdue and upcoming tasks
+  const overdue = filteredTasks.filter(t => t.date && t.date < today && t.status !== 'Complete' && t.status !== 'Done');
+  const upcoming = filteredTasks.filter(t => t.date && t.date >= today && t.date <= nextWeek && t.status !== 'Complete' && t.status !== 'Done');
+  const allUpcoming = filteredTasks.filter(t => t.date && t.date >= today && t.status !== 'Complete' && t.status !== 'Done');
+
+  // Count tasks by source
+  const sourceCount = Object.keys(sourceFilters).reduce((acc, source) => {
+    acc[source] = tasks.filter(t => t.source === source && t.status !== 'Complete' && t.status !== 'Done').length;
+    return acc;
+  }, {});
+
+  // Toggle source filter
+  const toggleSourceFilter = (source) => {
+    setSourceFilters(prev => ({ ...prev, [source]: !prev[source] }));
+  };
 
   return (
     <div className="p-6 pb-24 space-y-4">
       <h2 className={cn(THEME.punk.textStyle, "punk-accent-underline text-2xl")}>Today</h2>
-      <div className="grid md:grid-cols-3 gap-4">
-        <button onClick={() => onNavigate('globalTasks')} className={cn('p-4 text-left', THEME.punk.card)}>
-          <div className="text-xs opacity-60">Overdue tasks</div>
+      
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button onClick={() => onNavigate('dashboard')} className={cn('p-4 text-left hover:bg-yellow-50 dark:hover:bg-slate-700', THEME.punk.card)}>
+          <div className="text-xs opacity-60 uppercase font-bold">Total Tasks</div>
+          <div className="text-2xl font-black">{tasks.filter(t => t.status !== 'Complete' && t.status !== 'Done').length}</div>
+        </button>
+        <button onClick={() => onNavigate('dashboard')} className={cn('p-4 text-left hover:bg-red-50 dark:hover:bg-red-900', THEME.punk.card, 'bg-red-50 dark:bg-red-900')}>
+          <div className="text-xs opacity-60 uppercase font-bold">Overdue</div>
           <div className="text-2xl font-black text-red-600">{overdue.length}</div>
         </button>
-        <button onClick={() => onNavigate('calendar')} className={cn('p-4 text-left', THEME.punk.card)}>
-          <div className="text-xs opacity-60">Upcoming this week</div>
-          <div className="text-2xl font-black">{upcoming.length}</div>
+        <button onClick={() => onNavigate('calendar')} className={cn('p-4 text-left hover:bg-yellow-50 dark:hover:bg-yellow-900', THEME.punk.card, 'bg-yellow-50 dark:bg-yellow-900')}>
+          <div className="text-xs opacity-60 uppercase font-bold">Due This Week</div>
+          <div className="text-2xl font-black text-yellow-600">{upcoming.length}</div>
         </button>
-        <button onClick={() => onNavigate('dashboard')} className={cn('p-4 text-left', THEME.punk.card)}>
-          <div className="text-xs opacity-60">Songs planned</div>
+        <button onClick={() => onNavigate('songs')} className={cn('p-4 text-left hover:bg-blue-50 dark:hover:bg-slate-700', THEME.punk.card)}>
+          <div className="text-xs opacity-60 uppercase font-bold">Songs</div>
           <div className="text-2xl font-black">{(data.songs || []).length}</div>
         </button>
       </div>
+
+      {/* Source Filters */}
       <div className={cn('p-4', THEME.punk.card)}>
-        <div className="font-bold uppercase mb-2">Recent activity</div>
-        <div className="space-y-1 text-sm">
-          {recentlyEdited.length === 0 ? <div className="opacity-60">No tasks yet.</div> : recentlyEdited.map(item => (
-            <div key={item.id} className="flex justify-between gap-2"><span>{item.title} <span className="opacity-50">({item.source})</span></span><span className="opacity-60">{item.status}</span></div>
-          ))}
+        <div className="font-bold uppercase mb-3 text-sm">Filter by Source</div>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(sourceFilters).map(([source, enabled]) => {
+            const badge = getSourceBadge(source);
+            const count = sourceCount[source];
+            return (
+              <button
+                key={source}
+                onClick={() => toggleSourceFilter(source)}
+                className={cn(
+                  "px-3 py-2 text-xs font-bold border-2 transition-all flex items-center gap-2",
+                  enabled 
+                    ? cn(badge.color, "opacity-100") 
+                    : "bg-gray-100 dark:bg-slate-700 text-gray-400 border-gray-300 dark:border-slate-600 opacity-50"
+                )}
+              >
+                <Icon name={badge.icon} size={14} />
+                <span>{source}</span>
+                <span className="px-1.5 py-0.5 bg-black dark:bg-slate-900 text-white rounded-full text-[10px] font-black">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
+      </div>
+
+      {/* Overdue Tasks */}
+      {overdue.length > 0 && (
+        <div className={cn('p-4', THEME.punk.card, 'bg-red-50 dark:bg-red-900 border-red-500')}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-bold uppercase text-sm text-red-600 dark:text-red-300 flex items-center gap-2">
+              <Icon name="AlertTriangle" size={18} />
+              Overdue Tasks ({overdue.length})
+            </div>
+          </div>
+          <div className="space-y-2">
+            {overdue.slice(0, 10).map(task => {
+              const badge = getSourceBadge(task.source);
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => navigateToSource(task)}
+                  className={cn(
+                    "flex flex-col sm:flex-row sm:items-center gap-2 p-3 cursor-pointer hover:bg-red-100 dark:hover:bg-red-800 transition-colors border-2",
+                    isDark ? "bg-slate-800 border-red-700" : "bg-white border-red-300"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm truncate">{task.title}</div>
+                    <div className="text-xs opacity-60 truncate">{task.sourceName}</div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn("px-2 py-1 text-[10px] font-bold border", badge.color)}>
+                      {badge.label}
+                    </span>
+                    <span className="px-2 py-1 text-[10px] font-bold bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 border border-red-500">
+                      {task.date}
+                    </span>
+                    <span className="px-2 py-1 text-[10px] font-bold bg-gray-200 dark:bg-slate-700 border border-gray-400 dark:border-slate-600">
+                      {task.status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            {overdue.length > 10 && (
+              <button 
+                onClick={() => onNavigate('dashboard')}
+                className={cn("w-full p-2 text-xs font-bold uppercase", THEME.punk.btn, "bg-red-600 text-white")}
+              >
+                View All {overdue.length} Overdue Tasks
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Tasks (This Week) */}
+      <div className={cn('p-4', THEME.punk.card)}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-bold uppercase text-sm flex items-center gap-2">
+            <Icon name="Calendar" size={18} />
+            Due This Week ({upcoming.length})
+          </div>
+          {allUpcoming.length > upcoming.length && (
+            <button 
+              onClick={() => onNavigate('calendar')}
+              className={cn("px-3 py-1 text-xs", THEME.punk.btn)}
+            >
+              View All
+            </button>
+          )}
+        </div>
+        <div className="space-y-2">
+          {upcoming.length === 0 ? (
+            <div className="text-sm opacity-60 py-4 text-center">No tasks due this week! 🎉</div>
+          ) : (
+            upcoming.slice(0, 10).map(task => {
+              const badge = getSourceBadge(task.source);
+              const isToday = task.date === today;
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => navigateToSource(task)}
+                  className={cn(
+                    "flex flex-col sm:flex-row sm:items-center gap-2 p-3 cursor-pointer transition-colors border-2",
+                    isDark 
+                      ? "bg-slate-800 border-slate-600 hover:bg-slate-700" 
+                      : "bg-white border-gray-300 hover:bg-gray-50",
+                    isToday && "bg-yellow-50 dark:bg-yellow-900 border-yellow-500"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm truncate">{task.title}</div>
+                    <div className="text-xs opacity-60 truncate">{task.sourceName}</div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn("px-2 py-1 text-[10px] font-bold border", badge.color)}>
+                      {badge.label}
+                    </span>
+                    <span className={cn(
+                      "px-2 py-1 text-[10px] font-bold border",
+                      isToday 
+                        ? "bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 border-yellow-500"
+                        : "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-500"
+                    )}>
+                      {isToday ? '📍 TODAY' : task.date}
+                    </span>
+                    <span className="px-2 py-1 text-[10px] font-bold bg-gray-200 dark:bg-slate-700 border border-gray-400 dark:border-slate-600">
+                      {task.status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button onClick={() => onNavigate('songs')} className={cn('p-3 text-center', THEME.punk.btn, 'flex flex-col items-center gap-2')}>
+          <Icon name="Plus" size={20} />
+          <span className="text-xs">New Song</span>
+        </button>
+        <button onClick={() => onNavigate('releases')} className={cn('p-3 text-center', THEME.punk.btn, 'flex flex-col items-center gap-2')}>
+          <Icon name="Plus" size={20} />
+          <span className="text-xs">New Release</span>
+        </button>
+        <button onClick={() => onNavigate('events')} className={cn('p-3 text-center', THEME.punk.btn, 'flex flex-col items-center gap-2')}>
+          <Icon name="Plus" size={20} />
+          <span className="text-xs">New Event</span>
+        </button>
+        <button onClick={() => onNavigate('globalTasks')} className={cn('p-3 text-center', THEME.punk.btn, 'flex flex-col items-center gap-2')}>
+          <Icon name="Plus" size={20} />
+          <span className="text-xs">New Task</span>
+        </button>
       </div>
     </div>
   );
