@@ -1,5 +1,13 @@
 # E2E Test Execution Checklist
 
+> **⚠️ DEPRECATED:** This checklist is for the **archived E2E test infrastructure**. 
+> 
+> E2E tests were replaced with unit tests on **2026-02-16**. See [E2E_DOCS_DEPRECATED.md](E2E_DOCS_DEPRECATED.md) for details.
+>
+> **Current testing:** Run `npm test` for unit tests (completes in <5 seconds).
+
+---
+
 Quick checklist for running E2E tests before releases or major changes.
 
 ## Pre-Test Setup ✓

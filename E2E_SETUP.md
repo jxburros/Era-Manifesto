@@ -1,5 +1,13 @@
 # E2E Test Setup Guide
 
+> **⚠️ DEPRECATED:** This documentation is for the **archived E2E test infrastructure**. 
+> 
+> E2E tests were replaced with unit tests on **2026-02-16**. See [E2E_DOCS_DEPRECATED.md](E2E_DOCS_DEPRECATED.md) for details.
+>
+> **Current testing:** See [tests/README.md](tests/README.md) for unit test documentation.
+
+---
+
 Quick setup guide for Era Manifesto E2E testing with Playwright.
 
 ## Prerequisites

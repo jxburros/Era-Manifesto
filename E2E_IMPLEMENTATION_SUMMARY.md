@@ -1,5 +1,14 @@
 # E2E Testing Implementation Summary
 
+> **⚠️ DEPRECATED:** This document describes the **archived E2E test infrastructure**. 
+> 
+> E2E tests were replaced with unit tests on **2026-02-16**. See:
+> - [E2E_TO_UNIT_MIGRATION.md](E2E_TO_UNIT_MIGRATION.md) - Migration details
+> - [TEST_REPLACEMENT_SUMMARY.md](TEST_REPLACEMENT_SUMMARY.md) - Current approach
+> - [tests/README.md](tests/README.md) - Unit test documentation
+
+---
+
 ## Overview
 
 Comprehensive end-to-end testing infrastructure has been successfully implemented for Era Manifesto using Playwright. This implementation provides automated testing for all critical user workflows, ensuring application reliability and preventing regressions.
