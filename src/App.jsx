@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, useCallback, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { StoreProvider, useStore, collectAllTasks } from './Store';
 import { Sidebar, Editor, Icon } from './Components';
@@ -623,8 +623,8 @@ const TodayView = ({ onNavigate }) => {
   const today = new Date().toISOString().split('T')[0];
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
-  // Collect all tasks from all sources
-  const tasks = collectAllTasks(data);
+  // Collect all tasks from all sources - memoized for performance
+  const tasks = useMemo(() => collectAllTasks(data), [data]);
   
   // Filter state for sources
   const [sourceFilters, setSourceFilters] = useState({

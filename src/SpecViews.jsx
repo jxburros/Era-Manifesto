@@ -4,7 +4,8 @@ import { THEME, formatMoney, cn, getTaskBudget } from './utils';
 import { Icon } from './Components';
 import { DetailPane, EraStageTagsModule, StandardListPage, StandardDetailPage, DisplayInfoSection, AutocompleteInput } from './ItemComponents';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { exportSongPDF, exportVideoPDF, exportReleasePDF } from './pdfExport';
+// Lazy load PDF export to reduce initial bundle size
+import { exportSongPDF, exportVideoPDF, exportReleasePDF } from './pdfExportLazy';
 // Helper to calculate minimum end date (one day after start date)
 const getMinEndDate = (startDate) => {
   if (!startDate) return '';
