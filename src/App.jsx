@@ -1,4 +1,13 @@
-import { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react';
+import { 
+  useState, 
+  useEffect, 
+  useRef, 
+  createContext, 
+  useContext, 
+  useCallback, 
+  useMemo 
+} from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { StoreProvider, useStore, collectAllTasks } from './Store';
 import { Sidebar, Editor, Icon } from './Components';
 import { ListView, CalendarView, GalleryView, FilesView, TeamView, MiscView, ArchiveView, ActiveView, SettingsView } from './Views';
@@ -458,38 +467,415 @@ const FloatingActionButton = () => {
 };
 
 
+// Hook to sync React Router with hash-based routing for backward compatibility
+const useRouteSync = (setTab, setSelectedSong, setSelectedRelease, setSelectedEvent, setSelectedExpense, setSelectedVideo, setSelectedGlobalTask) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
+  const { data } = useStore();
+
+  // Map React Router paths to tab names
+  const pathToTab = {
+    '/': 'today',
+    '/today': 'today',
+    '/dashboard': 'dashboard',
+    '/songs': 'songs',
+    '/releases': 'releases',
+    '/videos': 'videos',
+    '/events': 'events',
+    '/tasks': 'globalTasks',
+    '/expenses': 'expenses',
+    '/calendar': 'calendar',
+    '/timeline': 'timeline',
+    '/financials': 'financials',
+    '/progress': 'progress',
+    '/team': 'team',
+    '/gallery': 'gallery',
+    '/files': 'files',
+    '/settings': 'settings',
+    '/archive': 'archive',
+    '/active': 'active',
+  };
+
+  // Sync React Router to app state on mount and route changes
+  useEffect(() => {
+    const path = location.pathname;
+    
+    // Handle detail routes with IDs
+    if (path.startsWith('/songs/') && params.songId) {
+      const song = (data.songs || []).find(s => s.id === params.songId);
+      if (song) {
+        setSelectedSong(song);
+        setTab('songDetail');
+      }
+    } else if (path.startsWith('/releases/') && params.releaseId) {
+      const release = (data.releases || []).find(r => r.id === params.releaseId);
+      if (release) {
+        setSelectedRelease(release);
+        setTab('releaseDetail');
+      }
+    } else if (path.startsWith('/videos/') && params.videoId) {
+      const standalone = (data.standaloneVideos || []).find(v => v.id === params.videoId);
+      const attached = (data.songs || []).flatMap(song => song.videos || []).find(v => v.id === params.videoId);
+      const video = standalone || attached;
+      if (video) {
+        setSelectedVideo(video);
+        setTab('videoDetail');
+      }
+    } else if (path.startsWith('/events/') && params.eventId) {
+      const event = (data.events || []).find(e => e.id === params.eventId);
+      if (event) {
+        setSelectedEvent(event);
+        setTab('eventDetail');
+      }
+    } else if (path.startsWith('/expenses/') && params.expenseId) {
+      const expense = (data.expenses || []).find(e => e.id === params.expenseId);
+      if (expense) {
+        setSelectedExpense(expense);
+        setTab('expenseDetail');
+      }
+    } else if (path.startsWith('/tasks/') && params.taskId) {
+      const task = (data.globalTasks || []).find(t => t.id === params.taskId);
+      if (task) {
+        setSelectedGlobalTask(task);
+        setTab('globalTaskDetail');
+      }
+    } else {
+      // Handle list routes
+      const tab = pathToTab[path];
+      if (tab) {
+        setTab(tab);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, params, data.songs, data.releases, data.standaloneVideos, data.events, data.expenses, data.globalTasks]);
+
+  // Handle legacy hash-based URLs for backward compatibility
+  useEffect(() => {
+    const handleHashRoute = () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (!hash) return;
+      
+      const urlParams = new URLSearchParams(hash);
+      const tab = urlParams.get('tab');
+      const songId = urlParams.get('songId');
+      const releaseId = urlParams.get('releaseId');
+      const eventId = urlParams.get('eventId');
+      const expenseId = urlParams.get('expenseId');
+      const videoId = urlParams.get('videoId');
+      const taskId = urlParams.get('taskId');
+
+      // Convert hash route to React Router route
+      if (songId) {
+        navigate(`/songs/${songId}`, { replace: true });
+      } else if (releaseId) {
+        navigate(`/releases/${releaseId}`, { replace: true });
+      } else if (videoId) {
+        navigate(`/videos/${videoId}`, { replace: true });
+      } else if (eventId) {
+        navigate(`/events/${eventId}`, { replace: true });
+      } else if (expenseId) {
+        navigate(`/expenses/${expenseId}`, { replace: true });
+      } else if (taskId) {
+        navigate(`/tasks/${taskId}`, { replace: true });
+      } else if (tab) {
+        // Map old tab names to new routes
+        const tabToPath = {
+          'today': '/today',
+          'dashboard': '/dashboard',
+          'songs': '/songs',
+          'releases': '/releases',
+          'videos': '/videos',
+          'events': '/events',
+          'globalTasks': '/tasks',
+          'expenses': '/expenses',
+          'calendar': '/calendar',
+          'timeline': '/timeline',
+          'financials': '/financials',
+          'progress': '/progress',
+          'team': '/team',
+          'gallery': '/gallery',
+          'files': '/files',
+          'settings': '/settings',
+          'archive': '/archive',
+          'active': '/active',
+        };
+        const path = tabToPath[tab];
+        if (path) {
+          navigate(path, { replace: true });
+        }
+      }
+    };
+
+    // Check for hash on initial load
+    if (window.location.hash) {
+      handleHashRoute();
+    }
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashRoute);
+    return () => window.removeEventListener('hashchange', handleHashRoute);
+  }, [navigate]);
+
+  // Return navigation function that uses React Router
+  return useCallback((path, options = {}) => {
+    navigate(path, options);
+  }, [navigate]);
+};
+
 const TodayView = ({ onNavigate }) => {
   const { data } = useStore();
+  const navigate = useNavigate();
+  const settings = data.settings || {};
+  const isDark = settings.themeMode === 'dark';
   const today = new Date().toISOString().split('T')[0];
-  const tasks = collectAllTasks(data);
-  const overdue = tasks.filter(t => t.date && t.date < today && t.status !== 'Complete' && t.status !== 'Done');
-  const upcoming = tasks.filter(t => t.date && t.date >= today && t.status !== 'Complete' && t.status !== 'Done').slice(0, 5);
-  const recentlyEdited = [...tasks].reverse().slice(0, 5);
+  const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  
+  // Collect all tasks from all sources - memoized for performance
+  const tasks = useMemo(() => collectAllTasks(data), [data]);
+  
+  // Filter state for sources
+  const [sourceFilters, setSourceFilters] = useState({
+    'Song': true,
+    'Version': true,
+    'Release': true,
+    'Video': true,
+    'Event': true,
+    'Global Task': true
+  });
+
+  // Get source icon and color
+  const getSourceBadge = (source) => {
+    const badges = {
+      'Song': { icon: 'Music', label: '🎵 Song', color: 'bg-blue-100 text-blue-800 border-blue-500' },
+      'Version': { icon: 'Music2', label: '🎵 Version', color: 'bg-blue-100 text-blue-800 border-blue-500' },
+      'Release': { icon: 'Disc', label: '💿 Release', color: 'bg-purple-100 text-purple-800 border-purple-500' },
+      'Video': { icon: 'Video', label: '🎬 Video', color: 'bg-pink-100 text-pink-800 border-pink-500' },
+      'Event': { icon: 'Calendar', label: '📅 Event', color: 'bg-green-100 text-green-800 border-green-500' },
+      'Global Task': { icon: 'CheckCircle', label: '✅ Task', color: 'bg-yellow-100 text-yellow-800 border-yellow-500' }
+    };
+    return badges[source] || { icon: 'Circle', label: source, color: 'bg-gray-100 text-gray-800 border-gray-500' };
+  };
+
+  // Navigate to source
+  const navigateToSource = (task) => {
+    if (task.source === 'Song' || task.source === 'Version') {
+      navigate(`/songs/${task.sourceId}`);
+    } else if (task.source === 'Release') {
+      navigate(`/releases/${task.sourceId}`);
+    } else if (task.source === 'Video') {
+      // Videos can be standalone or part of songs - for now go to videos list
+      navigate('/videos');
+    } else if (task.source === 'Event') {
+      navigate(`/events/${task.sourceId}`);
+    } else if (task.source === 'Global Task') {
+      navigate(`/tasks/${task.sourceId}`);
+    }
+  };
+
+  // Filter tasks by selected sources
+  const filteredTasks = tasks.filter(t => sourceFilters[t.source]);
+  
+  // Separate overdue and upcoming tasks
+  const overdue = filteredTasks.filter(t => t.date && t.date < today && t.status !== 'Complete' && t.status !== 'Done');
+  const upcoming = filteredTasks.filter(t => t.date && t.date >= today && t.date <= nextWeek && t.status !== 'Complete' && t.status !== 'Done');
+  const allUpcoming = filteredTasks.filter(t => t.date && t.date >= today && t.status !== 'Complete' && t.status !== 'Done');
+
+  // Count tasks by source
+  const sourceCount = Object.keys(sourceFilters).reduce((acc, source) => {
+    acc[source] = tasks.filter(t => t.source === source && t.status !== 'Complete' && t.status !== 'Done').length;
+    return acc;
+  }, {});
+
+  // Toggle source filter
+  const toggleSourceFilter = (source) => {
+    setSourceFilters(prev => ({ ...prev, [source]: !prev[source] }));
+  };
 
   return (
     <div className="p-6 pb-24 space-y-4">
       <h2 className={cn(THEME.punk.textStyle, "punk-accent-underline text-2xl")}>Today</h2>
-      <div className="grid md:grid-cols-3 gap-4">
-        <button onClick={() => onNavigate('globalTasks')} className={cn('p-4 text-left', THEME.punk.card)}>
-          <div className="text-xs opacity-60">Overdue tasks</div>
+      
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button onClick={() => onNavigate('dashboard')} className={cn('p-4 text-left hover:bg-yellow-50 dark:hover:bg-slate-700', THEME.punk.card)}>
+          <div className="text-xs opacity-60 uppercase font-bold">Total Tasks</div>
+          <div className="text-2xl font-black">{tasks.filter(t => t.status !== 'Complete' && t.status !== 'Done').length}</div>
+        </button>
+        <button onClick={() => onNavigate('dashboard')} className={cn('p-4 text-left hover:bg-red-50 dark:hover:bg-red-900', THEME.punk.card, 'bg-red-50 dark:bg-red-900')}>
+          <div className="text-xs opacity-60 uppercase font-bold">Overdue</div>
           <div className="text-2xl font-black text-red-600">{overdue.length}</div>
         </button>
-        <button onClick={() => onNavigate('calendar')} className={cn('p-4 text-left', THEME.punk.card)}>
-          <div className="text-xs opacity-60">Upcoming this week</div>
-          <div className="text-2xl font-black">{upcoming.length}</div>
+        <button onClick={() => onNavigate('calendar')} className={cn('p-4 text-left hover:bg-yellow-50 dark:hover:bg-yellow-900', THEME.punk.card, 'bg-yellow-50 dark:bg-yellow-900')}>
+          <div className="text-xs opacity-60 uppercase font-bold">Due This Week</div>
+          <div className="text-2xl font-black text-yellow-600">{upcoming.length}</div>
         </button>
-        <button onClick={() => onNavigate('dashboard')} className={cn('p-4 text-left', THEME.punk.card)}>
-          <div className="text-xs opacity-60">Songs planned</div>
+        <button onClick={() => onNavigate('songs')} className={cn('p-4 text-left hover:bg-blue-50 dark:hover:bg-slate-700', THEME.punk.card)}>
+          <div className="text-xs opacity-60 uppercase font-bold">Songs</div>
           <div className="text-2xl font-black">{(data.songs || []).length}</div>
         </button>
       </div>
+
+      {/* Source Filters */}
       <div className={cn('p-4', THEME.punk.card)}>
-        <div className="font-bold uppercase mb-2">Recent activity</div>
-        <div className="space-y-1 text-sm">
-          {recentlyEdited.length === 0 ? <div className="opacity-60">No tasks yet.</div> : recentlyEdited.map(item => (
-            <div key={item.id} className="flex justify-between gap-2"><span>{item.title} <span className="opacity-50">({item.source})</span></span><span className="opacity-60">{item.status}</span></div>
-          ))}
+        <div className="font-bold uppercase mb-3 text-sm">Filter by Source</div>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(sourceFilters).map(([source, enabled]) => {
+            const badge = getSourceBadge(source);
+            const count = sourceCount[source];
+            return (
+              <button
+                key={source}
+                onClick={() => toggleSourceFilter(source)}
+                className={cn(
+                  "px-3 py-2 text-xs font-bold border-2 transition-all flex items-center gap-2",
+                  enabled 
+                    ? cn(badge.color, "opacity-100") 
+                    : "bg-gray-100 dark:bg-slate-700 text-gray-400 border-gray-300 dark:border-slate-600 opacity-50"
+                )}
+              >
+                <Icon name={badge.icon} size={14} />
+                <span>{source}</span>
+                <span className="px-1.5 py-0.5 bg-black dark:bg-slate-900 text-white rounded-full text-[10px] font-black">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
+      </div>
+
+      {/* Overdue Tasks */}
+      {overdue.length > 0 && (
+        <div className={cn('p-4', THEME.punk.card, 'bg-red-50 dark:bg-red-900 border-red-500')}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-bold uppercase text-sm text-red-600 dark:text-red-300 flex items-center gap-2">
+              <Icon name="AlertTriangle" size={18} />
+              Overdue Tasks ({overdue.length})
+            </div>
+          </div>
+          <div className="space-y-2">
+            {overdue.slice(0, 10).map(task => {
+              const badge = getSourceBadge(task.source);
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => navigateToSource(task)}
+                  className={cn(
+                    "flex flex-col sm:flex-row sm:items-center gap-2 p-3 cursor-pointer hover:bg-red-100 dark:hover:bg-red-800 transition-colors border-2",
+                    isDark ? "bg-slate-800 border-red-700" : "bg-white border-red-300"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm truncate">{task.title}</div>
+                    <div className="text-xs opacity-60 truncate">{task.sourceName}</div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn("px-2 py-1 text-[10px] font-bold border", badge.color)}>
+                      {badge.label}
+                    </span>
+                    <span className="px-2 py-1 text-[10px] font-bold bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 border border-red-500">
+                      {task.date}
+                    </span>
+                    <span className="px-2 py-1 text-[10px] font-bold bg-gray-200 dark:bg-slate-700 border border-gray-400 dark:border-slate-600">
+                      {task.status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            {overdue.length > 10 && (
+              <button 
+                onClick={() => onNavigate('dashboard')}
+                className={cn("w-full p-2 text-xs font-bold uppercase", THEME.punk.btn, "bg-red-600 text-white")}
+              >
+                View All {overdue.length} Overdue Tasks
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Tasks (This Week) */}
+      <div className={cn('p-4', THEME.punk.card)}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-bold uppercase text-sm flex items-center gap-2">
+            <Icon name="Calendar" size={18} />
+            Due This Week ({upcoming.length})
+          </div>
+          {allUpcoming.length > upcoming.length && (
+            <button 
+              onClick={() => onNavigate('calendar')}
+              className={cn("px-3 py-1 text-xs", THEME.punk.btn)}
+            >
+              View All
+            </button>
+          )}
+        </div>
+        <div className="space-y-2">
+          {upcoming.length === 0 ? (
+            <div className="text-sm opacity-60 py-4 text-center">No tasks due this week! 🎉</div>
+          ) : (
+            upcoming.slice(0, 10).map(task => {
+              const badge = getSourceBadge(task.source);
+              const isToday = task.date === today;
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => navigateToSource(task)}
+                  className={cn(
+                    "flex flex-col sm:flex-row sm:items-center gap-2 p-3 cursor-pointer transition-colors border-2",
+                    isDark 
+                      ? "bg-slate-800 border-slate-600 hover:bg-slate-700" 
+                      : "bg-white border-gray-300 hover:bg-gray-50",
+                    isToday && "bg-yellow-50 dark:bg-yellow-900 border-yellow-500"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm truncate">{task.title}</div>
+                    <div className="text-xs opacity-60 truncate">{task.sourceName}</div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn("px-2 py-1 text-[10px] font-bold border", badge.color)}>
+                      {badge.label}
+                    </span>
+                    <span className={cn(
+                      "px-2 py-1 text-[10px] font-bold border",
+                      isToday 
+                        ? "bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 border-yellow-500"
+                        : "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-500"
+                    )}>
+                      {isToday ? '📍 TODAY' : task.date}
+                    </span>
+                    <span className="px-2 py-1 text-[10px] font-bold bg-gray-200 dark:bg-slate-700 border border-gray-400 dark:border-slate-600">
+                      {task.status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button onClick={() => onNavigate('songs')} className={cn('p-3 text-center', THEME.punk.btn, 'flex flex-col items-center gap-2')}>
+          <Icon name="Plus" size={20} />
+          <span className="text-xs">New Song</span>
+        </button>
+        <button onClick={() => onNavigate('releases')} className={cn('p-3 text-center', THEME.punk.btn, 'flex flex-col items-center gap-2')}>
+          <Icon name="Plus" size={20} />
+          <span className="text-xs">New Release</span>
+        </button>
+        <button onClick={() => onNavigate('events')} className={cn('p-3 text-center', THEME.punk.btn, 'flex flex-col items-center gap-2')}>
+          <Icon name="Plus" size={20} />
+          <span className="text-xs">New Event</span>
+        </button>
+        <button onClick={() => onNavigate('globalTasks')} className={cn('p-3 text-center', THEME.punk.btn, 'flex flex-col items-center gap-2')}>
+          <Icon name="Plus" size={20} />
+          <span className="text-xs">New Task</span>
+        </button>
       </div>
     </div>
   );
@@ -514,6 +900,17 @@ function AppInner() {
   const focusMode = settings.focusMode || false;
   const accent = COLOR_VALUES[settings.themeColor || 'pink'] || COLOR_VALUES.pink;
 
+  // React Router navigation hook (replaces hash-based routing)
+  const routerNavigate = useRouteSync(
+    setTab,
+    setSelectedSong,
+    setSelectedRelease,
+    setSelectedEvent,
+    setSelectedExpense,
+    setSelectedVideo,
+    setSelectedGlobalTask
+  );
+
   // Feature 4: Era Mode state
   const eraModeActive = settings.eraModeActive && settings.eraModeEraId;
   const eraModeEra = eraModeActive ? (data.eras || []).find(e => e.id === settings.eraModeEraId) : null;
@@ -521,60 +918,12 @@ function AppInner() {
   const isManagerMode = settings.appMode === 'manager';
 
   const onboardingSteps = [
-    { key: 'settings', label: 'Set project name and artist info', done: Boolean(settings.artistName && settings.albumTitle), action: () => setTab('settings') },
-    ...(isManagerMode ? [{ key: 'artist', label: 'Add your first artist in Manager Mode', done: (data.artists || []).length > 0, action: () => setTab('settings') }] : []),
-    { key: 'song', label: 'Create your first song', done: (data.songs || []).length > 0, action: () => setTab('songs') },
-    { key: 'release', label: 'Create your first release', done: (data.releases || []).length > 0, action: () => setTab('releases') },
+    { key: 'settings', label: 'Set project name and artist info', done: Boolean(settings.artistName && settings.albumTitle), action: () => routerNavigate('/settings') },
+    ...(isManagerMode ? [{ key: 'artist', label: 'Add your first artist in Manager Mode', done: (data.artists || []).length > 0, action: () => routerNavigate('/settings') }] : []),
+    { key: 'song', label: 'Create your first song', done: (data.songs || []).length > 0, action: () => routerNavigate('/songs') },
+    { key: 'release', label: 'Create your first release', done: (data.releases || []).length > 0, action: () => routerNavigate('/releases') },
   ];
   const onboardingComplete = onboardingSteps.every(step => step.done);
-
-  // Route-backed navigation (hash-based) for deep-linking and refresh persistence
-  useEffect(() => {
-    const applyHashRoute = () => {
-      const hash = window.location.hash.replace(/^#/, '');
-      if (!hash) return;
-      const params = new URLSearchParams(hash);
-      const nextTab = params.get('tab');
-      if (nextTab) setTab(nextTab);
-
-      const songId = params.get('songId');
-      const releaseId = params.get('releaseId');
-      const eventId = params.get('eventId');
-      const expenseId = params.get('expenseId');
-      const videoId = params.get('videoId');
-      const taskId = params.get('taskId');
-
-      if (songId) setSelectedSong((data.songs || []).find(s => s.id === songId) || null);
-      if (releaseId) setSelectedRelease((data.releases || []).find(r => r.id === releaseId) || null);
-      if (eventId) setSelectedEvent((data.events || []).find(e => e.id === eventId) || null);
-      if (expenseId) setSelectedExpense((data.expenses || []).find(e => e.id === expenseId) || null);
-      if (videoId) {
-        const standalone = (data.standaloneVideos || []).find(v => v.id === videoId);
-        const attached = (data.songs || []).flatMap(song => song.videos || []).find(v => v.id === videoId);
-        setSelectedVideo(standalone || attached || null);
-      }
-      if (taskId) setSelectedGlobalTask((data.globalTasks || []).find(t => t.id === taskId) || null);
-    };
-
-    applyHashRoute();
-    window.addEventListener('hashchange', applyHashRoute);
-    return () => window.removeEventListener('hashchange', applyHashRoute);
-  }, [data.songs, data.releases, data.events, data.expenses, data.standaloneVideos, data.globalTasks]);
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    params.set('tab', tab);
-    if (selectedSong?.id) params.set('songId', selectedSong.id);
-    if (selectedRelease?.id) params.set('releaseId', selectedRelease.id);
-    if (selectedEvent?.id) params.set('eventId', selectedEvent.id);
-    if (selectedExpense?.id) params.set('expenseId', selectedExpense.id);
-    if (selectedVideo?.id) params.set('videoId', selectedVideo.id);
-    if (selectedGlobalTask?.id) params.set('taskId', selectedGlobalTask.id);
-    const nextHash = `#${params.toString()}`;
-    if (window.location.hash !== nextHash) {
-      window.history.replaceState(null, '', nextHash);
-    }
-  }, [tab, selectedSong, selectedRelease, selectedEvent, selectedExpense, selectedVideo, selectedGlobalTask]);
 
   // Phase 10: Apply dark class to html element for Tailwind dark mode
   useEffect(() => {
@@ -611,44 +960,50 @@ function AppInner() {
   const handleSelectSong = (song) => {
     setSelectedSong(song);
     setTab('songDetail');
+    routerNavigate(`/songs/${song.id}`);
   };
 
   // Handle release selection
   const handleSelectRelease = (release) => {
     setSelectedRelease(release);
     setTab('releaseDetail');
+    routerNavigate(`/releases/${release.id}`);
   };
 
   // Handle event selection
   const handleSelectEvent = (event) => {
     setSelectedEvent(event);
     setTab('eventDetail');
+    routerNavigate(`/events/${event.id}`);
   };
 
   // Handle expense selection
   const handleSelectExpense = (expense) => {
     setSelectedExpense(expense);
     setTab('expenseDetail');
+    routerNavigate(`/expenses/${expense.id}`);
   };
 
   // Handle video selection - Following unified Item/Page architecture
   const handleSelectVideo = (video) => {
     setSelectedVideo(video);
     setTab('videoDetail');
+    routerNavigate(`/videos/${video.id}`);
   };
 
   // Handle global task selection - Following unified Item/Page architecture
   const handleSelectGlobalTask = (task) => {
     setSelectedGlobalTask(task);
     setTab('globalTaskDetail');
+    routerNavigate(`/tasks/${task.id}`);
   };
 
   const commandItems = [
-    { label: 'Go to Today', action: () => setTab('today') },
-    { label: 'Go to Songs', action: () => setTab('songs') },
-    { label: 'Go to Releases', action: () => setTab('releases') },
-    { label: 'Go to Events', action: () => setTab('events') },
-    { label: 'Go to Timeline', action: () => setTab('timeline') },
+    { label: 'Go to Today', action: () => routerNavigate('/today') },
+    { label: 'Go to Songs', action: () => routerNavigate('/songs') },
+    { label: 'Go to Releases', action: () => routerNavigate('/releases') },
+    { label: 'Go to Events', action: () => routerNavigate('/events') },
+    { label: 'Go to Timeline', action: () => routerNavigate('/timeline') },
     { label: 'Create Song', action: async () => { const song = await actions.addSong({ title: 'New Song' }); handleSelectSong(song); } },
     { label: 'Create Release', action: async () => { const release = await actions.addRelease({ name: 'New Release', type: 'Single' }); handleSelectRelease(release); } },
     { label: 'Create Task', action: async () => { const task = await actions.addGlobalTask({ taskName: 'New Task', status: 'Not Started', category: 'Other' }); handleSelectGlobalTask(task); } },
@@ -674,7 +1029,39 @@ function AppInner() {
           isOpen={sidebarOpen}
           setIsOpen={setSidebarOpen}
           activeTab={tab}
-          setActiveTab={(t) => { setTab(t); setSelectedSong(null); setSelectedRelease(null); setSelectedEvent(null); setSelectedExpense(null); setSelectedVideo(null); setSelectedGlobalTask(null); }}
+          setActiveTab={(t) => { 
+            setTab(t); 
+            setSelectedSong(null); 
+            setSelectedRelease(null); 
+            setSelectedEvent(null); 
+            setSelectedExpense(null); 
+            setSelectedVideo(null); 
+            setSelectedGlobalTask(null);
+            
+            // Map tab names to routes
+            const tabToPath = {
+              'today': '/today',
+              'dashboard': '/dashboard',
+              'songs': '/songs',
+              'releases': '/releases',
+              'videos': '/videos',
+              'events': '/events',
+              'globalTasks': '/tasks',
+              'expenses': '/expenses',
+              'calendar': '/calendar',
+              'timeline': '/timeline',
+              'financials': '/financials',
+              'progress': '/progress',
+              'team': '/team',
+              'gallery': '/gallery',
+              'files': '/files',
+              'settings': '/settings',
+              'archive': '/archive',
+              'active': '/active',
+            };
+            const path = tabToPath[t];
+            if (path) routerNavigate(path);
+          }}
         />
       )}
 
@@ -818,31 +1205,38 @@ function AppInner() {
           )}
           {/* Songs - Following unified Item/Page architecture */}
           {tab === 'songs' && <SongListView onSelectSong={handleSelectSong} onSongCreated={(song) => showCreatedToast('song', song)} />}
-          {tab === 'songDetail' && selectedSong && <SongDetailView song={selectedSong} onBack={() => { setSelectedSong(null); setTab('songs'); }} />}
+          {tab === 'songDetail' && selectedSong && <SongDetailView song={selectedSong} onBack={() => { setSelectedSong(null); setTab('songs'); routerNavigate('/songs'); }} />}
           
           {/* Videos - Following unified Item/Page architecture */}
           {tab === 'videos' && <VideosListView onSelectVideo={handleSelectVideo} />}
-          {tab === 'videoDetail' && selectedVideo && <VideoDetailView video={selectedVideo} onBack={() => { setSelectedVideo(null); setTab('videos'); }} />}
+          {tab === 'videoDetail' && selectedVideo && <VideoDetailView video={selectedVideo} onBack={() => { setSelectedVideo(null); setTab('videos'); routerNavigate('/videos'); }} />}
           
           {/* Global Tasks - Following unified Item/Page architecture */}
           {tab === 'globalTasks' && <GlobalTasksListView onSelectTask={handleSelectGlobalTask} onTaskCreated={(task) => showCreatedToast('task', task)} />}
-          {tab === 'globalTaskDetail' && selectedGlobalTask && <GlobalTaskDetailView task={selectedGlobalTask} onBack={() => { setSelectedGlobalTask(null); setTab('globalTasks'); }} />}
+          {tab === 'globalTaskDetail' && selectedGlobalTask && <GlobalTaskDetailView task={selectedGlobalTask} onBack={() => { setSelectedGlobalTask(null); setTab('globalTasks'); routerNavigate('/tasks'); }} />}
           
           {/* Releases - Following unified Item/Page architecture */}
           {tab === 'releases' && <ReleasesListView onSelectRelease={handleSelectRelease} onReleaseCreated={(release) => showCreatedToast('release', release)} />}
-          {tab === 'releaseDetail' && selectedRelease && <ReleaseDetailView release={selectedRelease} onBack={() => { setSelectedRelease(null); setTab('releases'); }} onSelectSong={handleSelectSong} />}
+          {tab === 'releaseDetail' && selectedRelease && <ReleaseDetailView release={selectedRelease} onBack={() => { setSelectedRelease(null); setTab('releases'); routerNavigate('/releases'); }} onSelectSong={handleSelectSong} />}
           
           {tab === 'timeline' && <CombinedTimelineView />}
           
           {/* Events - Following unified Item/Page architecture */}
           {tab === 'events' && <EventsListView onSelectEvent={handleSelectEvent} onEventCreated={(event) => showCreatedToast('event', event)} />}
-          {tab === 'eventDetail' && selectedEvent && <EventDetailView event={selectedEvent} onBack={() => { setSelectedEvent(null); setTab('events'); }} />}
+          {tab === 'eventDetail' && selectedEvent && <EventDetailView event={selectedEvent} onBack={() => { setSelectedEvent(null); setTab('events'); routerNavigate('/events'); }} />}
           
           {/* Expenses - Following unified Item/Page architecture */}
           {tab === 'expenses' && <ExpensesListView onSelectExpense={handleSelectExpense} onExpenseCreated={(expense) => showCreatedToast('expense', expense)} />}
-          {tab === 'expenseDetail' && selectedExpense && <ExpenseDetailView expense={selectedExpense} onBack={() => { setSelectedExpense(null); setTab('expenses'); }} />}
+          {tab === 'expenseDetail' && selectedExpense && <ExpenseDetailView expense={selectedExpense} onBack={() => { setSelectedExpense(null); setTab('expenses'); routerNavigate('/expenses'); }} />}
           
-          {tab === 'today' && <TodayView onNavigate={setTab} />}
+          {tab === 'today' && <TodayView onNavigate={(path) => {
+            const tabToPath = {
+              'globalTasks': '/tasks',
+              'calendar': '/calendar',
+              'dashboard': '/dashboard',
+            };
+            routerNavigate(tabToPath[path] || `/${path}`);
+          }} />}
 
           {/* Task Dashboard - replaces confusing Plan view */}
           {tab === 'dashboard' && <TaskDashboardView />}
@@ -931,7 +1325,36 @@ export default function App() {
   return (
     <StoreProvider>
       <ToastProvider>
-        <AppInner />
+        <BrowserRouter>
+          <Routes>
+            {/* All routes point to AppInner - routing is managed internally */}
+            <Route path="/" element={<AppInner />} />
+            <Route path="/today" element={<AppInner />} />
+            <Route path="/dashboard" element={<AppInner />} />
+            <Route path="/songs" element={<AppInner />} />
+            <Route path="/songs/:songId" element={<AppInner />} />
+            <Route path="/releases" element={<AppInner />} />
+            <Route path="/releases/:releaseId" element={<AppInner />} />
+            <Route path="/videos" element={<AppInner />} />
+            <Route path="/videos/:videoId" element={<AppInner />} />
+            <Route path="/events" element={<AppInner />} />
+            <Route path="/events/:eventId" element={<AppInner />} />
+            <Route path="/tasks" element={<AppInner />} />
+            <Route path="/tasks/:taskId" element={<AppInner />} />
+            <Route path="/expenses" element={<AppInner />} />
+            <Route path="/expenses/:expenseId" element={<AppInner />} />
+            <Route path="/calendar" element={<AppInner />} />
+            <Route path="/timeline" element={<AppInner />} />
+            <Route path="/financials" element={<AppInner />} />
+            <Route path="/progress" element={<AppInner />} />
+            <Route path="/team" element={<AppInner />} />
+            <Route path="/gallery" element={<AppInner />} />
+            <Route path="/files" element={<AppInner />} />
+            <Route path="/settings" element={<AppInner />} />
+            <Route path="/archive" element={<AppInner />} />
+            <Route path="/active" element={<AppInner />} />
+          </Routes>
+        </BrowserRouter>
       </ToastProvider>
     </StoreProvider>
   );

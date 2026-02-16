@@ -20,6 +20,16 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
+/* React Router Link styling - no underline, inherit colors */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
 .punk-shell {
   background-image:
     radial-gradient(circle at 24px 24px, rgba(15, 23, 42, 0.08) 2px, transparent 2px),

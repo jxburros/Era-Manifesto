@@ -1,4 +1,5 @@
 import { useState, useEffect, memo } from 'react';
+import { Link } from 'react-router-dom';
 import { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search } from 'lucide-react';
 import { useStore, STATUS_OPTIONS, getEffectiveCost } from './Store';
 import { THEME, COLORS, formatMoney, STAGES, cn } from './utils';
@@ -19,6 +20,28 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
   const [viewsExpanded, setViewsExpanded] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(true);
   const [uploadsExpanded, setUploadsExpanded] = useState(false);
+
+  // Map tab IDs to React Router paths
+  const tabToPath = {
+    'today': '/today',
+    'dashboard': '/dashboard',
+    'songs': '/songs',
+    'releases': '/releases',
+    'videos': '/videos',
+    'events': '/events',
+    'globalTasks': '/tasks',
+    'expenses': '/expenses',
+    'calendar': '/calendar',
+    'timeline': '/timeline',
+    'financials': '/financials',
+    'progress': '/progress',
+    'team': '/team',
+    'gallery': '/gallery',
+    'files': '/files',
+    'settings': '/settings',
+    'archive': '/archive',
+    'active': '/active',
+  };
 
   // Top buttons (side-by-side)
   const topButtons = [
@@ -67,10 +90,11 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
   const isUploadsActive = uploadsMenu.some(v => v.id === activeTab);
 
   const MenuButton = ({ item, compact = false }) => (
-    <button 
+    <Link
+      to={tabToPath[item.id] || `/${item.id}`}
       onClick={() => { setActiveTab(item.id); setIsOpen(false); }}
       className={cn(
-        "w-full flex items-center gap-3 px-4 text-left font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5",
+        "w-full flex items-center gap-3 px-4 text-left font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5 no-underline",
         compact ? "py-2 text-sm" : "py-2",
         isDark ? "border-slate-600" : "border-black",
         activeTab === item.id
@@ -79,7 +103,7 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
       )}
     >
       <Icon name={item.icon} size={compact ? 14 : 18} /> {item.label}
-    </button>
+    </Link>
   );
 
   return (
@@ -94,7 +118,9 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
         isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-black"
       )}>
         <div>
-          <h1 onClick={() => { setActiveTab('dashboard'); setIsOpen(false); }} className={cn("text-xl flex items-center gap-2 punk-accent-underline font-rubik-distressed cursor-pointer", colorClass)}><Icon name="Music" /> Era Manifesto</h1>
+          <Link to="/dashboard" className="no-underline">
+            <h1 className={cn("text-xl flex items-center gap-2 punk-accent-underline font-rubik-distressed cursor-pointer", colorClass)}><Icon name="Music" /> Era Manifesto</h1>
+          </Link>
           <div className={cn("text-xs font-bold mt-1", isDark ? "text-slate-400" : "opacity-60")}>{settings.artistName || 'Artist'}</div>
           <div className={cn("text-[10px] mt-1", isDark ? "text-slate-500" : "opacity-50")}>⌘/Ctrl+K for quick actions</div>
         </div>
@@ -105,11 +131,12 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
       <div className="p-4 pb-2">
         <div className="grid grid-cols-3 gap-2">
           {topButtons.map(item => (
-            <button 
+            <Link
               key={item.id}
+              to={tabToPath[item.id] || `/${item.id}`}
               onClick={() => { setActiveTab(item.id); setIsOpen(false); }}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 p-3 font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5 text-xs",
+                "flex flex-col items-center justify-center gap-1 p-3 font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5 text-xs no-underline",
                 isDark ? "border-slate-600" : "border-black",
                 activeTab === item.id
                   ? "bg-[var(--accent)] text-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.35)]"
@@ -118,7 +145,7 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
             >
               <Icon name={item.icon} size={20} />
               {item.label}
-            </button>
+            </Link>
           ))}
         </div>
       </div>
@@ -228,11 +255,12 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
       <div className="p-4 pt-2">
         <div className="grid grid-cols-3 gap-2">
           {footerMenu.map(item => (
-            <button 
+            <Link
               key={item.id}
+              to={tabToPath[item.id] || `/${item.id}`}
               onClick={() => { setActiveTab(item.id); setIsOpen(false); }}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 p-3 font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5 text-xs",
+                "flex flex-col items-center justify-center gap-1 p-3 font-bold uppercase tracking-wide border-[3px] transition-transform hover:-translate-y-0.5 text-xs no-underline",
                 isDark ? "border-slate-600" : "border-black",
                 activeTab === item.id
                   ? "bg-[var(--accent)] text-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.35)]"
@@ -241,7 +269,7 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
             >
               <Icon name={item.icon} size={20} />
               {item.label}
-            </button>
+            </Link>
           ))}
         </div>
       </div>
