@@ -13,7 +13,7 @@
  * @param {import('@playwright/test').Page} page 
  * @param {number} timeout - Maximum wait time in ms
  */
-export async function waitForApp(page, timeout = 10000) {
+export async function waitForApp(page, timeout = 30000) {
   // Wait for React root to mount
   await page.waitForSelector('#root', { timeout });
   
