@@ -1,5 +1,7 @@
 # Mobile Quick Start Guide 📱
 
+Era Manifesto is now a full Progressive Web App (PWA) with offline support and native-like features!
+
 ## Access Era Manifesto on Your Android Phone
 
 ### Method 1: Open in Browser
@@ -7,13 +9,22 @@
 2. Navigate to your deployed Era Manifesto URL
 3. The app is fully responsive and works great on mobile!
 
-### Method 2: Add to Home Screen (Recommended)
+### Method 2: Install as PWA (Recommended) ⭐
 1. Open the Era Manifesto URL in Chrome on your Android device
 2. Tap the **menu button** (⋮) in the top-right corner
-3. Select **"Add to Home screen"**
+3. Select **"Install app"** or **"Add to Home screen"**
 4. Name it "Era Manifesto" or your preferred name
-5. Tap **"Add"**
+5. Tap **"Install"** or **"Add"**
 6. The app icon will appear on your home screen like a native app!
+
+**New PWA Features:**
+- ✅ Standalone app window (no browser UI)
+- ✅ Works offline with cached data
+- ✅ Fast app-like performance
+- ✅ Custom app icon on home screen
+- ✅ Quick shortcuts (long-press icon)
+
+For detailed PWA installation instructions, see the **[Android Deployment Guide](ANDROID_DEPLOYMENT.md)**.
 
 ## Syncing Between PC and Android
 
