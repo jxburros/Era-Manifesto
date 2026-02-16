@@ -146,7 +146,7 @@ Then open `http://localhost:4173` in Chrome and:
 
 The current icons use a simple "EM" text design. To customize:
 
-1. Edit `/home/runner/work/Era-Manifesto/Era-Manifesto/generate-icons.cjs` to change the icon design
+1. Edit `generate-icons.cjs` in the project root to change the icon design
 2. Run: `node generate-icons.cjs`
 3. Rebuild and redeploy
 
