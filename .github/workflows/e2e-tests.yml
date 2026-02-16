@@ -8,10 +8,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Run Playwright E2E Tests
+  e2e-backup-restore:
+    name: E2E - Backup & Restore
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     permissions:
       contents: read
     
@@ -31,8 +31,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       
-      - name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run Backup & Restore tests
+        run: npx playwright test tests/backup-restore.spec.js
         env:
           CI: true
       
@@ -40,7 +40,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-backup-restore
           path: playwright-report/
           retention-days: 30
       
@@ -48,7 +48,183 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-screenshots
+          name: test-screenshots-backup-restore
+          path: test-results/
+          retention-days: 7
+
+  e2e-cost-precedence:
+    name: E2E - Cost Precedence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Run Cost Precedence tests
+        run: npx playwright test tests/cost-precedence.spec.js
+        env:
+          CI: true
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-cost-precedence
+          path: playwright-report/
+          retention-days: 30
+      
+      - name: Upload test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots-cost-precedence
+          path: test-results/
+          retention-days: 7
+
+  e2e-song-release-flow:
+    name: E2E - Song Release Flow
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Run Song Release Flow tests
+        run: npx playwright test tests/song-release-flow.spec.js
+        env:
+          CI: true
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-song-release
+          path: playwright-report/
+          retention-days: 30
+      
+      - name: Upload test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots-song-release
+          path: test-results/
+          retention-days: 7
+
+  e2e-task-override:
+    name: E2E - Task Override
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Run Task Override tests
+        run: npx playwright test tests/task-override.spec.js
+        env:
+          CI: true
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-task-override
+          path: playwright-report/
+          retention-days: 30
+      
+      - name: Upload test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots-task-override
+          path: test-results/
+          retention-days: 7
+
+  e2e-team-assignment:
+    name: E2E - Team Assignment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Run Team Assignment tests
+        run: npx playwright test tests/team-assignment.spec.js
+        env:
+          CI: true
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-team-assignment
+          path: playwright-report/
+          retention-days: 30
+      
+      - name: Upload test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots-team-assignment
           path: test-results/
           retention-days: 7
 
