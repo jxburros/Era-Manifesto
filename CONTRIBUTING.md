@@ -265,6 +265,18 @@ Contributors will be recognized in:
 
 By contributing, you agree that your contributions will be licensed under the Apache License 2.0.
 
+### Contributor License Agreement
+
+When you submit contributions to this project:
+
+1. **License Terms**: Your contributions are automatically licensed under the same Apache License 2.0 terms as the project.
+
+2. **Commercial Use Rights**: You acknowledge and agree that the project owner (Jeffrey Guntly / JX Holdings, LLC) retains the right to use your contributions in future commercial versions of the application. This ensures that the project can be monetized while maintaining a clear path for commercial development.
+
+3. **Your Rights**: You retain copyright ownership of your contributions, but grant the project owner a perpetual, worldwide, non-exclusive license to use, modify, and distribute your contributions in both open-source and commercial versions.
+
+4. **Attribution**: Significant contributions will be recognized in the project's contributors list and release notes.
+
 ---
 
 Thank you for contributing to Era Manifesto! 🎵
