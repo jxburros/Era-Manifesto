@@ -176,12 +176,13 @@ firebase deploy
 - **[Performance Testing](PERFORMANCE_TESTING.md)** - Testing procedures
 - **[Performance Quick Ref](PERFORMANCE_QUICK_REFERENCE.md)** - Developer guide
 
-### End-to-End Testing
+### Testing
 
-- **[E2E Testing Guide](docs/E2E_TESTING.md)** - Complete E2E testing documentation
-- **[E2E Setup](E2E_SETUP.md)** - Installation and configuration
-- **[E2E Test Checklist](E2E_TEST_CHECKLIST.md)** - Test execution checklist
-- **[E2E Quick Ref](docs/E2E_TESTING_QUICK_REF.md)** - Quick reference guide
+- **[Test Suite](tests/README.md)** - Unit testing guide and best practices
+- **[Test Migration](E2E_TO_UNIT_MIGRATION.md)** - Migration from E2E to unit tests
+- **[Test Summary](TEST_REPLACEMENT_SUMMARY.md)** - Complete testing approach
+
+**Note:** Previous E2E tests were replaced with fast, reliable unit tests. See migration docs for details.
 
 ## Quality Checks
 
@@ -192,13 +193,8 @@ npm run lint
 # Production build
 npm run build
 
-# Unit tests
+# Unit tests (fast, <5 seconds)
 npm test
-
-# End-to-end tests
-npm run test:e2e
-npm run test:e2e:ui      # Interactive UI mode
-npm run test:e2e:debug   # Debug mode
 ```
 
 ## Tech Stack
