@@ -123,16 +123,24 @@ To access your data across multiple devices:
 
 ### 🚀 Ready for Android!
 
-Era Manifesto is fully configured as a Progressive Web App (PWA) and ready for Android deployment.
+Era Manifesto can be deployed as both a Progressive Web App (PWA) and a native Android app.
 
-**Quick Start:**
+**PWA Deployment (Web-based):**
 ```bash
 npm run build
 firebase deploy --only hosting
 # Then install on Android: Open URL → Menu → "Install app"
 ```
 
-📱 **[Android Quick Start](docs/deployment/ANDROID_QUICK_START.md)** - Deploy in 5 minutes
+**Native Android App (Android Studio):**
+```bash
+npm run android:sync
+npm run android:open
+# Opens project in Android Studio - click Run to build and install
+```
+
+📱 **[Android Studio Guide](docs/development/ANDROID_STUDIO_GUIDE.md)** - Build and run in Android Studio
+📱 **[Android Quick Start](docs/deployment/ANDROID_QUICK_START.md)** - Deploy PWA in 5 minutes
 📋 **[Android Deployment Checklist](docs/deployment/ANDROID_DEPLOYMENT_CHECKLIST.md)** - Complete guide
 ✅ **[Android Deployment Ready](ANDROID_DEPLOYMENT_READY.md)** - What's included
 

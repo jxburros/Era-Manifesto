@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Era Manifesto</string>
+    <string name="title_activity_main">Era Manifesto</string>
+    <string name="package_name">com.eramanifesto.app</string>
+    <string name="custom_url_scheme">com.eramanifesto.app</string>
+</resources>
