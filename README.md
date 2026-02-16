@@ -130,8 +130,9 @@ You can deploy Era Manifesto to various platforms:
 
 The app is fully PWA-ready for Android installation!
 
-See the **[Deployment Guide](DEPLOYMENT.md)** for detailed instructions.
-See the **[Android Deployment Guide](ANDROID_DEPLOYMENT.md)** for PWA installation on Android devices.
+📦 **[Deployment Hub](docs/deployment/)** - Complete deployment documentation
+- **[Web Deployment](docs/deployment/web.md)** - Deploy to Firebase, Netlify, Vercel, GitHub Pages
+- **[Android PWA](docs/deployment/android.md)** - Install as native-like app on Android
 
 ### Quick Deploy to Firebase
 
@@ -140,14 +141,17 @@ npm install -g firebase-tools
 firebase login
 firebase init hosting
 npm run build
-firebase deploy
+firebase deploy --only hosting
 ```
 
 ## Documentation
 
+### Setup & Deployment
 - **[Firebase Setup Guide](FIREBASE_SETUP.md)** - Set up cloud sync across devices
-- **[Deployment Guide](DEPLOYMENT.md)** - Deploy to various hosting platforms
-- **[Mobile Guide](MOBILE_GUIDE.md)** - Mobile access and home screen installation
+- **[Deployment Hub](docs/deployment/)** - Complete deployment guide for web and Android
+- **[Mobile Guide](MOBILE_GUIDE.md)** - Mobile access and PWA installation
+
+### Architecture & Development
 - **[App Architecture](docs/APP_ARCHITECTURE.md)** - Core data models and system design
 - **[Page Architecture](docs/app_architecture_2.md)** - Page types and UI specifications
 - **[Project Direction](PROJECT_DIRECTION.md)** - Project vision and feature details
@@ -230,7 +234,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 If you encounter any issues or have questions:
 
-1. Check the [Firebase Setup Guide](FIREBASE_SETUP.md) and [Deployment Guide](DEPLOYMENT.md)
+1. Check the [Firebase Setup Guide](FIREBASE_SETUP.md) and [Deployment Hub](docs/deployment/)
 2. Review existing GitHub Issues
 3. Open a new issue with details
 
