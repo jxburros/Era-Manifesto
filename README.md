@@ -104,7 +104,9 @@ Era Manifesto works seamlessly across devices:
 
 - **Desktop**: Any modern web browser (Chrome, Firefox, Safari, Edge)
 - **Mobile**: Android and iOS browsers with responsive design
+- **Android App**: Install as a PWA for a native app experience
 - **Tablet**: Fully responsive layout
+- **Offline**: Works offline with service worker caching
 
 ### Setting Up Cloud Sync
 
@@ -126,7 +128,10 @@ You can deploy Era Manifesto to various platforms:
 - **Vercel**
 - **GitHub Pages**
 
+The app is fully PWA-ready for Android installation!
+
 See the **[Deployment Guide](DEPLOYMENT.md)** for detailed instructions.
+See the **[Android Deployment Guide](ANDROID_DEPLOYMENT.md)** for PWA installation on Android devices.
 
 ### Quick Deploy to Firebase
 

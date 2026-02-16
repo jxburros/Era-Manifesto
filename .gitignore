@@ -41,3 +41,4 @@ playwright-report/
 playwright/.cache/
 screenshots/
 
+generate-icons.cjs
