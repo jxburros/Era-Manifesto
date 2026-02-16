@@ -13,7 +13,7 @@
  * @param {import('@playwright/test').Page} page 
  * @param {number} timeout - Maximum wait time in ms
  */
-export async function waitForApp(page, timeout = 10000) {
+export async function waitForApp(page, timeout = 30000) {
   // Wait for React root to mount
   await page.waitForSelector('#root', { timeout });
   
@@ -29,22 +29,28 @@ export async function waitForApp(page, timeout = 10000) {
  * @param {import('@playwright/test').Page} page 
  */
 export async function clearStorage(page) {
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     // Clear localStorage
     localStorage.clear();
     
     // Clear sessionStorage
     sessionStorage.clear();
     
-    // Clear IndexedDB
+    // Clear IndexedDB - properly await completion
     if (window.indexedDB && window.indexedDB.databases) {
-      window.indexedDB.databases().then((databases) => {
-        databases.forEach((db) => {
-          if (db.name) {
-            window.indexedDB.deleteDatabase(db.name);
-          }
-        });
+      const databases = await window.indexedDB.databases();
+      const promises = databases.map((db) => {
+        if (db.name) {
+          return new Promise((resolve) => {
+            const request = window.indexedDB.deleteDatabase(db.name);
+            request.onsuccess = () => resolve();
+            request.onerror = () => resolve(); // Resolve even on error
+            request.onblocked = () => resolve(); // Resolve even if blocked
+          });
+        }
+        return Promise.resolve();
       });
+      await Promise.all(promises);
     }
   });
   

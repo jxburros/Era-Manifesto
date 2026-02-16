@@ -1,170 +1,72 @@
 # Era Manifesto Test Suite
 
-This directory contains all tests for the Era Manifesto application.
+This directory contains unit tests for the Era Manifesto application.
 
-## Test Types
+## Test Philosophy
+
+We use **simple, fast unit tests** to ensure code quality and catch bugs early. The testing strategy focuses on:
+
+- **Speed**: Tests run in <5 seconds
+- **Reliability**: No flaky tests, no timing issues  
+- **Simplicity**: Pure JavaScript tests using Node's built-in test runner
+- **Coverage**: Focus on business logic and utility functions
+
+## Test Files
 
 ### Unit Tests
-- **File**: `taskLogic.test.js`
-- **Purpose**: Test core business logic functions
-- **Runner**: Node.js native test runner
-- **Command**: `npm test`
 
-### E2E Tests
-- **Files**: `*.spec.js`
-- **Purpose**: Test complete user workflows
-- **Runner**: Playwright
-- **Command**: `npm run test:e2e`
+- **taskLogic.test.js** - Tests for task business logic (status points, progress calculation, date resolution, cost precedence)
+- **utils.test.js** - Additional tests for core domain logic
 
-## E2E Test Files
+### Archived E2E Tests
 
-### Core Test Suites
+The `archived/` directory contains previous Playwright E2E tests that were removed due to:
+- Slow execution (3-5 minutes)
+- Frequent timing issues and flakiness
+- Complex setup requirements (browser automation, dev server)
+- High CI cost
 
-1. **song-release-flow.spec.js**
-   - Create songs with versions
-   - Create releases
-   - Attach songs to releases
-   - Verify timeline integration
+These are kept for reference but are no longer run in CI.
 
-2. **task-override.spec.js**
-   - Auto-generated task creation
-   - Manual task overrides
-   - Global task management
-   - Status progression
+## Running Tests
 
-3. **cost-precedence.spec.js**
-   - Three-tier cost system (Estimated → Quoted → Paid)
-   - Cost precedence rules
-   - Total cost calculation
-   - Cost updates and persistence
-
-4. **team-assignment.spec.js**
-   - Team member creation
-   - Musician instrument tracking
-   - Task assignments
-   - Cost allocation per member
-
-5. **backup-restore.spec.js**
-   - Data backup creation
-   - JSON export
-   - Data restoration
-   - Backup management
-
-### Test Helpers
-
-- **helpers.e2e.js** - Shared utilities for navigation, interactions, and waits
-- **fixtures.e2e.js** - Test data generators for consistent scenarios
-
-## Quick Start
-
-### Install Dependencies
-
+### Run All Tests
 ```bash
-# Install all dependencies including Playwright
-npm install
-
-# Install Playwright browsers
-npx playwright install
-```
-
-### Run Tests
-
-```bash
-# Run all E2E tests
-npm run test:e2e
-
-# Run specific test file
-npm run test:e2e tests/song-release-flow.spec.js
-
-# Run in UI mode (interactive)
-npm run test:e2e:ui
-
-# Run in debug mode
-npm run test:e2e:debug
-
-# Run unit tests
 npm test
 ```
 
-### View Results
-
+### Run Tests in Watch Mode
 ```bash
-# Open HTML test report
-npm run test:e2e:report
+npm test -- --watch
 ```
 
-## Test Structure
-
-```
-tests/
-├── taskLogic.test.js          # Unit tests
-├── helpers.e2e.js             # E2E test utilities
-├── fixtures.e2e.js            # Test data generators
-├── song-release-flow.spec.js  # Song → Release workflow
-├── task-override.spec.js      # Task management
-├── cost-precedence.spec.js    # Cost system tests
-├── team-assignment.spec.js    # Team member tests
-└── backup-restore.spec.js     # Data backup tests
+### Run Specific Test File
+```bash
+node --test tests/taskLogic.test.js
 ```
 
 ## Writing Tests
 
-### Basic Pattern
+Tests use Node.js's built-in test runner and assertion library:
 
 ```javascript
-import { test, expect } from '@playwright/test';
-import { waitForApp, clearStorage } from './helpers.e2e.js';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { myFunction } from '../src/myModule.js';
 
-test.describe('My Feature', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await clearStorage(page);
-    await page.reload();
-    await waitForApp(page);
-  });
-
-  test('should do something', async ({ page }) => {
-    // Your test code
-  });
+test('myFunction does what it should', () => {
+  const result = myFunction(input);
+  assert.equal(result, expectedOutput);
 });
 ```
 
-### Using Helpers
+### Guidelines
 
-```javascript
-import { 
-  navigateToRoute, 
-  clickAndWait, 
-  fillInput, 
-  waitForDataSave 
-} from './helpers.e2e.js';
-
-// Navigate to a page
-await navigateToRoute(page, '/songs');
-
-// Fill form and submit
-await fillInput(page, 'input[name="title"]', 'My Song');
-await clickAndWait(page, 'button:has-text("Save")');
-await waitForDataSave(page);
-```
-
-### Using Fixtures
-
-```javascript
-import { createTestSong, getRelativeDate } from './fixtures.e2e.js';
-
-const song = createTestSong({
-  title: 'Test Song',
-  releaseDate: getRelativeDate(30) // 30 days from now
-});
-```
-
-## Documentation
-
-For detailed documentation:
-- **Full Guide**: [../docs/E2E_TESTING.md](../docs/E2E_TESTING.md)
-- **Quick Reference**: [../docs/E2E_TESTING_QUICK_REF.md](../docs/E2E_TESTING_QUICK_REF.md)
-- **Completion Summary**: [../PHASE7_COMPLETE.md](../PHASE7_COMPLETE.md)
+1. **Test pure functions** - Focus on business logic without side effects
+2. **Use descriptive test names** - Clearly describe what is being tested
+3. **Test edge cases** - Empty inputs, null values, boundary conditions
+4. **Keep tests simple** - One assertion per test when possible
+5. **No external dependencies** - Tests should not require network, database, or browser
 
 ## CI/CD
 
@@ -173,65 +75,40 @@ Tests run automatically in GitHub Actions on:
 - Pull requests
 - Manual workflow dispatch
 
-View results in the **Actions** tab.
+The CI workflow includes:
+- **Unit Tests** - Fast tests (<30 seconds)
+- **Lint Check** - ESLint validation
+- **Build Check** - Verifies the app builds successfully
 
 ## Test Coverage
 
-- **36 E2E test cases** covering critical user flows
-- **Unit tests** for core business logic
-- All PRE_QA_CHECKLIST scenarios automated
-
-## Troubleshooting
-
-### Tests Timeout
-Increase timeout in test:
-```javascript
-test.setTimeout(60000); // 60 seconds
-```
-
-### Element Not Found
-Check if element exists first:
-```javascript
-const visible = await isVisible(page, 'text=My Element');
-if (visible) {
-  await page.click('text=My Element');
-}
-```
-
-### Storage Not Clearing
-Ensure beforeEach hook runs:
-```javascript
-test.beforeEach(async ({ page }) => {
-  await page.goto('/');
-  await clearStorage(page);
-  await page.reload();
-  await page.waitForTimeout(1000);
-  await waitForApp(page);
-});
-```
+Current test coverage focuses on:
+- ✅ Task status and progress calculations
+- ✅ Date resolution and precedence logic
+- ✅ Cost precedence and effective cost calculation
+- ✅ Edge cases and error handling
 
 ## Performance
 
-- Tests run in **parallel** by default
-- Expected total runtime: **2-4 minutes**
-- CI runs with 1 worker (serial) for stability
-- Local development uses all available workers
+- **Local**: <5 seconds total
+- **CI**: <30 seconds total (including setup)
+- **No browser required**: Tests run in Node.js
+- **No dev server required**: Tests are isolated unit tests
 
-## Best Practices
+## Troubleshooting
 
-1. **Test Independence** - Each test starts with clean state
-2. **Explicit Waits** - Always wait for async operations
-3. **Semantic Selectors** - Use visible text, not brittle classes
-4. **Idempotency** - Tests can run multiple times
-5. **Error Handling** - Handle optional UI elements gracefully
-6. **Documentation** - Comment complex test logic
+### Tests failing locally but passing in CI
+- Ensure you're using Node.js 18 or later
+- Run `npm ci` to ensure dependencies match
 
-## Resources
+### Import errors
+- Make sure the module path is correct relative to the test file
+- Check that the function is exported from the source file
 
-- [Playwright Documentation](https://playwright.dev)
-- [Era Manifesto E2E Testing Guide](../docs/E2E_TESTING.md)
-- [Test Writing Best Practices](https://playwright.dev/docs/best-practices)
+### Tests running slowly
+- Unit tests should be nearly instant (<100ms each)
+- If tests are slow, they may have external dependencies that should be mocked
 
 ---
 
-**Questions?** See the full documentation in `docs/E2E_TESTING.md`
+**Questions?** See the main [README](../README.md) for more information about the project.

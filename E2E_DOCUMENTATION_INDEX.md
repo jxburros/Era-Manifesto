@@ -1,5 +1,22 @@
 # E2E Testing Documentation Index
 
+> **⚠️ DEPRECATED:** All E2E testing documentation is now **archived and deprecated**.
+> 
+> ## What Happened
+> 
+> On **2026-02-16**, the E2E test infrastructure was replaced with simple, fast unit tests.
+> 
+> ## Current Testing Documentation
+> 
+> - **[tests/README.md](tests/README.md)** - Unit testing guide
+> - **[E2E_TO_UNIT_MIGRATION.md](E2E_TO_UNIT_MIGRATION.md)** - Why we migrated
+> - **[TEST_REPLACEMENT_SUMMARY.md](TEST_REPLACEMENT_SUMMARY.md)** - Complete summary
+> - **[E2E_DOCS_DEPRECATED.md](E2E_DOCS_DEPRECATED.md)** - Deprecation details
+>
+> **Quick Start:** Run `npm test` to execute all 23 unit tests (<5 seconds)
+
+---
+
 Complete guide to E2E testing documentation for Era Manifesto.
 
 ## Quick Start
