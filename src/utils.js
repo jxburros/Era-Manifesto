@@ -93,9 +93,11 @@ export const filterTasksByStatus = (tasks = [], activeStatus = 'all', archivedFi
 };
 
 /**
- * Navigation Persistence Utilities
- * Enhanced scroll position and form draft state persistence
- * Uses sessionStorage for cross-refresh persistence
+ * Scroll Position Persistence Utility
+ * Saves and restores scroll positions for specific routes/views
+ * 
+ * Note: Enhanced version available in utils/navigationPersistence.js
+ * This is kept for backwards compatibility
  */
 
 // In-memory fallback for environments without sessionStorage

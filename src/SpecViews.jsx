@@ -61,10 +61,12 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
     return songs;
   }, [data.songs, filterSingles, eraModeEraId, settings.appMode, settings.selectedArtistId]);
 
-  const handleAddSong = async () => {
-    // Feature 4: Auto-assign active Era to new songs
-    const defaultEraIds = eraModeEraId ? [eraModeEraId] : (settings.defaultEraId ? [settings.defaultEraId] : []);
-    const newSong = await actions.addSong({ title: 'New Song', category: 'Album', releaseDate: '', isSingle: false, eraIds: defaultEraIds });
+  const handleAddSong = () => {
+    // Open quick add modal instead of creating directly
+    setShowQuickAddModal(true);
+  };
+
+  const handleQuickAddComplete = (newSong) => {
     onSongCreated?.(newSong);
     if (onSelectSong) onSelectSong(newSong);
   };
@@ -1925,10 +1927,12 @@ export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
     return releases;
   }, [data.releases, eraModeEraId, settings.appMode, settings.selectedArtistId]);
 
-  const handleAddRelease = async () => {
-    // Feature 4: Auto-assign active Era to new releases
-    const defaultEraIds = eraModeEraId ? [eraModeEraId] : (settings.defaultEraId ? [settings.defaultEraId] : []);
-    const newRelease = await actions.addRelease({ name: 'New Release', type: 'Album', releaseDate: '', estimatedCost: 0, notes: '', eraIds: defaultEraIds });
+  const handleAddRelease = () => {
+    // Open quick add modal instead of creating directly
+    setShowQuickAddModal(true);
+  };
+
+  const handleQuickAddComplete = (newRelease) => {
     onReleaseCreated?.(newRelease);
     if (onSelectRelease) onSelectRelease(newRelease);
   };

@@ -43,6 +43,39 @@ export const APP_VERSION = '2.0.0';
 // Status enum for consistency across all entities - per APP_ARCHITECTURE.md Section 1.7
 export { STATUS_OPTIONS, STATUS_POINTS, getStatusPoints, calculateTaskProgress, getTaskDueDate, getPrimaryDate, resolveCostPrecedence, getEffectiveCost };
 
+// Export task offset configuration functions
+export { getEffectiveOffset, getDefaultOffsets, mergeOffsets, validateOffsets };
+
+// Export cost model configuration
+export { 
+  COST_MODELS, 
+  DEFAULT_COST_MODEL, 
+  resolveCostPrecedenceWithModel, 
+  getEffectiveCostWithModel,
+  getCostModelConfig,
+  getCostModelLabel,
+  getCostModelDescription,
+  isValidCostModel,
+  isValidPrecedenceOrder
+};
+
+// Export data integrity diagnostics
+export {
+  runDiagnostics,
+  autoRepair,
+  getDiagnosticStats
+};
+
+// Export memoization utilities for performance
+export {
+  calculateTotalBudget,
+  calculateAggregateProgress,
+  calculateFinancialSummary,
+  calculateTaskStatistics,
+  calculateEntityCounts,
+  clearMemoizationCache
+};
+
 // Progress Calculation per APP_ARCHITECTURE.md Section 1.7:
 // Complete = 1 point
 // In-Progress, Waiting on Someone Else, Paid But Not Complete, Complete But Not Paid = 0.5 points
@@ -1061,6 +1094,59 @@ export const StoreProvider = ({ children }) => {
          if (mode === 'cloud') await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_tasks', 'settings'), newSettings, { merge: true });
          else setData(p => ({...p, settings: {...p.settings, ...newSettings}}));
      },
+     
+     // Task offset management
+     saveTaskOffsets: async (offsets) => {
+       const validated = validateOffsets(offsets);
+       await actions.saveSettings({ deadlineOffsets: validated });
+     },
+     
+     getTaskOffsets: () => {
+       return mergeOffsets(data.settings?.deadlineOffsets || {});
+     },
+     
+     // Cost model management
+     saveCostModel: async (model, customOrder = null) => {
+       if (!isValidCostModel(model)) {
+         throw new Error(`Invalid cost model: ${model}`);
+       }
+       
+       const settings = { costModel: model };
+       if (model === COST_MODELS.CUSTOM) {
+         if (!isValidPrecedenceOrder(customOrder)) {
+           throw new Error('Invalid custom precedence order');
+         }
+         settings.costPrecedenceOrder = customOrder;
+       }
+       
+       await actions.saveSettings(settings);
+     },
+     
+     getCostModelConfig: () => {
+       return getCostModelConfig(data.settings || {});
+     },
+     
+     // Data integrity diagnostics
+     runDataDiagnostics: () => {
+       return runDiagnostics(data);
+     },
+     
+     repairData: (issues = null) => {
+       const issuesToRepair = issues || runDiagnostics(data).issues;
+       const result = autoRepair(data, issuesToRepair);
+       
+       if (result.repairedCount > 0) {
+         // Update data with repaired version
+         setData(result.repairedData);
+         actions.logAudit('data_repair', 'system', 'diagnostics', {
+           repairedCount: result.repairedCount,
+           errorCount: result.errorCount
+         });
+       }
+       
+       return result;
+     },
+     
      runMigration: async (notes = '') => {
         actions.logAudit('migration', 'system', 'onboarding', { notes });
         const marker = { migrationRanAt: new Date().toISOString(), migrationNotes: notes, lastBackup: data.settings?.lastBackup || '' };

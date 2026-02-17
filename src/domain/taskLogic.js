@@ -98,6 +98,19 @@ export const resolveCostPrecedence = (entity = {}, model = 'paid-first') => {
   const partial = normalizeCost(entity.partially_paid, entity.partiallyPaidAmount, entity.partialPaidCost);
   const quoted = normalizeCost(entity.quoted_cost, entity.quotedCost);
   const estimated = normalizeCost(entity.estimated_cost, entity.estimatedCost);
+  
+  const costs = { actual, paid, partially_paid: partial, quoted, estimated };
+  
+  // If cost model is specified, use custom precedence
+  if (costModel) {
+    const order = customOrder || getCostPrecedenceOrder(costModel);
+    for (const source of order) {
+      if (costs[source] > 0) {
+        return { value: costs[source], source };
+      }
+    }
+    return { value: estimated, source: 'estimated' };
+  }
 
   // Apply cost calculation model
   if (model === 'quoted-first') {
