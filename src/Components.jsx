@@ -14,11 +14,57 @@
  * limitations under the License.
  */
 
-import { useState, useEffect, memo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, memo, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search } from 'lucide-react';
 import { useStore, STATUS_OPTIONS, getEffectiveCost } from './Store';
-import { THEME, COLORS, formatMoney, STAGES, cn } from './utils';
+import { THEME, COLORS, formatMoney, STAGES, cn, saveScrollPosition, getScrollPosition } from './utils';
+
+/**
+ * Custom hook for scroll position persistence
+ * Automatically saves and restores scroll position for a specific key/route
+ * 
+ * @param {string} scrollKey - Unique identifier for this scroll position
+ * @param {Object} containerRef - Optional ref to the scrollable container (defaults to window)
+ * @returns {Object} - Returns the containerRef to attach to scrollable element
+ */
+export const useScrollPersistence = (scrollKey, containerRef = null) => {
+  const location = useLocation();
+  const internalRef = useRef(null);
+  const ref = containerRef || internalRef;
+
+  // Restore scroll position on mount
+  useEffect(() => {
+    const savedPosition = getScrollPosition(scrollKey);
+    if (savedPosition && ref.current) {
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        if (ref.current) {
+          ref.current.scrollTop = savedPosition;
+        }
+      }, 0);
+    } else if (savedPosition && !ref.current) {
+      // If no container ref, scroll window
+      window.scrollTo(0, savedPosition);
+    }
+  }, [scrollKey, ref]);
+
+  // Save scroll position before unmount or route change
+  useEffect(() => {
+    const savePosition = () => {
+      const position = ref.current ? ref.current.scrollTop : window.scrollY;
+      saveScrollPosition(scrollKey, position);
+    };
+
+    // Save on route change
+    return () => {
+      savePosition();
+    };
+  }, [scrollKey, location, ref]);
+
+  // Return the ref so it can be attached to the scrollable container
+  return containerRef ? {} : { ref: internalRef };
+};
 
 export const Icon = memo(function Icon({ name, ...props }) {
   const icons = { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search };

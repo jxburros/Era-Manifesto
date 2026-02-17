@@ -91,3 +91,21 @@ export const filterTasksByStatus = (tasks = [], activeStatus = 'all', archivedFi
     return true;
   });
 };
+
+/**
+ * Scroll Position Persistence Utility
+ * Saves and restores scroll positions for specific routes/views
+ */
+const SCROLL_POSITIONS = new Map();
+
+export const saveScrollPosition = (key, position) => {
+  SCROLL_POSITIONS.set(key, position);
+};
+
+export const getScrollPosition = (key) => {
+  return SCROLL_POSITIONS.get(key) || 0;
+};
+
+export const clearScrollPosition = (key) => {
+  SCROLL_POSITIONS.delete(key);
+};

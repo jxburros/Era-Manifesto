@@ -39,8 +39,9 @@
 - [ ] **Task Source Badges**  
   Add visual indicators (icons or text labels) to tasks in the "Today" view to show their origin (Song, Video, Event, etc.).
 
-- [ ] **"Next Best Action" Widget**  
+- [x] **"Next Best Action" Widget** ✅  
   Create a prominent dashboard component that uses due dates and progress logic to suggest the single most important task for the user to focus on.
+  *Completed: Smart widget added to TaskDashboardView that prioritizes tasks by: 1) Overdue tasks, 2) Tasks due today/tomorrow, 3) In-progress tasks, 4) Upcoming tasks, 5) Not started tasks. Shows task details, source, status, due date, and cost.*
 
 - [ ] **Aggregation Unification**  
   Ensure the "Today" view captures upcoming/overdue tasks from all sources, not just global tasks.
