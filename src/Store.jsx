@@ -52,6 +52,14 @@ import {
   autoRepair,
   getDiagnosticStats
 } from './utils/dataIntegrity';
+import {
+  calculateTotalBudget,
+  calculateAggregateProgress,
+  calculateFinancialSummary,
+  calculateTaskStatistics,
+  calculateEntityCounts,
+  clearMemoizationCache
+} from './utils/memoization';
 
 const StoreContext = createContext();
 
@@ -85,6 +93,16 @@ export {
   runDiagnostics,
   autoRepair,
   getDiagnosticStats
+};
+
+// Export memoization utilities for performance
+export {
+  calculateTotalBudget,
+  calculateAggregateProgress,
+  calculateFinancialSummary,
+  calculateTaskStatistics,
+  calculateEntityCounts,
+  clearMemoizationCache
 };
 
 // Progress Calculation per APP_ARCHITECTURE.md Section 1.7:
