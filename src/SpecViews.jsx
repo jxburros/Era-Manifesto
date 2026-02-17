@@ -17,7 +17,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useStore, STATUS_OPTIONS, RELEASE_TYPES, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence, getPrimaryDate, getTaskDueDate, generateEventTasks, itemBelongsToEra, isEraLocked, collectAllTasks } from './Store';
 import { THEME, formatMoney, cn, getTaskBudget } from './utils';
-import { Icon, Breadcrumb } from './Components';
+import { Icon, Breadcrumb, QuickAddSongModal, QuickAddReleaseModal } from './Components';
 import { DetailPane, EraStageTagsModule, StandardListPage, StandardDetailPage, DisplayInfoSection, AutocompleteInput } from './ItemComponents';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 // Lazy load PDF export to reduce initial bundle size
@@ -32,6 +32,7 @@ const getMinEndDate = (startDate) => {
 export const SongListView = ({ onSelectSong, onSongCreated }) => {
   const { data, actions } = useStore();
   const [filterSingles, setFilterSingles] = useState(false);
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const settings = data.settings || {};
 
   // Feature 4: Era Mode filtering
@@ -60,10 +61,12 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
     return songs;
   }, [data.songs, filterSingles, eraModeEraId, settings.appMode, settings.selectedArtistId]);
 
-  const handleAddSong = async () => {
-    // Feature 4: Auto-assign active Era to new songs
-    const defaultEraIds = eraModeEraId ? [eraModeEraId] : (settings.defaultEraId ? [settings.defaultEraId] : []);
-    const newSong = await actions.addSong({ title: 'New Song', category: 'Album', releaseDate: '', isSingle: false, eraIds: defaultEraIds });
+  const handleAddSong = () => {
+    // Open quick add modal instead of creating directly
+    setShowQuickAddModal(true);
+  };
+
+  const handleQuickAddComplete = (newSong) => {
     onSongCreated?.(newSong);
     if (onSelectSong) onSelectSong(newSong);
   };
@@ -123,22 +126,29 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
   );
 
   return (
-    <StandardListPage
-      title="Songs"
-      items={filteredSongs}
-      onSelectItem={onSelectSong}
-      onAddItem={handleAddSong}
-      addButtonText="+ Add Song"
-      columns={columns}
-      filterOptions={filterOptions}
-      renderGridCard={renderGridCard}
-      headerExtra={headerExtra}
-      emptyMessage="No songs yet. Click + Add Song to create one."
-      emptyStateActions={[
-        { label: 'Create your first single', onClick: handleAddSingleTemplate, className: 'bg-pink-100' },
-        { label: 'Create an album track', onClick: handleAddAlbumTrackTemplate, className: 'bg-blue-100' }
-      ]}
-    />
+    <>
+      <StandardListPage
+        title="Songs"
+        items={filteredSongs}
+        onSelectItem={onSelectSong}
+        onAddItem={handleAddSong}
+        addButtonText="+ Add Song"
+        columns={columns}
+        filterOptions={filterOptions}
+        renderGridCard={renderGridCard}
+        headerExtra={headerExtra}
+        emptyMessage="No songs yet. Click + Add Song to create one."
+        emptyStateActions={[
+          { label: 'Create your first single', onClick: handleAddSingleTemplate, className: 'bg-pink-100' },
+          { label: 'Create an album track', onClick: handleAddAlbumTrackTemplate, className: 'bg-blue-100' }
+        ]}
+      />
+      <QuickAddSongModal
+        isOpen={showQuickAddModal}
+        onClose={() => setShowQuickAddModal(false)}
+        onSongCreated={handleQuickAddComplete}
+      />
+    </>
   );
 };
 
@@ -1889,6 +1899,7 @@ export const GlobalTasksView = () => {
 // Releases List View - Standardized Architecture
 export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
   const { data, actions } = useStore();
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const settings = data.settings || {};
 
   // Feature 4: Era Mode filtering
@@ -1907,10 +1918,12 @@ export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
     return releases;
   }, [data.releases, eraModeEraId, settings.appMode, settings.selectedArtistId]);
 
-  const handleAddRelease = async () => {
-    // Feature 4: Auto-assign active Era to new releases
-    const defaultEraIds = eraModeEraId ? [eraModeEraId] : (settings.defaultEraId ? [settings.defaultEraId] : []);
-    const newRelease = await actions.addRelease({ name: 'New Release', type: 'Album', releaseDate: '', estimatedCost: 0, notes: '', eraIds: defaultEraIds });
+  const handleAddRelease = () => {
+    // Open quick add modal instead of creating directly
+    setShowQuickAddModal(true);
+  };
+
+  const handleQuickAddComplete = (newRelease) => {
     onReleaseCreated?.(newRelease);
     if (onSelectRelease) onSelectRelease(newRelease);
   };
@@ -1994,21 +2007,28 @@ export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
   };
 
   return (
-    <StandardListPage
-      title="Releases"
-      items={filteredReleases}
-      onSelectItem={onSelectRelease}
-      onAddItem={handleAddRelease}
-      addButtonText="+ Add Release"
-      columns={columns}
-      filterOptions={filterOptions}
-      renderGridCard={renderGridCard}
-      emptyMessage="No releases yet. Click + Add Release to create one."
-      emptyStateActions={[
-        { label: 'Start a single rollout', onClick: () => actions.addRelease({ name: 'New Single Release', type: 'Single', releaseDate: '' }).then(r => { onReleaseCreated?.(r); onSelectRelease?.(r); }), className: 'bg-purple-100' },
-        { label: 'Start an EP rollout', onClick: () => actions.addRelease({ name: 'New EP Release', type: 'EP', releaseDate: '' }).then(r => { onReleaseCreated?.(r); onSelectRelease?.(r); }), className: 'bg-yellow-100' }
-      ]}
-    />
+    <>
+      <StandardListPage
+        title="Releases"
+        items={filteredReleases}
+        onSelectItem={onSelectRelease}
+        onAddItem={handleAddRelease}
+        addButtonText="+ Add Release"
+        columns={columns}
+        filterOptions={filterOptions}
+        renderGridCard={renderGridCard}
+        emptyMessage="No releases yet. Click + Add Release to create one."
+        emptyStateActions={[
+          { label: 'Start a single rollout', onClick: () => actions.addRelease({ name: 'New Single Release', type: 'Single', releaseDate: '' }).then(r => { onReleaseCreated?.(r); onSelectRelease?.(r); }), className: 'bg-purple-100' },
+          { label: 'Start an EP rollout', onClick: () => actions.addRelease({ name: 'New EP Release', type: 'EP', releaseDate: '' }).then(r => { onReleaseCreated?.(r); onSelectRelease?.(r); }), className: 'bg-yellow-100' }
+        ]}
+      />
+      <QuickAddReleaseModal
+        isOpen={showQuickAddModal}
+        onClose={() => setShowQuickAddModal(false)}
+        onReleaseCreated={handleQuickAddComplete}
+      />
+    </>
   );
 };
 
