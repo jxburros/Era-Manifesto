@@ -2538,6 +2538,51 @@ export const SettingsView = () => {
                   ))}
                 </div>
 
+                {/* Cost Calculation Model */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <h3 className="font-black text-xs uppercase">Cost Calculation Model</h3>
+                  <div className="text-xs opacity-60 mb-3">
+                    Choose how costs are calculated when multiple values exist (Estimated, Quoted, Paid)
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { value: 'paid-first', label: 'Paid-First (Default)', desc: 'Prioritize actual paid costs over estimates' },
+                      { value: 'quoted-first', label: 'Quoted-First', desc: 'Prioritize quoted costs over paid costs' },
+                      { value: 'estimated-first', label: 'Estimated-First', desc: 'Always use estimated budget values' }
+                    ].map(model => (
+                      <label
+                        key={model.value}
+                        className={cn(
+                          "flex items-start gap-3 p-3 cursor-pointer",
+                          THEME.punk.card,
+                          "border-4",
+                          (settings.costPrecedenceModel || 'paid-first') === model.value
+                            ? "border-green-500 bg-green-50 dark:bg-green-900"
+                            : "border-black dark:border-slate-600"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="costModel"
+                          value={model.value}
+                          checked={(settings.costPrecedenceModel || 'paid-first') === model.value}
+                          onChange={e => actions.saveSettings({ costPrecedenceModel: e.target.value })}
+                          className="mt-1"
+                        />
+                        <div>
+                          <div className="font-bold text-sm">{model.label}</div>
+                          <div className="text-xs opacity-70 mt-1">{model.desc}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <div className={cn("p-3 bg-blue-50 dark:bg-blue-900 border-4 border-blue-500 text-xs")}>
+                    <div className="font-bold mb-1">ℹ️ Info</div>
+                    <div className="opacity-80">
+                      This setting affects how costs are displayed throughout the app. Changes apply immediately to all cost calculations. No data is modified - only how costs are calculated and displayed.
+                    </div>
+                  </div>
+                </div>
 
                 {/* Dashboard Customization */}
                 <div className="pt-4 border-t-4 border-black space-y-3">

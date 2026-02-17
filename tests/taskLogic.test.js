@@ -72,3 +72,42 @@ test('cost precedence handles string values and prefers explicit zero values ove
     { value: 250.5, source: 'actual' }
   );
 });
+
+test('cost precedence supports quoted-first model', () => {
+  const entity = { estimatedCost: 100, quotedCost: 120, paidCost: 150 };
+  
+  // Quoted-first: quoted > paid > estimated
+  assert.deepEqual(resolveCostPrecedence(entity, 'quoted-first'), { value: 120, source: 'quoted' });
+  
+  // When no quoted, falls back to paid
+  assert.deepEqual(resolveCostPrecedence({ estimatedCost: 100, paidCost: 150 }, 'quoted-first'), { value: 150, source: 'paid' });
+  
+  // When only estimated
+  assert.deepEqual(resolveCostPrecedence({ estimatedCost: 100 }, 'quoted-first'), { value: 100, source: 'estimated' });
+});
+
+test('cost precedence supports estimated-first model', () => {
+  const entity = { estimatedCost: 100, quotedCost: 120, paidCost: 150 };
+  
+  // Estimated-first: estimated > quoted > paid
+  assert.deepEqual(resolveCostPrecedence(entity, 'estimated-first'), { value: 100, source: 'estimated' });
+  
+  // When no estimated, falls back to quoted
+  assert.deepEqual(resolveCostPrecedence({ quotedCost: 120, paidCost: 150 }, 'estimated-first'), { value: 120, source: 'quoted' });
+  
+  // When only paid
+  assert.deepEqual(resolveCostPrecedence({ paidCost: 150 }, 'estimated-first'), { value: 150, source: 'paid' });
+});
+
+test('cost precedence defaults to paid-first model', () => {
+  const entity = { estimatedCost: 100, quotedCost: 120, paidCost: 150, actualCost: 180 };
+  
+  // Default (paid-first): actual > paid > quoted > estimated
+  assert.deepEqual(resolveCostPrecedence(entity), { value: 180, source: 'actual' });
+  assert.deepEqual(resolveCostPrecedence(entity, 'paid-first'), { value: 180, source: 'actual' });
+  
+  // getEffectiveCost uses the model parameter correctly
+  assert.equal(getEffectiveCost(entity, 'paid-first'), 180);
+  assert.equal(getEffectiveCost(entity, 'quoted-first'), 120);
+  assert.equal(getEffectiveCost(entity, 'estimated-first'), 100);
+});

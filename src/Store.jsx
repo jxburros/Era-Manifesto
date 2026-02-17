@@ -3934,8 +3934,33 @@ export const StoreProvider = ({ children }) => {
   const stageMap = useMemo(() => new Map((data.stages || []).map(s => [s.id, s])), [data.stages]);
   const tagMap = useMemo(() => new Map((data.tags || []).map(t => [t.id, t])), [data.tags]);
 
+  // Cost calculation utilities that respect user settings
+  const costModel = data.settings?.costPrecedenceModel || 'paid-first';
+  const getEffectiveCostWithSettings = useMemo(() => {
+    return (entity) => getEffectiveCost(entity, costModel);
+  }, [costModel]);
+
+  const resolveCostPrecedenceWithSettings = useMemo(() => {
+    return (entity) => resolveCostPrecedence(entity, costModel);
+  }, [costModel]);
+
   return (
-    <StoreContext.Provider value={{ data, actions, mode, stats, mods, undoStack, releaseMap, teamMemberMap, eraMap, stageMap, tagMap }}>
+    <StoreContext.Provider value={{ 
+      data, 
+      actions, 
+      mode, 
+      stats, 
+      mods, 
+      undoStack, 
+      releaseMap, 
+      teamMemberMap, 
+      eraMap, 
+      stageMap, 
+      tagMap,
+      getEffectiveCostWithSettings,
+      resolveCostPrecedenceWithSettings,
+      costModel
+    }}>
       {children}
     </StoreContext.Provider>
   );

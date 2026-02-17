@@ -83,7 +83,7 @@ export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = [], r
   return '';
 };
 
-export const resolveCostPrecedence = (entity = {}) => {
+export const resolveCostPrecedence = (entity = {}, model = 'paid-first') => {
   const normalizeCost = (...values) => {
     for (const value of values) {
       if (value === null || value === undefined || value === '') continue;
@@ -99,11 +99,30 @@ export const resolveCostPrecedence = (entity = {}) => {
   const quoted = normalizeCost(entity.quoted_cost, entity.quotedCost);
   const estimated = normalizeCost(entity.estimated_cost, entity.estimatedCost);
 
-  if (actual > 0) return { value: actual, source: 'actual' };
-  if (paid > 0) return { value: paid, source: 'paid' };
-  if (partial > 0) return { value: partial, source: 'partially_paid' };
-  if (quoted > 0) return { value: quoted, source: 'quoted' };
-  return { value: estimated, source: 'estimated' };
+  // Apply cost calculation model
+  if (model === 'quoted-first') {
+    // Quoted-first: Quoted > Paid > Partial > Estimated
+    if (quoted > 0) return { value: quoted, source: 'quoted' };
+    if (actual > 0) return { value: actual, source: 'actual' };
+    if (paid > 0) return { value: paid, source: 'paid' };
+    if (partial > 0) return { value: partial, source: 'partially_paid' };
+    return { value: estimated, source: 'estimated' };
+  } else if (model === 'estimated-first') {
+    // Estimated-first: Estimated > Quoted > Paid > Partial
+    if (estimated > 0) return { value: estimated, source: 'estimated' };
+    if (quoted > 0) return { value: quoted, source: 'quoted' };
+    if (actual > 0) return { value: actual, source: 'actual' };
+    if (paid > 0) return { value: paid, source: 'paid' };
+    if (partial > 0) return { value: partial, source: 'partially_paid' };
+    return { value: 0, source: 'estimated' };
+  } else {
+    // Default: Paid-first (Paid > Partial > Quoted > Estimated)
+    if (actual > 0) return { value: actual, source: 'actual' };
+    if (paid > 0) return { value: paid, source: 'paid' };
+    if (partial > 0) return { value: partial, source: 'partially_paid' };
+    if (quoted > 0) return { value: quoted, source: 'quoted' };
+    return { value: estimated, source: 'estimated' };
+  }
 };
 
-export const getEffectiveCost = (entity = {}) => resolveCostPrecedence(entity).value;
+export const getEffectiveCost = (entity = {}, model = 'paid-first') => resolveCostPrecedence(entity, model).value;
