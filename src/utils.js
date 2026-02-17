@@ -109,3 +109,72 @@ export const getScrollPosition = (key) => {
 export const clearScrollPosition = (key) => {
   SCROLL_POSITIONS.delete(key);
 };
+
+/**
+ * Semantic Color Overlays for Task Status
+ * Provides consistent color scheme based on task status and due date
+ * Returns object with border, background, and text color classes
+ */
+export const getTaskStatusColors = (status, dueDate) => {
+  const today = new Date().toISOString().split('T')[0];
+  const isOverdue = dueDate && dueDate < today;
+  const isComplete = status === 'Done' || status === 'Complete';
+  
+  // Priority 1: Overdue (Red)
+  if (isOverdue && !isComplete) {
+    return {
+      border: 'border-red-500 dark:border-red-600',
+      borderThick: 'border-l-4 border-red-500 dark:border-red-600',
+      bg: 'bg-red-50 dark:bg-red-900/20',
+      text: 'text-red-800 dark:text-red-200',
+      badge: 'bg-red-100 text-red-800 border-red-500',
+      ring: 'ring-red-500'
+    };
+  }
+  
+  // Priority 2: Complete (Green)
+  if (isComplete) {
+    return {
+      border: 'border-green-500 dark:border-green-600',
+      borderThick: 'border-l-4 border-green-500 dark:border-green-600',
+      bg: 'bg-green-50 dark:bg-green-900/20',
+      text: 'text-green-800 dark:text-green-200',
+      badge: 'bg-green-100 text-green-800 border-green-500',
+      ring: 'ring-green-500'
+    };
+  }
+  
+  // Priority 3: In Progress (Blue)
+  if (status === 'In Progress' || status === 'In-Progress') {
+    return {
+      border: 'border-blue-500 dark:border-blue-600',
+      borderThick: 'border-l-4 border-blue-500 dark:border-blue-600',
+      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      text: 'text-blue-800 dark:text-blue-200',
+      badge: 'bg-blue-100 text-blue-800 border-blue-500',
+      ring: 'ring-blue-500'
+    };
+  }
+  
+  // Priority 4: Delayed (Orange)
+  if (status === 'Delayed') {
+    return {
+      border: 'border-orange-500 dark:border-orange-600',
+      borderThick: 'border-l-4 border-orange-500 dark:border-orange-600',
+      bg: 'bg-orange-50 dark:bg-orange-900/20',
+      text: 'text-orange-800 dark:text-orange-200',
+      badge: 'bg-orange-100 text-orange-800 border-orange-500',
+      ring: 'ring-orange-500'
+    };
+  }
+  
+  // Default: Not Started (Gray)
+  return {
+    border: 'border-gray-300 dark:border-gray-600',
+    borderThick: 'border-l-4 border-gray-300 dark:border-gray-600',
+    bg: 'bg-gray-50 dark:bg-gray-800/20',
+    text: 'text-gray-800 dark:text-gray-200',
+    badge: 'bg-gray-100 text-gray-800 border-gray-400',
+    ring: 'ring-gray-400'
+  };
+};

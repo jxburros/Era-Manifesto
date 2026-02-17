@@ -16,7 +16,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate, getEffectiveCost, EXPORT_VERSION, collectAllTasks } from './Store';
-import { THEME, COLORS, formatMoney, cn } from './utils';
+import { THEME, COLORS, formatMoney, cn, getTaskStatusColors } from './utils';
 import { Icon } from './Components';
 import { DetailPane } from './ItemComponents';
 // Lazy load PDF export to reduce initial bundle size
@@ -1626,7 +1626,7 @@ export const ActiveView = ({ onEdit }) => {
     const dueSoon = allTasks.filter(t => t.dueDate && t.dueDate >= today && t.dueDate <= nextWeek);
     const unpaid = allTasks.filter(t => !t.isPaid && t.effectiveCost > 0);
     
-    const TaskCard = ({ task, highlight }) => {
+    const TaskCard = ({ task }) => {
         const sourceIcon = {
             'Song': 'Music',
             'Version': 'Music2',
@@ -1634,6 +1634,7 @@ export const ActiveView = ({ onEdit }) => {
             'Video': 'Video',
             'Event': 'Calendar',
             'Global': 'CheckCircle',
+            'Global Task': 'CheckCircle',
             'Legacy': 'Archive'
         }[task.source] || 'Circle';
         
@@ -1644,21 +1645,23 @@ export const ActiveView = ({ onEdit }) => {
             'Video': 'bg-pink-100 text-pink-800 border-pink-500',
             'Event': 'bg-green-100 text-green-800 border-green-500',
             'Global': 'bg-yellow-100 text-yellow-800 border-yellow-500',
+            'Global Task': 'bg-yellow-100 text-yellow-800 border-yellow-500',
             'Legacy': 'bg-gray-100 text-gray-800 border-gray-500'
         }[task.source] || 'bg-gray-100 text-gray-800 border-gray-500';
+        
+        // Get semantic status colors
+        const statusColors = getTaskStatusColors(task.status, task.dueDate);
         
         return (
             <div 
                 key={task.id} 
                 onClick={() => task.source === 'Legacy' ? onEdit(task) : undefined} 
                 className={cn(
-                    "p-4 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 border-l-4",
+                    "p-4 cursor-pointer hover:opacity-90 transition-opacity",
                     THEME.punk.card,
-                    highlight === 'overdue' ? 'border-l-red-500 bg-red-50 dark:bg-red-900/20' :
-                    highlight === 'dueSoon' ? 'border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
-                    highlight === 'inProgress' ? 'border-l-blue-500 bg-blue-50 dark:bg-blue-900/20' :
-                    highlight === 'unpaid' ? 'border-l-purple-500 bg-purple-50 dark:bg-purple-900/20' :
-                    'border-l-gray-300'
+                    // Use semantic color for left border and background
+                    statusColors.borderThick,
+                    statusColors.bg
                 )}
             >
                 <div className="flex items-center justify-between mb-2">
@@ -1670,11 +1673,11 @@ export const ActiveView = ({ onEdit }) => {
                 </div>
                 <div className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">{task.sourceName}</div>
                 <div className="flex flex-wrap gap-2 mt-2 text-xs">
-                    {task.dueDate && <span className={cn("px-2 py-1 font-bold border border-black", task.dueDate < today ? 'bg-red-200' : task.dueDate <= nextWeek ? 'bg-yellow-200' : 'bg-gray-200')}>
+                    {task.dueDate && <span className={cn("px-2 py-1 font-bold border-2", statusColors.badge)}>
                         {task.dueDate < today ? 'OVERDUE: ' : 'Due: '}{task.dueDate}
                     </span>}
-                    <span className={cn("px-2 py-1 font-bold border border-black", (task.status === 'In Progress' || task.status === 'In-Progress') ? 'bg-blue-200' : 'bg-gray-200')}>{task.status}</span>
-                    {task.effectiveCost > 0 && <span className={cn("px-2 py-1 font-bold border border-black", task.isPaid ? 'bg-green-200' : 'bg-purple-200')}>{task.isPaid ? 'Paid' : 'Unpaid'}: {formatMoney(task.effectiveCost)}</span>}
+                    <span className={cn("px-2 py-1 font-bold border-2", statusColors.badge)}>{task.status}</span>
+                    {task.effectiveCost > 0 && <span className={cn("px-2 py-1 font-bold border-2", task.isPaid ? 'bg-green-100 border-green-500 text-green-800' : 'bg-purple-100 border-purple-500 text-purple-800')}>{task.isPaid ? 'Paid' : 'Unpaid'}: {formatMoney(task.effectiveCost)}</span>}
                 </div>
             </div>
         );
@@ -1708,7 +1711,7 @@ export const ActiveView = ({ onEdit }) => {
             {overdue.length > 0 && (
                 <div className="mb-6">
                     <h3 className="font-black uppercase text-red-600 mb-3 border-b-4 border-red-600 pb-2">⚠️ Overdue Tasks</h3>
-                    <div className="grid gap-3">{overdue.map(t => <TaskCard key={t.id} task={t} highlight="overdue" />)}</div>
+                    <div className="grid gap-3">{overdue.map(t => <TaskCard key={t.id} task={t}  />)}</div>
                 </div>
             )}
             
@@ -1716,7 +1719,7 @@ export const ActiveView = ({ onEdit }) => {
             {dueSoon.length > 0 && (
                 <div className="mb-6">
                     <h3 className="font-black uppercase text-yellow-600 mb-3 border-b-4 border-yellow-600 pb-2">📅 Due This Week</h3>
-                    <div className="grid gap-3">{dueSoon.map(t => <TaskCard key={t.id} task={t} highlight="dueSoon" />)}</div>
+                    <div className="grid gap-3">{dueSoon.map(t => <TaskCard key={t.id} task={t}  />)}</div>
                 </div>
             )}
             
@@ -1724,7 +1727,7 @@ export const ActiveView = ({ onEdit }) => {
             {inProgress.length > 0 && (
                 <div className="mb-6">
                     <h3 className="font-black uppercase text-blue-600 mb-3 border-b-4 border-blue-600 pb-2">🔄 In Progress</h3>
-                    <div className="grid gap-3">{inProgress.map(t => <TaskCard key={t.id} task={t} highlight="inProgress" />)}</div>
+                    <div className="grid gap-3">{inProgress.map(t => <TaskCard key={t.id} task={t}  />)}</div>
                 </div>
             )}
             
@@ -1732,7 +1735,7 @@ export const ActiveView = ({ onEdit }) => {
             {unpaid.length > 0 && (
                 <div className="mb-6">
                     <h3 className="font-black uppercase text-purple-600 mb-3 border-b-4 border-purple-600 pb-2">💰 Unpaid Tasks</h3>
-                    <div className="grid gap-3">{unpaid.map(t => <TaskCard key={t.id} task={t} highlight="unpaid" />)}</div>
+                    <div className="grid gap-3">{unpaid.map(t => <TaskCard key={t.id} task={t}  />)}</div>
                 </div>
             )}
             

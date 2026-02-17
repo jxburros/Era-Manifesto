@@ -55,8 +55,9 @@
 - [ ] **Enhanced Focus Mode**  
   Expand the existing "Focus Mode" to include standard typography settings (disabling forced uppercase) for better readability of dense data.
 
-- [ ] **Semantic Color Overlays**  
+- [x] **Semantic Color Overlays** ✅  
   Integrate Green (Complete) and Red (Overdue) status colors into the brutalist UI borders for instant recognition.
+  *Completed: Added getTaskStatusColors() utility function that provides consistent semantic color scheme based on task status and due date. Integrated into ActiveView (Today view) TaskCard component with color-coded left borders and backgrounds: Red for overdue, Green for complete, Blue for in-progress, Orange for delayed, Gray for not started.*
 
 ---
 
