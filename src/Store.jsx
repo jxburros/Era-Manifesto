@@ -30,6 +30,7 @@ import {
   resolveCostPrecedence,
   getEffectiveCost
 } from './domain/taskLogic';
+import { getTaskOffsets } from './settings/taskOffsets';
 
 const StoreContext = createContext();
 
@@ -695,7 +696,20 @@ export const StoreProvider = ({ children }) => {
   const [db, setDb] = useState(null);
   const [storage, setStorage] = useState(null);
   const appId = "album-tracker-v2";
-  const deadlineOffsets = data.settings?.deadlineOffsets || {};
+  
+  // Deadline offsets with template support
+  // Priority: user's deadlineOffsets > template offsets > hardcoded defaults
+  const deadlineOffsets = useMemo(() => {
+    const settings = data.settings || {};
+    // Get template offsets based on default template (can be customized per song/release)
+    const templateType = settings.defaultTemplateType || 'single';
+    const templateOffsets = getTaskOffsets(settings, templateType);
+    
+    // User's direct deadlineOffsets override template
+    const userOffsets = settings.deadlineOffsets || {};
+    
+    return { ...templateOffsets, ...userOffsets };
+  }, [data.settings]);
 
   useEffect(() => {
     const init = async () => {

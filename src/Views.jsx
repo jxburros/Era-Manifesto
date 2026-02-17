@@ -22,6 +22,7 @@ import { DetailPane } from './ItemComponents';
 // Lazy load PDF export to reduce initial bundle size
 import { exportEraPDF } from './pdfExportLazy';
 import { runDiagnostics, repairIssues } from './utils/dataIntegrity';
+import { getAllTemplates, saveTemplateOffsets, resetTemplate } from './settings/taskOffsets';
 
 export const ListView = ({ onEdit }) => {
     const { data, actions } = useStore();
@@ -2038,7 +2039,7 @@ const StorageInfo = ({ actions }) => {
 
 export const SettingsView = () => {
     const { data, actions, mode, mods } = useStore();
-    const settings = data.settings || {};
+    const settings = useMemo(() => data.settings || {}, [data.settings]);
     const themeMode = settings.themeMode || 'light';
     const accent = settings.themeColor || 'pink';
     const isConnected = mode === 'cloud';
@@ -2062,6 +2063,11 @@ export const SettingsView = () => {
     const [showDiagnosticDetails, setShowDiagnosticDetails] = useState(false);
     const [repairOptions, setRepairOptions] = useState({ autoFix: false, removeOrphans: false });
     const [repairResult, setRepairResult] = useState(null);
+
+    // Task offset templates state
+    const [selectedTemplate, setSelectedTemplate] = useState(settings.defaultTemplateType || 'single');
+    const [editingOffsets, setEditingOffsets] = useState({});
+    const [showAllOffsets, setShowAllOffsets] = useState(false);
 
     useEffect(() => {
       setTemplateDrafts(settings.templates || []);
@@ -2194,6 +2200,58 @@ export const SettingsView = () => {
       actions.removeMod(modId);
     };
 
+    // Task offset template handlers
+    const templates = useMemo(() => getAllTemplates(settings), [settings]);
+    
+    const handleSelectTemplate = (templateId) => {
+      setSelectedTemplate(templateId);
+      actions.saveSettings({ defaultTemplateType: templateId });
+    };
+
+    const handleOffsetChange = (templateId, taskType, value) => {
+      const numValue = Number(value || 0);
+      setEditingOffsets(prev => ({
+        ...prev,
+        [templateId]: {
+          ...(prev[templateId] || {}),
+          [taskType]: numValue
+        }
+      }));
+    };
+
+    const handleSaveTemplateOffsets = (templateId) => {
+      const offsets = editingOffsets[templateId];
+      if (!offsets) return;
+      
+      const updatedSettings = saveTemplateOffsets(settings, templateId, offsets);
+      actions.saveSettings(updatedSettings);
+      
+      // Clear editing state for this template
+      setEditingOffsets(prev => {
+        const next = { ...prev };
+        delete next[templateId];
+        return next;
+      });
+      
+      alert(`Template "${templateId}" offsets saved!`);
+    };
+
+    const handleResetTemplate = (templateId) => {
+      if (!window.confirm(`Reset "${templateId}" template to default values?`)) return;
+      
+      const updatedSettings = resetTemplate(settings, templateId);
+      actions.saveSettings(updatedSettings);
+      
+      // Clear editing state
+      setEditingOffsets(prev => {
+        const next = { ...prev };
+        delete next[templateId];
+        return next;
+      });
+      
+      alert(`Template "${templateId}" reset to defaults!`);
+    };
+
     // Enhanced export with version metadata
     const exportAllData = () => {
       const basePayload = actions.getExportPayload();
@@ -2313,17 +2371,6 @@ export const SettingsView = () => {
       photos: true,
       upcomingTable: true
     };
-
-    const deadlineOffsets = settings.deadlineOffsets || {};
-    const defaultOffsetRows = [
-      { key: 'Demo', value: 100 },
-      { key: 'Record', value: 70 },
-      { key: 'Mix', value: 42 },
-      { key: 'Master', value: 21 },
-      { key: 'Release', value: 0 },
-      { key: 'Plan Video', value: 60 },
-      { key: 'Release Video', value: 0 }
-    ];
 
     // Legacy: allStatuses collection removed - replaced by comprehensive diagnostics utility
 
@@ -2646,21 +2693,131 @@ export const SettingsView = () => {
                   ))}
                 </div>
 
-                {/* Deadline Offset Editor */}
-                <div className="pt-4 border-t-4 border-black space-y-3">
-                  <h3 className="font-black text-xs uppercase">Auto-Deadline Offsets (days before release)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {defaultOffsetRows.map(row => (
-                      <label key={row.key} className="text-sm font-bold flex items-center justify-between gap-2">
-                        <span>{row.key}</span>
-                        <input
-                          type="number"
-                          className={cn("w-24", THEME.punk.input)}
-                          value={deadlineOffsets[row.key] ?? row.value}
-                          onChange={e => actions.saveSettings({ deadlineOffsets: { ...deadlineOffsets, [row.key]: Number(e.target.value || 0) } })}
-                        />
-                      </label>
+                {/* Task Deadline Templates */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-xs uppercase">Task Deadline Templates</h3>
+                    <button
+                      onClick={() => setShowAllOffsets(!showAllOffsets)}
+                      className={cn("px-3 py-2 text-xs", THEME.punk.btn, showAllOffsets ? "bg-black text-white" : "bg-white dark:bg-slate-700")}
+                    >
+                      {showAllOffsets ? 'Show Less' : 'Show All'}
+                    </button>
+                  </div>
+
+                  <div className="text-xs opacity-70">
+                    Configure task deadline offsets for different project types (Single, EP, Album). Offsets are in days before release date.
+                  </div>
+
+                  {/* Template Selector */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {templates.map(template => (
+                      <button
+                        key={template.id}
+                        onClick={() => handleSelectTemplate(template.id)}
+                        className={cn(
+                          "p-3 text-sm font-bold text-left",
+                          THEME.punk.btn,
+                          "border-4",
+                          selectedTemplate === template.id
+                            ? "border-green-500 bg-green-50 dark:bg-green-900"
+                            : "border-black dark:border-slate-600"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{template.name}</span>
+                          {template.isCustomized && (
+                            <span className="text-xs">✏️</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] opacity-60 mt-1">{template.description}</div>
+                      </button>
                     ))}
+                  </div>
+
+                  {/* Selected Template Editor */}
+                  {selectedTemplate && (() => {
+                    const template = templates.find(t => t.id === selectedTemplate);
+                    if (!template) return null;
+
+                    const currentOffsets = editingOffsets[selectedTemplate] || template.offsets;
+                    const offsetKeys = Object.keys(currentOffsets).sort();
+                    const displayKeys = showAllOffsets ? offsetKeys : offsetKeys.slice(0, 8);
+
+                    return (
+                      <div className={cn("p-4", THEME.punk.card, "border-4 border-black dark:border-slate-600")}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <div className="font-black text-sm">{template.name} Template</div>
+                            <div className="text-xs opacity-70">{template.description}</div>
+                          </div>
+                          {template.isCustomized && (
+                            <button
+                              onClick={() => handleResetTemplate(selectedTemplate)}
+                              className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-orange-500 text-white")}
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {displayKeys.map(taskType => (
+                            <label key={taskType} className="text-sm flex items-center justify-between gap-2">
+                              <span className="font-bold">{taskType}</span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  className={cn("w-20", THEME.punk.input)}
+                                  value={currentOffsets[taskType]}
+                                  onChange={e => handleOffsetChange(selectedTemplate, taskType, e.target.value)}
+                                  min="0"
+                                  max="365"
+                                />
+                                <span className="text-xs opacity-60">days</span>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+
+                        {!showAllOffsets && offsetKeys.length > 8 && (
+                          <div className="text-xs opacity-60 text-center mt-3">
+                            ...and {offsetKeys.length - 8} more. Click &quot;Show All&quot; to see all offsets.
+                          </div>
+                        )}
+
+                        {Object.keys(editingOffsets[selectedTemplate] || {}).length > 0 && (
+                          <div className="mt-4 pt-3 border-t-2 border-gray-300 dark:border-slate-600 flex gap-2">
+                            <button
+                              onClick={() => handleSaveTemplateOffsets(selectedTemplate)}
+                              className={cn("flex-1 px-4 py-2 text-sm font-black", THEME.punk.btn, "bg-green-600 text-white")}
+                            >
+                              ✅ Save Changes
+                            </button>
+                            <button
+                              onClick={() => setEditingOffsets(prev => {
+                                const next = { ...prev };
+                                delete next[selectedTemplate];
+                                return next;
+                              })}
+                              className={cn("flex-1 px-4 py-2 text-sm font-black", THEME.punk.btn, "bg-gray-500 text-white")}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <div className={cn("p-3 bg-blue-50 dark:bg-blue-900 border-4 border-blue-500 text-xs")}>
+                    <div className="font-bold mb-1">ℹ️ How Templates Work</div>
+                    <div className="opacity-80 space-y-1">
+                      <div>• Templates provide default offset values for different project types</div>
+                      <div>• Your custom offsets override template defaults</div>
+                      <div>• Changes only affect newly created tasks</div>
+                      <div>• Existing tasks retain their original deadlines</div>
+                    </div>
                   </div>
                 </div>
 
