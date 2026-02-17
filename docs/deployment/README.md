@@ -24,6 +24,12 @@ Welcome to the Era Manifesto deployment documentation. This directory contains c
 - Service worker setup
 - Testing and troubleshooting
 
+**[Android Deployment Ready](./ANDROID_DEPLOYMENT_READY.md)** - Native Android (Capacitor) setup
+- Capacitor v8.1.0 native wrapper
+- Android Studio project structure
+- Google Play Store preparation
+- Quick start for native builds
+
 ---
 
 ## 🚀 Quick Start
@@ -144,7 +150,7 @@ The PWA provides:
 - `android.md` - Android PWA deployment
 
 ### Historical
-- [Android Implementation Summary](../history/phases/ANDROID_IMPLEMENTATION_SUMMARY.md) - Historical details
+- [Android Capacitor Summary](../history/phases/ANDROID_CAPACITOR_SUMMARY.md) - Historical Capacitor implementation details
 
 ---
 

@@ -37,6 +37,15 @@ Application analysis and improvement recommendations:
 
 **Review this** for guidance on improvements and refactoring.
 
+### [TODO.md](TODO.md)
+Implementation To-Do List — structured engineering tasks organized by priority (P0/P1/P2):
+- Core system tasks (completed ✅ and pending)
+- Workflow & UX enhancements
+- Data management features
+- Performance optimizations
+
+**Review this** for a complete overview of the project roadmap and completed work.
+
 ### [REMAINING_TODO.md](REMAINING_TODO.md)
 Outstanding tasks and future enhancements:
 - Planned features

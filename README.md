@@ -142,7 +142,7 @@ npm run android:open
 📱 **[Android Studio Guide](docs/development/ANDROID_STUDIO_GUIDE.md)** - Build and run in Android Studio
 📱 **[Android Quick Start](docs/deployment/ANDROID_QUICK_START.md)** - Deploy PWA in 5 minutes
 📋 **[Android Deployment Checklist](docs/deployment/ANDROID_DEPLOYMENT_CHECKLIST.md)** - Complete guide
-✅ **[Android Deployment Ready](ANDROID_DEPLOYMENT_READY.md)** - What's included
+✅ **[Android Deployment Ready](docs/deployment/ANDROID_DEPLOYMENT_READY.md)** - What's included
 
 ### Web Deployment Platforms
 

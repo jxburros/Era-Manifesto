@@ -23,6 +23,13 @@ Documentation from completed development phases. These files capture major miles
 - Enhancement summaries and implementation details
 - Test replacement summaries
 - Complete work summaries
+- `ANDROID_CAPACITOR_SUMMARY.md` - Native Android Capacitor wrapper implementation details (Feb 2026)
+
+### `/documentation-reorganization/`
+Records of documentation structure changes and cleanup efforts.
+
+**Includes:**
+- `DOCUMENTATION_CLEANUP_COMPLETE.md` - Summary of the Feb 2026 root directory cleanup (reduced from 41 to 6 markdown files)
 
 ## Why Archive?
 
