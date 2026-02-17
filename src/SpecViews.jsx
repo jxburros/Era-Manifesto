@@ -17,7 +17,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useStore, STATUS_OPTIONS, RELEASE_TYPES, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence, getPrimaryDate, getTaskDueDate, generateEventTasks, itemBelongsToEra, isEraLocked, collectAllTasks } from './Store';
 import { THEME, formatMoney, cn, getTaskBudget } from './utils';
-import { Icon, Breadcrumb } from './Components';
+import { Icon, Breadcrumb, QuickAddSongModal, QuickAddReleaseModal } from './Components';
 import { DetailPane, EraStageTagsModule, StandardListPage, StandardDetailPage, DisplayInfoSection, AutocompleteInput } from './ItemComponents';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 // Lazy load PDF export to reduce initial bundle size
@@ -32,6 +32,7 @@ const getMinEndDate = (startDate) => {
 export const SongListView = ({ onSelectSong, onSongCreated }) => {
   const { data, actions } = useStore();
   const [filterSingles, setFilterSingles] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const settings = data.settings || {};
 
   // Feature 4: Era Mode filtering
@@ -112,18 +113,33 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
     </div>
   );
 
-  // Header extra content (singles toggle)
+  // Header extra content (singles toggle + quick add button)
   const headerExtra = (
     <div className="flex items-center gap-4 mb-4">
       <label className="flex items-center gap-2 px-3 py-2 border-4 border-black dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-sm">
         <input type="checkbox" checked={filterSingles} onChange={e => setFilterSingles(e.target.checked)} className="w-4 h-4" />
         Singles Only
       </label>
+      <button
+        onClick={() => setShowQuickAdd(true)}
+        className={cn("px-4 py-2 font-black text-sm", THEME.punk.btn, "bg-green-600 text-white")}
+      >
+        ⚡ Quick Add
+      </button>
     </div>
   );
 
   return (
-    <StandardListPage
+    <>
+      <QuickAddSongModal
+        isOpen={showQuickAdd}
+        onClose={() => setShowQuickAdd(false)}
+        onAdd={(newSong) => {
+          onSongCreated?.(newSong);
+          if (onSelectSong) onSelectSong(newSong);
+        }}
+      />
+      <StandardListPage
       title="Songs"
       items={filteredSongs}
       onSelectItem={onSelectSong}
@@ -139,6 +155,7 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
         { label: 'Create an album track', onClick: handleAddAlbumTrackTemplate, className: 'bg-blue-100' }
       ]}
     />
+    </>
   );
 };
 
@@ -1889,6 +1906,7 @@ export const GlobalTasksView = () => {
 // Releases List View - Standardized Architecture
 export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
   const { data, actions } = useStore();
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const settings = data.settings || {};
 
   // Feature 4: Era Mode filtering
@@ -1993,9 +2011,30 @@ export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
     );
   };
 
+  // Header extra content (quick add button)
+  const headerExtra = (
+    <div className="flex items-center gap-4 mb-4">
+      <button
+        onClick={() => setShowQuickAdd(true)}
+        className={cn("px-4 py-2 font-black text-sm", THEME.punk.btn, "bg-green-600 text-white")}
+      >
+        ⚡ Quick Add
+      </button>
+    </div>
+  );
+
   return (
-    <StandardListPage
-      title="Releases"
+    <>
+      <QuickAddReleaseModal
+        isOpen={showQuickAdd}
+        onClose={() => setShowQuickAdd(false)}
+        onAdd={(newRelease) => {
+          onReleaseCreated?.(newRelease);
+          if (onSelectRelease) onSelectRelease(newRelease);
+        }}
+      />
+      <StandardListPage
+        title="Releases"
       items={filteredReleases}
       onSelectItem={onSelectRelease}
       onAddItem={handleAddRelease}
@@ -2003,12 +2042,14 @@ export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
       columns={columns}
       filterOptions={filterOptions}
       renderGridCard={renderGridCard}
+      headerExtra={headerExtra}
       emptyMessage="No releases yet. Click + Add Release to create one."
       emptyStateActions={[
         { label: 'Start a single rollout', onClick: () => actions.addRelease({ name: 'New Single Release', type: 'Single', releaseDate: '' }).then(r => { onReleaseCreated?.(r); onSelectRelease?.(r); }), className: 'bg-purple-100' },
         { label: 'Start an EP rollout', onClick: () => actions.addRelease({ name: 'New EP Release', type: 'EP', releaseDate: '' }).then(r => { onReleaseCreated?.(r); onSelectRelease?.(r); }), className: 'bg-yellow-100' }
       ]}
     />
+    </>
   );
 };
 

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { useState, useEffect, memo, useRef } from 'react';
+import { useState, useEffect, memo, useRef, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search } from 'lucide-react';
 import { useStore, STATUS_OPTIONS, getEffectiveCost } from './Store';
-import { THEME, COLORS, formatMoney, STAGES, cn, saveScrollPosition, getScrollPosition } from './utils';
+import { THEME, COLORS, formatMoney, STAGES, cn, saveScrollPosition, getScrollPosition, saveFormDraft, getFormDraft, clearFormDraft, hasFormDraft } from './utils';
 
 /**
  * Custom hook for scroll position persistence
@@ -64,6 +64,99 @@ export const useScrollPersistence = (scrollKey, containerRef = null) => {
 
   // Return the ref so it can be attached to the scrollable container
   return containerRef ? {} : { ref: internalRef };
+};
+
+/**
+ * Custom hook for form draft state persistence
+ * Automatically saves and restores form state for a specific key/entity
+ * Uses sessionStorage for persistence across page refreshes
+ * 
+ * @param {string} draftKey - Unique identifier for this form draft (e.g., 'song-detail-123')
+ * @param {Object} initialState - Initial form state (used if no draft exists)
+ * @param {Object} options - Options { autoSave: boolean, saveDelay: number, clearOnSave: boolean }
+ * @returns {Array} - [formState, setFormState, { hasDraft, clearDraft, saveDraft, isDirty }]
+ */
+export const useFormDraftPersistence = (draftKey, initialState = {}, options = {}) => {
+  const {
+    autoSave = true,
+    saveDelay = 1000,
+    clearOnSave = false
+  } = options;
+
+  const [formState, setFormState] = useState(() => {
+    // Try to restore from draft on initial mount
+    const draft = getFormDraft(draftKey);
+    return draft || initialState;
+  });
+
+  const [isDirty, setIsDirty] = useState(false);
+  const saveTimeoutRef = useRef(null);
+
+  // Check if there's a draft available
+  const hasDraft = hasFormDraft(draftKey);
+
+  // Save draft with debounce
+  const saveDraft = useCallback(() => {
+    if (JSON.stringify(formState) !== JSON.stringify(initialState)) {
+      saveFormDraft(draftKey, formState);
+      setIsDirty(false);
+    }
+  }, [draftKey, formState, initialState]);
+
+  // Clear draft
+  const clearDraft = useCallback(() => {
+    clearFormDraft(draftKey);
+    setIsDirty(false);
+  }, [draftKey]);
+
+  // Auto-save with debounce when form state changes
+  useEffect(() => {
+    if (!autoSave) return;
+
+    setIsDirty(true);
+
+    // Clear previous timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout to save
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraft();
+    }, saveDelay);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [formState, autoSave, saveDelay, saveDraft]);
+
+  // Save draft before route change
+  useEffect(() => {
+    return () => {
+      if (isDirty && !clearOnSave) {
+        saveFormDraft(draftKey, formState);
+      }
+    };
+  }, [draftKey, formState, isDirty, clearOnSave]);
+
+  // Custom setter that marks as dirty
+  const setFormStateWithDirty = useCallback((newStateOrUpdater) => {
+    setFormState(newStateOrUpdater);
+    setIsDirty(true);
+  }, []);
+
+  return [
+    formState,
+    setFormStateWithDirty,
+    {
+      hasDraft,
+      clearDraft,
+      saveDraft,
+      isDirty
+    }
+  ];
 };
 
 export const Icon = memo(function Icon({ name, ...props }) {
@@ -723,5 +816,243 @@ export const Breadcrumb = ({ items = [], separator = '>' }) => {
                 </div>
             ))}
         </nav>
+    );
+};
+
+/**
+ * Quick-Add Song Modal
+ * Simplified modal for quickly creating songs with minimal fields (Name + Era)
+ * Advanced metadata can be edited later in the detail view
+ */
+export const QuickAddSongModal = ({ isOpen, onClose, onAdd }) => {
+    const { data, actions } = useStore();
+    const [name, setName] = useState('');
+    const [selectedEraId, setSelectedEraId] = useState('');
+    const eras = useMemo(() => data.eras || [], [data.eras]);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Reset form when modal opens
+            setName('');
+            setSelectedEraId(data.settings?.defaultEraId || (eras.length > 0 ? eras[0].id : ''));
+        }
+    }, [isOpen, data.settings, eras]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!name.trim()) {
+            alert('Please enter a song name');
+            return;
+        }
+
+        const newSong = {
+            title: name.trim(),
+            eraIds: selectedEraId ? [selectedEraId] : [],
+            releaseDate: '', // Will be set later
+            isSingle: false, // Default
+            videoType: 'None',
+            stemsNeeded: false,
+            deadlines: [], // Auto-tasks will be generated when release date is set
+            customTasks: [],
+            versions: [],
+            videos: []
+        };
+
+        await actions.addSong(newSong);
+        if (onAdd) onAdd(newSong);
+        setName('');
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={cn("w-full max-w-md p-6", THEME.punk.card, "border-4 border-black dark:border-slate-600")}>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-black text-xl uppercase">Quick Add Song</h2>
+                    <button onClick={onClose} className={cn("p-2", THEME.punk.btn)}>
+                        <Icon name="X" size={20} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Song Name *</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            placeholder="Enter song name"
+                            className={cn("w-full", THEME.punk.input)}
+                            autoFocus
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Era</label>
+                        <select
+                            value={selectedEraId}
+                            onChange={e => setSelectedEraId(e.target.value)}
+                            className={cn("w-full", THEME.punk.input)}
+                        >
+                            <option value="">No Era</option>
+                            {eras.map(era => (
+                                <option key={era.id} value={era.id}>{era.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="text-xs opacity-60">
+                        ℹ️ You can set release date, video type, and other details later
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                        <button
+                            type="submit"
+                            className={cn("flex-1 py-3 font-black text-sm", THEME.punk.btn, "bg-green-600 text-white")}
+                        >
+                            ✅ Create Song
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className={cn("flex-1 py-3 font-black text-sm", THEME.punk.btn, "bg-gray-500 text-white")}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+/**
+ * Quick-Add Release Modal
+ * Simplified modal for quickly creating releases with minimal fields (Name + Era)
+ * Advanced metadata can be edited later in the detail view
+ */
+export const QuickAddReleaseModal = ({ isOpen, onClose, onAdd }) => {
+    const { data, actions } = useStore();
+    const [name, setName] = useState('');
+    const [selectedEraId, setSelectedEraId] = useState('');
+    const [releaseType, setReleaseType] = useState('Single');
+    const eras = useMemo(() => data.eras || [], [data.eras]);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Reset form when modal opens
+            setName('');
+            setSelectedEraId(data.settings?.defaultEraId || (eras.length > 0 ? eras[0].id : ''));
+            setReleaseType('Single');
+        }
+    }, [isOpen, data.settings, eras]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!name.trim()) {
+            alert('Please enter a release name');
+            return;
+        }
+
+        const newRelease = {
+            name: name.trim(),
+            releaseType,
+            eraIds: selectedEraId ? [selectedEraId] : [],
+            releaseDate: '', // Will be set later
+            attachedSongIds: [],
+            requiredRecordings: [],
+            hasPhysicalCopies: false,
+            tasks: [], // Auto-tasks will be generated when release date is set
+            customTasks: []
+        };
+
+        await actions.addRelease(newRelease);
+        if (onAdd) onAdd(newRelease);
+        setName('');
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={cn("w-full max-w-md p-6", THEME.punk.card, "border-4 border-black dark:border-slate-600")}>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-black text-xl uppercase">Quick Add Release</h2>
+                    <button onClick={onClose} className={cn("p-2", THEME.punk.btn)}>
+                        <Icon name="X" size={20} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Release Name *</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            placeholder="Enter release name"
+                            className={cn("w-full", THEME.punk.input)}
+                            autoFocus
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Release Type *</label>
+                        <select
+                            value={releaseType}
+                            onChange={e => setReleaseType(e.target.value)}
+                            className={cn("w-full", THEME.punk.input)}
+                            required
+                        >
+                            <option value="Single">Single</option>
+                            <option value="EP">EP</option>
+                            <option value="Album">Album</option>
+                            <option value="Compilation">Compilation</option>
+                            <option value="Remix EP">Remix EP</option>
+                            <option value="Deluxe Edition">Deluxe Edition</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Era</label>
+                        <select
+                            value={selectedEraId}
+                            onChange={e => setSelectedEraId(e.target.value)}
+                            className={cn("w-full", THEME.punk.input)}
+                        >
+                            <option value="">No Era</option>
+                            {eras.map(era => (
+                                <option key={era.id} value={era.id}>{era.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="text-xs opacity-60">
+                        ℹ️ You can add songs, set release date, and configure other details later
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                        <button
+                            type="submit"
+                            className={cn("flex-1 py-3 font-black text-sm", THEME.punk.btn, "bg-green-600 text-white")}
+                        >
+                            ✅ Create Release
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className={cn("flex-1 py-3 font-black text-sm", THEME.punk.btn, "bg-gray-500 text-white")}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 };
