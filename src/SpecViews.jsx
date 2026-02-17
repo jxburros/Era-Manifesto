@@ -17,7 +17,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useStore, STATUS_OPTIONS, RELEASE_TYPES, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence, getPrimaryDate, getTaskDueDate, generateEventTasks, itemBelongsToEra, isEraLocked, collectAllTasks } from './Store';
 import { THEME, formatMoney, cn, getTaskBudget } from './utils';
-import { Icon } from './Components';
+import { Icon, Breadcrumb } from './Components';
 import { DetailPane, EraStageTagsModule, StandardListPage, StandardDetailPage, DisplayInfoSection, AutocompleteInput } from './ItemComponents';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 // Lazy load PDF export to reduce initial bundle size
@@ -600,6 +600,12 @@ export const SongDetailView = ({ song, onBack }) => {
 
   return (
     <div className="p-6 pb-24">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb items={[
+        { label: 'Songs', onClick: onBack },
+        { label: song.title || 'Untitled Song' }
+      ]} />
+
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
@@ -2294,6 +2300,12 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
 
   return (
     <div className="p-6 pb-24">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb items={[
+        { label: 'Releases', onClick: onBack },
+        { label: release.title || 'Untitled Release' }
+      ]} />
+
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}><Icon name="ChevronLeft" size={16} /> Back to Releases</button>
@@ -4076,6 +4088,98 @@ export const TaskDashboardView = () => {
   const isOverdue = (date) => date && date < today;
   const isDueSoon = (date) => date && date >= today && date <= nextWeek;
 
+  // Next Best Action - Smart task suggestion based on priority
+  const nextBestAction = useMemo(() => {
+    // Priority 1: Overdue tasks (most urgent first)
+    const overdueTasks = allTasks.filter(t => 
+      t.date && t.date < today && 
+      (t.status !== 'Done' && t.status !== 'Complete')
+    );
+    if (overdueTasks.length > 0) {
+      const mostOverdue = overdueTasks.sort((a, b) => a.date.localeCompare(b.date))[0];
+      return {
+        task: mostOverdue,
+        priority: 'critical',
+        reason: `Overdue since ${new Date(mostOverdue.date).toLocaleDateString()}`,
+        icon: 'AlertCircle',
+        color: 'bg-red-100 dark:bg-red-900 border-red-500 text-red-800 dark:text-red-200'
+      };
+    }
+
+    // Priority 2: Tasks due today or tomorrow
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const urgentTasks = allTasks.filter(t => 
+      t.date && t.date >= today && t.date <= tomorrow &&
+      (t.status !== 'Done' && t.status !== 'Complete')
+    );
+    if (urgentTasks.length > 0) {
+      const soonestTask = urgentTasks.sort((a, b) => a.date.localeCompare(b.date))[0];
+      return {
+        task: soonestTask,
+        priority: 'high',
+        reason: soonestTask.date === today ? 'Due today!' : 'Due tomorrow',
+        icon: 'AlertTriangle',
+        color: 'bg-yellow-100 dark:bg-yellow-900 border-yellow-500 text-yellow-800 dark:text-yellow-200'
+      };
+    }
+
+    // Priority 3: In-progress tasks (keep momentum)
+    const inProgressTasks = allTasks.filter(t => 
+      (t.status === 'In Progress' || t.status === 'In-Progress')
+    );
+    if (inProgressTasks.length > 0) {
+      // Prefer those with closer due dates
+      const sortedInProgress = inProgressTasks.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return a.date.localeCompare(b.date);
+      });
+      return {
+        task: sortedInProgress[0],
+        priority: 'medium',
+        reason: 'Continue work in progress',
+        icon: 'Activity',
+        color: 'bg-blue-100 dark:bg-blue-900 border-blue-500 text-blue-800 dark:text-blue-200'
+      };
+    }
+
+    // Priority 4: Upcoming tasks (next 7 days)
+    const upcomingTasks = allTasks.filter(t => 
+      t.date && t.date > today && t.date <= nextWeek &&
+      (t.status !== 'Done' && t.status !== 'Complete' && t.status !== 'In Progress' && t.status !== 'In-Progress')
+    );
+    if (upcomingTasks.length > 0) {
+      const nextTask = upcomingTasks.sort((a, b) => a.date.localeCompare(b.date))[0];
+      return {
+        task: nextTask,
+        priority: 'normal',
+        reason: `Due ${new Date(nextTask.date).toLocaleDateString()}`,
+        icon: 'Calendar',
+        color: 'bg-green-100 dark:bg-green-900 border-green-500 text-green-800 dark:text-green-200'
+      };
+    }
+
+    // No urgent tasks - encourage starting something new
+    const notStartedTasks = allTasks.filter(t => t.status === 'Not Started');
+    if (notStartedTasks.length > 0) {
+      const nextTask = notStartedTasks.sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return a.date.localeCompare(b.date);
+      })[0];
+      return {
+        task: nextTask,
+        priority: 'low',
+        reason: nextTask.date ? `Coming up on ${new Date(nextTask.date).toLocaleDateString()}` : 'Ready to start',
+        icon: 'Zap',
+        color: 'bg-purple-100 dark:bg-purple-900 border-purple-500 text-purple-800 dark:text-purple-200'
+      };
+    }
+
+    return null;
+  }, [allTasks, today, nextWeek]);
+
   return (
     <div className="p-6 pb-24">
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
@@ -4150,6 +4254,91 @@ export const TaskDashboardView = () => {
           <div className="text-xs font-bold uppercase">Total Estimated</div>
         </div>
       </div>
+
+      {/* Next Best Action Widget */}
+      {nextBestAction && (
+        <div className={cn(
+          "p-6 mb-6 relative overflow-hidden",
+          THEME.punk.card,
+          nextBestAction.color
+        )}>
+          {/* Priority Banner */}
+          <div className="absolute top-0 right-0">
+            <div className={cn(
+              "px-3 py-1 text-xs font-black uppercase",
+              nextBestAction.priority === 'critical' && "bg-red-600 text-white",
+              nextBestAction.priority === 'high' && "bg-yellow-600 text-white",
+              nextBestAction.priority === 'medium' && "bg-blue-600 text-white",
+              nextBestAction.priority === 'normal' && "bg-green-600 text-white",
+              nextBestAction.priority === 'low' && "bg-purple-600 text-white"
+            )}>
+              {nextBestAction.priority === 'critical' ? '🔥 URGENT' : 
+               nextBestAction.priority === 'high' ? '⚡ HIGH PRIORITY' :
+               nextBestAction.priority === 'medium' ? '▶️ IN PROGRESS' :
+               nextBestAction.priority === 'normal' ? '📅 UPCOMING' : '✨ READY'}
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4">
+            <div className={cn(
+              "p-3 rounded-full",
+              isDark ? "bg-slate-700" : "bg-white"
+            )}>
+              <Icon name={nextBestAction.icon} size={32} className="opacity-80" />
+            </div>
+            
+            <div className="flex-1">
+              <h3 className="font-black uppercase text-lg mb-1">
+                🎯 Next Best Action
+              </h3>
+              <p className="text-sm opacity-75 mb-3">{nextBestAction.reason}</p>
+              
+              <div className={cn(
+                "p-4",
+                isDark ? "bg-slate-800 bg-opacity-50" : "bg-white bg-opacity-70"
+              )}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "px-2 py-1 text-xs font-bold",
+                      isDark ? "bg-slate-700" : "bg-gray-100"
+                    )}>
+                      {nextBestAction.task.source}
+                    </span>
+                    <span className="font-black text-base">
+                      {nextBestAction.task.sourceName}
+                    </span>
+                  </div>
+                  <span className={cn(
+                    "px-2 py-1 text-xs font-bold",
+                    getStatusColor(nextBestAction.task.status)
+                  )}>
+                    {nextBestAction.task.status}
+                  </span>
+                </div>
+                
+                <div className="text-lg font-bold mb-1">
+                  {nextBestAction.task.type}
+                </div>
+                
+                {nextBestAction.task.date && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Icon name="Calendar" size={14} />
+                    <span>Due: {new Date(nextBestAction.task.date).toLocaleDateString()}</span>
+                  </div>
+                )}
+                
+                {getEffectiveCost(nextBestAction.task) > 0 && (
+                  <div className="flex items-center gap-2 text-sm mt-1">
+                    <Icon name="DollarSign" size={14} />
+                    <span>Cost: {formatMoney(getEffectiveCost(nextBestAction.task))}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* NEW: Tasks by Source Breakdown */}
       <div className={cn("p-6 mb-6", THEME.punk.card)}>
@@ -6160,13 +6349,16 @@ export const EventDetailView = ({ event, onBack }) => {
 
   return (
     <StandardDetailPage
-      item={currentEvent}
       onBack={onBack}
       backText="Back to Events"
       onDelete={async () => { await actions.deleteEvent(event.id); onBack(); }}
       displaySection={displaySection}
       editSection={editSection}
       tasksSection={tasksSection}
+      breadcrumbItems={[
+        { label: 'Events', onClick: onBack },
+        { label: event.title || 'Untitled Event' }
+      ]}
     />
   );
 };
@@ -6500,7 +6692,6 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
 
   return (
     <StandardDetailPage
-      item={currentExpense}
       onBack={onBack}
       backText="Back to Expenses"
       onDelete={async () => { await actions.deleteExpense(expense.id); onBack(); }}
@@ -6510,6 +6701,10 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
       displaySection={displaySection}
       editSection={editSection}
       extraSections={eraStageTagsSection}
+      breadcrumbItems={[
+        { label: 'Expenses', onClick: onBack },
+        { label: expense.name || 'Untitled Expense' }
+      ]}
     />
   );
 };
@@ -6900,6 +7095,12 @@ export const VideoDetailView = ({ video, onBack }) => {
 
   return (
     <div className="p-6 pb-24">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb items={[
+        { label: 'Videos', onClick: onBack },
+        { label: video.title || 'Untitled Video' }
+      ]} />
+
       <div className="flex justify-between items-center mb-6">
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
           <Icon name="ChevronLeft" size={16} /> Back to Videos
@@ -8172,7 +8373,6 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
         </div>
       )}
       <StandardDetailPage
-        item={currentTask}
         onBack={onBack}
         backText="Back to Tasks"
         onDelete={isTaskLocked ? undefined : handleDelete}
@@ -8182,6 +8382,10 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
         displaySection={displaySection}
         editSection={editSection}
         extraSections={<>{teamSection}{eraStageTagsSection}</>}
+        breadcrumbItems={[
+          { label: 'Tasks', onClick: onBack },
+          { label: task.taskName || task.title || 'Untitled Task' }
+        ]}
       />
     </>
   );

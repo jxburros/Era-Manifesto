@@ -17,7 +17,7 @@
 import { useState, useMemo, memo } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { cn, THEME } from './utils';
-import { Icon } from './Components';
+import { Icon, Breadcrumb } from './Components';
 import { useStore, STATUS_OPTIONS } from './Store';
 
 // Shared card for songs, versions, videos, releases, and tasks
@@ -1356,7 +1356,8 @@ export const StandardDetailPage = ({
   displaySection,
   editSection,
   tasksSection,
-  extraSections
+  extraSections,
+  breadcrumbItems // New prop for breadcrumb navigation
 }) => {
   const handleDelete = () => {
     if (confirm('Delete this item?')) {
@@ -1366,6 +1367,9 @@ export const StandardDetailPage = ({
 
   return (
     <div className="p-6 pb-24">
+      {/* Breadcrumb Navigation */}
+      {breadcrumbItems && <Breadcrumb items={breadcrumbItems} />}
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>

@@ -4,14 +4,17 @@
 
 ## 1. Navigation & Context Retention
 
-- [ ] **Implement Route-Backed Navigation**  
+- [x] **Implement Route-Backed Navigation** ✅  
   Transition from state-based tabs to URL-addressable routes using React Router.
+  *Completed: React Router implemented in App.jsx with routes for all entity types.*
 
-- [ ] **Enable Deep-Linking**  
+- [x] **Enable Deep-Linking** ✅  
   Ensure primary list and detail views (e.g., `/songs/:id`) are directly accessible via URL.
+  *Completed: useRouteSync hook handles deep-linking for all entity types.*
 
-- [ ] **Add Breadcrumb Navigation**  
+- [x] **Add Breadcrumb Navigation** ✅  
   Implement a "Parent-Child" navigation trail at the top of detail views (e.g., `Song > Version > Task`).
+  *Completed: Breadcrumb component added to Components.jsx and integrated into all detail views (Songs, Releases, Events, Expenses, Videos, Tasks).*
 
 - [ ] **Persistence Layer**  
   Ensure scroll positions and unsaved field states are preserved when a user navigates away and returns to a detail view.
@@ -33,14 +36,17 @@
 
 ## 3. Dashboard & "Today" View Enhancements
 
-- [ ] **Task Source Badges**  
+- [x] **Task Source Badges** ✅  
   Add visual indicators (icons or text labels) to tasks in the "Today" view to show their origin (Song, Video, Event, etc.).
+  *Completed: Enhanced ActiveView (Today view) with visual source badges using icons and colors. Each task now displays an icon badge showing its source type (Song, Video, Release, Event, Global Task, etc.) with appropriate colors.*
 
-- [ ] **"Next Best Action" Widget**  
+- [x] **"Next Best Action" Widget** ✅  
   Create a prominent dashboard component that uses due dates and progress logic to suggest the single most important task for the user to focus on.
+  *Completed: Smart widget added to TaskDashboardView that prioritizes tasks by: 1) Overdue tasks, 2) Tasks due today/tomorrow, 3) In-progress tasks, 4) Upcoming tasks, 5) Not started tasks. Shows task details, source, status, due date, and cost.*
 
-- [ ] **Aggregation Unification**  
+- [x] **Aggregation Unification** ✅  
   Ensure the "Today" view captures upcoming/overdue tasks from all sources, not just global tasks.
+  *Completed: ActiveView now uses the centralized collectAllTasks() function which aggregates tasks from all sources: Songs, Versions, Releases, Videos, Events, and Global Tasks.*
 
 ---
 
@@ -49,8 +55,9 @@
 - [ ] **Enhanced Focus Mode**  
   Expand the existing "Focus Mode" to include standard typography settings (disabling forced uppercase) for better readability of dense data.
 
-- [ ] **Semantic Color Overlays**  
+- [x] **Semantic Color Overlays** ✅  
   Integrate Green (Complete) and Red (Overdue) status colors into the brutalist UI borders for instant recognition.
+  *Completed: Added getTaskStatusColors() utility function that provides consistent semantic color scheme based on task status and due date. Integrated into ActiveView (Today view) TaskCard component with color-coded left borders and backgrounds: Red for overdue, Green for complete, Blue for in-progress, Orange for delayed, Gray for not started.*
 
 ---
 

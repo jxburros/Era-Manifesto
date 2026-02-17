@@ -14,11 +14,57 @@
  * limitations under the License.
  */
 
-import { useState, useEffect, memo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, memo, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search } from 'lucide-react';
 import { useStore, STATUS_OPTIONS, getEffectiveCost } from './Store';
-import { THEME, COLORS, formatMoney, STAGES, cn } from './utils';
+import { THEME, COLORS, formatMoney, STAGES, cn, saveScrollPosition, getScrollPosition } from './utils';
+
+/**
+ * Custom hook for scroll position persistence
+ * Automatically saves and restores scroll position for a specific key/route
+ * 
+ * @param {string} scrollKey - Unique identifier for this scroll position
+ * @param {Object} containerRef - Optional ref to the scrollable container (defaults to window)
+ * @returns {Object} - Returns the containerRef to attach to scrollable element
+ */
+export const useScrollPersistence = (scrollKey, containerRef = null) => {
+  const location = useLocation();
+  const internalRef = useRef(null);
+  const ref = containerRef || internalRef;
+
+  // Restore scroll position on mount
+  useEffect(() => {
+    const savedPosition = getScrollPosition(scrollKey);
+    if (savedPosition && ref.current) {
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        if (ref.current) {
+          ref.current.scrollTop = savedPosition;
+        }
+      }, 0);
+    } else if (savedPosition && !ref.current) {
+      // If no container ref, scroll window
+      window.scrollTo(0, savedPosition);
+    }
+  }, [scrollKey, ref]);
+
+  // Save scroll position before unmount or route change
+  useEffect(() => {
+    const savePosition = () => {
+      const position = ref.current ? ref.current.scrollTop : window.scrollY;
+      saveScrollPosition(scrollKey, position);
+    };
+
+    // Save on route change
+    return () => {
+      savePosition();
+    };
+  }, [scrollKey, location, ref]);
+
+  // Return the ref so it can be attached to the scrollable container
+  return containerRef ? {} : { ref: internalRef };
+};
 
 export const Icon = memo(function Icon({ name, ...props }) {
   const icons = { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search };
@@ -623,5 +669,59 @@ export const UnifiedTaskEditor = ({
                 </div>
             </div>
         </div>
+    );
+};
+
+/**
+ * Breadcrumb Navigation Component
+ * Displays a parent-child navigation trail (e.g., Song > Version > Task)
+ * 
+ * @param {Array} items - Array of breadcrumb items: [{ label: string, onClick?: () => void }]
+ * @param {string} separator - Separator character (default: '>')
+ */
+export const Breadcrumb = ({ items = [], separator = '>' }) => {
+    const { data } = useStore();
+    const settings = data.settings || {};
+    const isDark = settings.themeMode === 'dark';
+    const focusMode = settings.focusMode || false;
+
+    if (!items || items.length === 0) return null;
+
+    return (
+        <nav className={cn(
+            "flex items-center gap-2 text-sm mb-4 pb-3",
+            focusMode ? "border-b" : "border-b-2",
+            isDark ? "border-slate-700 text-slate-300" : "border-black text-slate-700"
+        )}>
+            {items.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                    {index > 0 && (
+                        <span className={cn(
+                            "select-none",
+                            isDark ? "text-slate-600" : "text-slate-400"
+                        )}>{separator}</span>
+                    )}
+                    {item.onClick ? (
+                        <button
+                            onClick={item.onClick}
+                            className={cn(
+                                "transition-colors",
+                                focusMode ? "hover:text-[var(--accent)] font-medium" : "hover:text-[var(--accent)] font-bold uppercase",
+                                isDark ? "text-slate-300 hover:text-[var(--accent)]" : "text-slate-700 hover:text-[var(--accent)]"
+                            )}
+                        >
+                            {item.label}
+                        </button>
+                    ) : (
+                        <span className={cn(
+                            focusMode ? "font-semibold" : "font-bold uppercase",
+                            isDark ? "text-slate-50" : "text-black"
+                        )}>
+                            {item.label}
+                        </span>
+                    )}
+                </div>
+            ))}
+        </nav>
     );
 };
