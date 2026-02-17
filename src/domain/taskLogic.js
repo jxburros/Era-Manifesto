@@ -83,7 +83,7 @@ export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = [], r
   return '';
 };
 
-export const resolveCostPrecedence = (entity = {}) => {
+export const resolveCostPrecedence = (entity = {}, costModel = null, customOrder = null) => {
   const normalizeCost = (...values) => {
     for (const value of values) {
       if (value === null || value === undefined || value === '') continue;
@@ -98,7 +98,21 @@ export const resolveCostPrecedence = (entity = {}) => {
   const partial = normalizeCost(entity.partially_paid, entity.partiallyPaidAmount, entity.partialPaidCost);
   const quoted = normalizeCost(entity.quoted_cost, entity.quotedCost);
   const estimated = normalizeCost(entity.estimated_cost, entity.estimatedCost);
+  
+  const costs = { actual, paid, partially_paid: partial, quoted, estimated };
+  
+  // If cost model is specified, use custom precedence
+  if (costModel) {
+    const order = customOrder || getCostPrecedenceOrder(costModel);
+    for (const source of order) {
+      if (costs[source] > 0) {
+        return { value: costs[source], source };
+      }
+    }
+    return { value: estimated, source: 'estimated' };
+  }
 
+  // Default precedence (backwards compatible)
   if (actual > 0) return { value: actual, source: 'actual' };
   if (paid > 0) return { value: paid, source: 'paid' };
   if (partial > 0) return { value: partial, source: 'partially_paid' };
@@ -106,4 +120,17 @@ export const resolveCostPrecedence = (entity = {}) => {
   return { value: estimated, source: 'estimated' };
 };
 
-export const getEffectiveCost = (entity = {}) => resolveCostPrecedence(entity).value;
+// Helper function to get precedence order for a cost model
+const getCostPrecedenceOrder = (model) => {
+  const orders = {
+    'actual-first': ['actual', 'paid', 'partially_paid', 'quoted', 'estimated'],
+    'paid-first': ['paid', 'actual', 'partially_paid', 'quoted', 'estimated'],
+    'quoted-first': ['quoted', 'actual', 'paid', 'partially_paid', 'estimated'],
+    'estimated-first': ['estimated', 'quoted', 'paid', 'actual', 'partially_paid']
+  };
+  return orders[model] || orders['actual-first'];
+};
+
+export const getEffectiveCost = (entity = {}, costModel = null, customOrder = null) => {
+  return resolveCostPrecedence(entity, costModel, customOrder).value;
+};

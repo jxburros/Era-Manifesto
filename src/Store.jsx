@@ -36,6 +36,17 @@ import {
   mergeOffsets,
   validateOffsets
 } from './settings/taskOffsets';
+import {
+  COST_MODELS,
+  DEFAULT_COST_MODEL,
+  resolveCostPrecedenceWithModel,
+  getEffectiveCostWithModel,
+  getCostModelConfig,
+  getCostModelLabel,
+  getCostModelDescription,
+  isValidCostModel,
+  isValidPrecedenceOrder
+} from './settings/costModels';
 
 const StoreContext = createContext();
 
@@ -50,6 +61,19 @@ export { STATUS_OPTIONS, STATUS_POINTS, getStatusPoints, calculateTaskProgress, 
 
 // Export task offset configuration functions
 export { getEffectiveOffset, getDefaultOffsets, mergeOffsets, validateOffsets };
+
+// Export cost model configuration
+export { 
+  COST_MODELS, 
+  DEFAULT_COST_MODEL, 
+  resolveCostPrecedenceWithModel, 
+  getEffectiveCostWithModel,
+  getCostModelConfig,
+  getCostModelLabel,
+  getCostModelDescription,
+  isValidCostModel,
+  isValidPrecedenceOrder
+};
 
 // Progress Calculation per APP_ARCHITECTURE.md Section 1.7:
 // Complete = 1 point
@@ -1065,6 +1089,27 @@ export const StoreProvider = ({ children }) => {
      
      getTaskOffsets: () => {
        return mergeOffsets(data.settings?.deadlineOffsets || {});
+     },
+     
+     // Cost model management
+     saveCostModel: async (model, customOrder = null) => {
+       if (!isValidCostModel(model)) {
+         throw new Error(`Invalid cost model: ${model}`);
+       }
+       
+       const settings = { costModel: model };
+       if (model === COST_MODELS.CUSTOM) {
+         if (!isValidPrecedenceOrder(customOrder)) {
+           throw new Error('Invalid custom precedence order');
+         }
+         settings.costPrecedenceOrder = customOrder;
+       }
+       
+       await actions.saveSettings(settings);
+     },
+     
+     getCostModelConfig: () => {
+       return getCostModelConfig(data.settings || {});
      },
      
      runMigration: async (notes = '') => {
