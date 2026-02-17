@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { useState, useEffect, memo, useRef } from 'react';
+import { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search } from 'lucide-react';
 import { useStore, STATUS_OPTIONS, getEffectiveCost } from './Store';
-import { THEME, COLORS, formatMoney, STAGES, cn, saveScrollPosition, getScrollPosition } from './utils';
+import { THEME, COLORS, formatMoney, STAGES, cn, saveScrollPosition, getScrollPosition, saveFormDraft, getFormDraft, clearFormDraft, hasFormDraft } from './utils';
 
 /**
  * Custom hook for scroll position persistence
@@ -64,6 +64,99 @@ export const useScrollPersistence = (scrollKey, containerRef = null) => {
 
   // Return the ref so it can be attached to the scrollable container
   return containerRef ? {} : { ref: internalRef };
+};
+
+/**
+ * Custom hook for form draft state persistence
+ * Automatically saves and restores form state for a specific key/entity
+ * Uses sessionStorage for persistence across page refreshes
+ * 
+ * @param {string} draftKey - Unique identifier for this form draft (e.g., 'song-detail-123')
+ * @param {Object} initialState - Initial form state (used if no draft exists)
+ * @param {Object} options - Options { autoSave: boolean, saveDelay: number, clearOnSave: boolean }
+ * @returns {Array} - [formState, setFormState, { hasDraft, clearDraft, saveDraft, isDirty }]
+ */
+export const useFormDraftPersistence = (draftKey, initialState = {}, options = {}) => {
+  const {
+    autoSave = true,
+    saveDelay = 1000,
+    clearOnSave = false
+  } = options;
+
+  const [formState, setFormState] = useState(() => {
+    // Try to restore from draft on initial mount
+    const draft = getFormDraft(draftKey);
+    return draft || initialState;
+  });
+
+  const [isDirty, setIsDirty] = useState(false);
+  const saveTimeoutRef = useRef(null);
+
+  // Check if there's a draft available
+  const hasDraft = hasFormDraft(draftKey);
+
+  // Save draft with debounce
+  const saveDraft = useCallback(() => {
+    if (JSON.stringify(formState) !== JSON.stringify(initialState)) {
+      saveFormDraft(draftKey, formState);
+      setIsDirty(false);
+    }
+  }, [draftKey, formState, initialState]);
+
+  // Clear draft
+  const clearDraft = useCallback(() => {
+    clearFormDraft(draftKey);
+    setIsDirty(false);
+  }, [draftKey]);
+
+  // Auto-save with debounce when form state changes
+  useEffect(() => {
+    if (!autoSave) return;
+
+    setIsDirty(true);
+
+    // Clear previous timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout to save
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraft();
+    }, saveDelay);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [formState, autoSave, saveDelay, saveDraft]);
+
+  // Save draft before route change
+  useEffect(() => {
+    return () => {
+      if (isDirty && !clearOnSave) {
+        saveFormDraft(draftKey, formState);
+      }
+    };
+  }, [draftKey, formState, isDirty, clearOnSave]);
+
+  // Custom setter that marks as dirty
+  const setFormStateWithDirty = useCallback((newStateOrUpdater) => {
+    setFormState(newStateOrUpdater);
+    setIsDirty(true);
+  }, []);
+
+  return [
+    formState,
+    setFormStateWithDirty,
+    {
+      hasDraft,
+      clearDraft,
+      saveDraft,
+      isDirty
+    }
+  ];
 };
 
 export const Icon = memo(function Icon({ name, ...props }) {
