@@ -52,7 +52,7 @@ const validateReference = (id, collection, collectionName) => {
 /**
  * Check for orphaned tasks (tasks with invalid parent references)
  */
-const checkOrphanedTasks = (data) => {
+const _checkOrphanedParentRefs = (data) => {
   const issues = [];
   const { songs = [], releases = [], standaloneVideos = [], events = [] } = data;
 
@@ -179,9 +179,9 @@ const checkOrphanedTasks = (data) => {
 };
 
 /**
- * Check for invalid status values
+ * Check for invalid status values (legacy internal check)
  */
-const checkInvalidStatuses = (data) => {
+const _checkInvalidStatusValues = (data) => {
   const issues = [];
   const validStatuses = new Set(STATUS_OPTIONS);
   const { songs = [], releases = [], standaloneVideos = [], events = [], globalTasks = [] } = data;
@@ -229,9 +229,9 @@ const checkInvalidStatuses = (data) => {
 };
 
 /**
- * Check for broken reference links (eras, stages, tags, team members)
+ * Check for broken reference links (eras, stages, tags, team members) - legacy internal
  */
-const checkBrokenReferences = (data) => {
+const _checkBrokenReferences = (data) => {
   const issues = [];
   const { songs = [], releases = [], standaloneVideos = [], events = [], globalTasks = [], 
           eras = [], stages = [], tags = [], teamMembers = [] } = data;
@@ -405,15 +405,15 @@ const checkMissingRequiredFields = (data) => {
 };
 
 /**
- * Run all diagnostics and return a comprehensive report
+ * Legacy diagnostic runner (internal use only)
  * @param {Object} data - The application data
  * @returns {Object} Diagnostic report with issues grouped by type and severity
  */
-export const runDiagnostics = (data) => {
+const _runDiagnosticsLegacy = (data) => {
   const issues = [
-    ...checkOrphanedTasks(data),
-    ...checkInvalidStatuses(data),
-    ...checkBrokenReferences(data),
+    ..._checkOrphanedParentRefs(data),
+    ..._checkInvalidStatusValues(data),
+    ..._checkBrokenReferences(data),
     ...checkMissingRequiredFields(data)
   ];
 
@@ -615,5 +615,283 @@ export const repairIssues = (data, report, options = {}) => {
     data: repairedData,
     repairLog,
     timestamp: new Date().toISOString()
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Public API — functions expected by the test suite and external consumers
+// ---------------------------------------------------------------------------
+
+const VALID_STATUSES = new Set([
+  'Not Started', 'In-Progress', 'In Progress', 'Waiting on Someone Else',
+  'Paid But Not Complete', 'Complete But Not Paid', 'Complete', 'Done', 'Other'
+]);
+
+/**
+ * Check for tasks that are missing an ID field.
+ * @param {Object} data - Application data
+ * @returns {Array} Issues with type 'missing_id' and severity 'high'
+ */
+export const checkOrphanedTasks = (data) => {
+  const issues = [];
+  const collections = ['songs', 'releases', 'videos', 'events', 'globalTasks'];
+
+  const scanTasks = (tasks, entity, entityType) => {
+    (tasks || []).forEach(task => {
+      if (!task.id) {
+        issues.push({
+          type: 'missing_id',
+          severity: 'high',
+          message: `Task in ${entityType} "${entity.id || entity.name || entity.title}" is missing an ID`,
+          entity: entityType,
+          entityId: entity.id,
+          task
+        });
+      }
+    });
+  };
+
+  (data.songs || []).forEach(song => {
+    scanTasks(song.tasks, song, 'song');
+    (song.versions || []).forEach(v => scanTasks(v.tasks, song, 'song'));
+  });
+  (data.releases || []).forEach(r => scanTasks(r.tasks, r, 'release'));
+  (data.videos || []).forEach(v => scanTasks(v.tasks, v, 'video'));
+  (data.events || []).forEach(e => scanTasks(e.tasks, e, 'event'));
+  (data.globalTasks || []).forEach(task => {
+    if (!task.id) {
+      issues.push({
+        type: 'missing_id',
+        severity: 'high',
+        message: `Global task is missing an ID`,
+        entity: 'globalTask',
+        task
+      });
+    }
+  });
+
+  return issues;
+};
+
+/**
+ * Check for tasks with invalid status values.
+ * @param {Object} data - Application data
+ * @returns {Array} Issues with type 'invalid_status' and severity 'medium'
+ */
+export const checkInvalidStatuses = (data) => {
+  const issues = [];
+
+  const scanTasks = (tasks, entityType, entityId) => {
+    (tasks || []).forEach(task => {
+      if (task.status && !VALID_STATUSES.has(task.status)) {
+        issues.push({
+          type: 'invalid_status',
+          severity: 'medium',
+          message: `Task "${task.id}" has invalid status "${task.status}"`,
+          entity: entityType,
+          entityId,
+          taskId: task.id,
+          currentStatus: task.status,
+          suggestedFix: 'Set to "Not Started" or another valid status'
+        });
+      }
+    });
+  };
+
+  (data.songs || []).forEach(s => {
+    scanTasks(s.tasks, 'song', s.id);
+    (s.versions || []).forEach(v => scanTasks(v.tasks, 'song', s.id));
+  });
+  (data.releases || []).forEach(r => scanTasks(r.tasks, 'release', r.id));
+  (data.videos || []).forEach(v => scanTasks(v.tasks, 'video', v.id));
+  (data.events || []).forEach(e => scanTasks(e.tasks, 'event', e.id));
+  scanTasks(data.globalTasks, 'globalTask', null);
+
+  return issues;
+};
+
+/**
+ * Check for broken era and team member references.
+ * @param {Object} data - Application data
+ * @returns {Array} Issues with broken link types and severities
+ */
+export const checkBrokenLinks = (data) => {
+  const issues = [];
+  const eraIds = new Set((data.eras || []).map(e => e.id));
+  const memberIds = new Set((data.teamMembers || []).map(m => m.id));
+
+  const collections = ['songs', 'releases', 'videos', 'events', 'globalTasks'];
+  collections.forEach(col => {
+    (data[col] || []).forEach(item => {
+      (item.era_ids || []).forEach(id => {
+        if (!eraIds.has(id)) {
+          issues.push({
+            type: 'broken_era_link',
+            severity: 'low',
+            message: `${col} "${item.id}" references non-existent era "${id}"`,
+            entity: col,
+            entityId: item.id,
+            brokenId: id
+          });
+        }
+      });
+      (item.team_member_ids || []).forEach(id => {
+        if (!memberIds.has(id)) {
+          issues.push({
+            type: 'broken_team_member_link',
+            severity: 'medium',
+            message: `${col} "${item.id}" references non-existent team member "${id}"`,
+            entity: col,
+            entityId: item.id,
+            brokenId: id
+          });
+        }
+      });
+    });
+  });
+
+  return issues;
+};
+
+/**
+ * Run all diagnostics and return issues with a summary.
+ * @param {Object} data - Application data
+ * @returns {{ issues: Array, summary: Object, timestamp: string }}
+ */
+export const runDiagnostics = (data) => {
+  const issues = [
+    ...checkOrphanedTasks(data),
+    ...checkInvalidStatuses(data),
+    ...checkBrokenLinks(data)
+  ];
+
+  const summary = {
+    total: issues.length,
+    high: issues.filter(i => i.severity === 'high').length,
+    medium: issues.filter(i => i.severity === 'medium').length,
+    low: issues.filter(i => i.severity === 'low').length
+  };
+
+  return { issues, summary, timestamp: new Date().toISOString() };
+};
+
+/**
+ * Auto-repair a list of issues, returning repaired data and a repair log.
+ * @param {Object} data - Application data
+ * @param {Array} issues - Issues from checkOrphanedTasks / checkInvalidStatuses / checkBrokenLinks
+ * @returns {{ repairedData: Object, repairedCount: number, errorCount: number, repairLog: Array }}
+ */
+export const autoRepair = (data, issues = []) => {
+  const repairedData = JSON.parse(JSON.stringify(data));
+  const repairLog = [];
+  let repairedCount = 0;
+  let errorCount = 0;
+
+  const generateId = () =>
+    `repaired-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+  issues.forEach(issue => {
+    try {
+      if (issue.type === 'missing_id') {
+        // Generate IDs for tasks that lack them
+        const fixTasksIn = (tasks) => {
+          (tasks || []).forEach(task => {
+            if (!task.id) {
+              task.id = generateId();
+              repairLog.push({ type: 'generated_id', taskId: task.id, issue });
+              repairedCount++;
+            }
+          });
+        };
+
+        (repairedData.songs || []).forEach(s => {
+          fixTasksIn(s.tasks);
+          (s.versions || []).forEach(v => fixTasksIn(v.tasks));
+        });
+        (repairedData.releases || []).forEach(r => fixTasksIn(r.tasks));
+        (repairedData.videos || []).forEach(v => fixTasksIn(v.tasks));
+        (repairedData.events || []).forEach(e => fixTasksIn(e.tasks));
+        fixTasksIn(repairedData.globalTasks);
+
+      } else if (issue.type === 'invalid_status') {
+        // Reset invalid statuses to 'Not Started'
+        const fixTasksIn = (tasks) => {
+          (tasks || []).forEach(task => {
+            if (task.id === issue.taskId && !VALID_STATUSES.has(task.status)) {
+              task.status = 'Not Started';
+              repairLog.push({ type: 'fixed_status', taskId: task.id, issue });
+              repairedCount++;
+            }
+          });
+        };
+
+        (repairedData.songs || []).forEach(s => {
+          fixTasksIn(s.tasks);
+          (s.versions || []).forEach(v => fixTasksIn(v.tasks));
+        });
+        (repairedData.releases || []).forEach(r => fixTasksIn(r.tasks));
+        (repairedData.videos || []).forEach(v => fixTasksIn(v.tasks));
+        (repairedData.events || []).forEach(e => fixTasksIn(e.tasks));
+        fixTasksIn(repairedData.globalTasks);
+
+      } else if (issue.type === 'broken_era_link') {
+        // Remove the broken era ID from the entity
+        const removeFrom = (collections) => {
+          collections.forEach(col => {
+            (repairedData[col] || []).forEach(item => {
+              if (item.era_ids && item.era_ids.includes(issue.brokenId)) {
+                item.era_ids = item.era_ids.filter(id => id !== issue.brokenId);
+                repairLog.push({ type: 'removed_broken_link', entityId: item.id, brokenId: issue.brokenId, issue });
+                repairedCount++;
+              }
+            });
+          });
+        };
+        removeFrom(['songs', 'releases', 'videos', 'events', 'globalTasks']);
+
+      } else if (issue.type === 'broken_team_member_link') {
+        const removeFrom = (collections) => {
+          collections.forEach(col => {
+            (repairedData[col] || []).forEach(item => {
+              if (item.team_member_ids && item.team_member_ids.includes(issue.brokenId)) {
+                item.team_member_ids = item.team_member_ids.filter(id => id !== issue.brokenId);
+                repairLog.push({ type: 'removed_broken_link', entityId: item.id, brokenId: issue.brokenId, issue });
+                repairedCount++;
+              }
+            });
+          });
+        };
+        removeFrom(['songs', 'releases', 'videos', 'events', 'globalTasks']);
+      }
+    } catch (err) {
+      errorCount++;
+      repairLog.push({ type: 'error', error: err.message, issue });
+    }
+  });
+
+  return { repairedData, repairedCount, errorCount, repairLog };
+};
+
+/**
+ * Compute summary statistics from a diagnostics object.
+ * @param {{ summary: Object, issues: Array }} diagnostics
+ * @returns {{ totalIssues, highSeverity, issuesByType, issuesByEntity }}
+ */
+export const getDiagnosticStats = (diagnostics) => {
+  const issuesByType = {};
+  const issuesByEntity = {};
+
+  (diagnostics.issues || []).forEach(issue => {
+    issuesByType[issue.type] = (issuesByType[issue.type] || 0) + 1;
+    if (issue.entity) {
+      issuesByEntity[issue.entity] = (issuesByEntity[issue.entity] || 0) + 1;
+    }
+  });
+
+  return {
+    totalIssues: diagnostics.summary?.total ?? (diagnostics.issues?.length ?? 0),
+    highSeverity: diagnostics.summary?.high ?? 0,
+    issuesByType,
+    issuesByEntity
   };
 };

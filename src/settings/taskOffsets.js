@@ -247,3 +247,110 @@ export const detectProjectType = (release) => {
   if (trackCount >= 3) return 'ep';
   return 'single';
 };
+
+// ---------------------------------------------------------------------------
+// Flat-category exports used by getEffectiveOffset / mergeOffsets API
+// ---------------------------------------------------------------------------
+
+/** Default song-production offset values (days before release date) */
+export const DEFAULT_SONG_OFFSETS = {
+  'Demo': 100,
+  'Arrangement': 90,
+  'Record': 70,
+  'Vocal Recording': 60,
+  'Instrument Recording': 55,
+  'Mix': 42,
+  'Master': 21,
+  'DSP Upload': 14,
+  'Release': 0,
+  'Receive Stems': 35,
+  'Release Stems': 7
+};
+
+/** Default video-production offset values */
+export const DEFAULT_VIDEO_OFFSETS = {
+  'Plan Video': 60,
+  'Hire Crew': 45,
+  'Film Video': 35,
+  'Edit Video': 25,
+  'Submit Video': 14,
+  'Release Video': 0
+};
+
+/** Default event offset values */
+export const DEFAULT_EVENT_OFFSETS = {
+  'Attend Event': 0,
+  'Book Venue': 60,
+  'Promote Event': 30,
+  'Sound Check': 1
+};
+
+const DEFAULT_OFFSETS_BY_CATEGORY = {
+  song: DEFAULT_SONG_OFFSETS,
+  video: DEFAULT_VIDEO_OFFSETS,
+  event: DEFAULT_EVENT_OFFSETS
+};
+
+/**
+ * Get default offsets for a specific category.
+ * @param {string} category - 'song' | 'video' | 'event'
+ * @returns {Object} Offset map for that category
+ */
+export const getDefaultOffsets = (category) =>
+  DEFAULT_OFFSETS_BY_CATEGORY[category] || {};
+
+/**
+ * Get the effective offset for a task type, respecting user overrides.
+ * Priority: user project-type override > general user override > default
+ * @param {string} taskType - Task type name (e.g. 'Mix')
+ * @param {string} category - Category: 'song' | 'video' | 'event'
+ * @param {Object} userOffsets - User-defined offsets
+ * @param {string} [projectType] - Optional project type (e.g. 'Album', 'Single')
+ * @returns {number} Offset in days
+ */
+export const getEffectiveOffset = (taskType, category, userOffsets = {}, projectType = null) => {
+  // 1. User project-type specific override has highest priority
+  if (projectType && userOffsets.projectTypes?.[projectType]?.[taskType] !== undefined) {
+    return userOffsets.projectTypes[projectType][taskType];
+  }
+  // 2. General user override for this category
+  if (userOffsets[category]?.[taskType] !== undefined) {
+    return userOffsets[category][taskType];
+  }
+  // 3. Fall back to defaults
+  return DEFAULT_OFFSETS_BY_CATEGORY[category]?.[taskType] ?? 0;
+};
+
+/**
+ * Validate and sanitize user-supplied offsets, removing non-numeric or negative values.
+ * @param {Object} userOffsets - Raw user offsets keyed by category
+ * @returns {Object} Sanitized offsets
+ */
+export const validateOffsets = (userOffsets = {}) => {
+  const result = {};
+  for (const [category, tasks] of Object.entries(userOffsets)) {
+    if (!tasks || typeof tasks !== 'object') continue;
+    const sanitized = {};
+    for (const [taskType, value] of Object.entries(tasks)) {
+      const num = typeof value === 'number' ? value : Number(value);
+      if (Number.isFinite(num) && num >= 0) {
+        sanitized[taskType] = num;
+      }
+    }
+    if (Object.keys(sanitized).length > 0) {
+      result[category] = sanitized;
+    }
+  }
+  return result;
+};
+
+/**
+ * Merge user offsets with defaults, producing a full offset map by category.
+ * @param {Object} userOffsets - User offsets keyed by category
+ * @returns {Object} Merged offsets with all categories present
+ */
+export const mergeOffsets = (userOffsets = {}) => ({
+  song: { ...DEFAULT_SONG_OFFSETS, ...(userOffsets.song || {}) },
+  video: { ...DEFAULT_VIDEO_OFFSETS, ...(userOffsets.video || {}) },
+  event: { ...DEFAULT_EVENT_OFFSETS, ...(userOffsets.event || {}) }
+});
