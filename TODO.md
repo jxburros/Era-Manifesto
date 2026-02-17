@@ -36,15 +36,17 @@
 
 ## 3. Dashboard & "Today" View Enhancements
 
-- [ ] **Task Source Badges**  
+- [x] **Task Source Badges** ✅  
   Add visual indicators (icons or text labels) to tasks in the "Today" view to show their origin (Song, Video, Event, etc.).
+  *Completed: Enhanced ActiveView (Today view) with visual source badges using icons and colors. Each task now displays an icon badge showing its source type (Song, Video, Release, Event, Global Task, etc.) with appropriate colors.*
 
 - [x] **"Next Best Action" Widget** ✅  
   Create a prominent dashboard component that uses due dates and progress logic to suggest the single most important task for the user to focus on.
   *Completed: Smart widget added to TaskDashboardView that prioritizes tasks by: 1) Overdue tasks, 2) Tasks due today/tomorrow, 3) In-progress tasks, 4) Upcoming tasks, 5) Not started tasks. Shows task details, source, status, due date, and cost.*
 
-- [ ] **Aggregation Unification**  
+- [x] **Aggregation Unification** ✅  
   Ensure the "Today" view captures upcoming/overdue tasks from all sources, not just global tasks.
+  *Completed: ActiveView now uses the centralized collectAllTasks() function which aggregates tasks from all sources: Songs, Versions, Releases, Videos, Events, and Global Tasks.*
 
 ---
 

@@ -15,7 +15,7 @@
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate, getEffectiveCost, EXPORT_VERSION } from './Store';
+import { useStore, STATUS_OPTIONS, getTaskDueDate, getPrimaryDate, getEffectiveCost, EXPORT_VERSION, collectAllTasks } from './Store';
 import { THEME, COLORS, formatMoney, cn } from './utils';
 import { Icon } from './Components';
 import { DetailPane } from './ItemComponents';
@@ -1603,94 +1603,22 @@ export const ActiveView = ({ onEdit }) => {
     const today = new Date().toISOString().split('T')[0];
     const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
-    // Collect all tasks from various sources
+    // Collect all tasks from various sources using centralized function
     const allTasks = useMemo(() => {
-        const tasks = [];
+        // Use the centralized collectAllTasks function for consistent aggregation
+        const tasks = collectAllTasks(data);
         
-        // Legacy tasks from the original tasks array
-        const legacyTasks = data.tasks.filter(t => !t.archived && !t.isCategory && t.status !== 'done' && t.status !== 'Done' && t.status !== 'Complete');
-        legacyTasks.forEach(t => {
-            tasks.push({
-                ...t,
-                source: 'Legacy',
-                sourceName: t.title,
-                effectiveCost: t.actualCost || t.quotedCost || t.estimatedCost || 0,
-                isPaid: t.actualCost > 0
-            });
-        });
-        
-        // Song tasks (deadlines) and custom tasks
-        (data.songs || []).forEach(song => {
-            (song.deadlines || []).filter(d => d.status !== 'Done' && d.status !== 'Complete').forEach(d => {
-                tasks.push({
-                    id: `song-${song.id}-${d.id}`,
-                    title: d.type,
-                    dueDate: getTaskDueDate(d),
-                    status: d.status,
-                    source: 'Song',
-                    sourceName: song.title,
-                    estimatedCost: d.estimatedCost || 0,
-                    quotedCost: d.quotedCost || 0,
-                    paidCost: d.paidCost || 0,
-                    effectiveCost: d.paidCost || d.quotedCost || d.estimatedCost || 0,
-                    isPaid: (d.paidCost || 0) > 0
-                });
-            });
-            (song.customTasks || []).filter(t => t.status !== 'Done' && t.status !== 'Complete').forEach(t => {
-                tasks.push({
-                    id: `song-custom-${song.id}-${t.id}`,
-                    title: t.title,
-                    dueDate: getTaskDueDate(t),
-                    status: t.status,
-                    source: 'Song',
-                    sourceName: song.title,
-                    estimatedCost: t.estimatedCost || 0,
-                    quotedCost: t.quotedCost || 0,
-                    paidCost: t.paidCost || 0,
-                    effectiveCost: t.paidCost || t.quotedCost || t.estimatedCost || 0,
-                    isPaid: (t.paidCost || 0) > 0
-                });
-            });
-        });
-        
-        // Global tasks
-        (data.globalTasks || []).filter(t => t.status !== 'Done' && t.status !== 'Complete' && !t.isArchived).forEach(t => {
-            tasks.push({
-                id: `global-${t.id}`,
-                title: t.taskName,
-                dueDate: getTaskDueDate(t),
-                status: t.status,
-                source: 'Global',
-                sourceName: t.category,
-                estimatedCost: t.estimatedCost || 0,
-                quotedCost: t.quotedCost || 0,
-                paidCost: t.paidCost || 0,
-                effectiveCost: t.paidCost || t.quotedCost || t.estimatedCost || 0,
-                isPaid: (t.paidCost || 0) > 0
-            });
-        });
-        
-        // Release tasks
-        (data.releases || []).forEach(release => {
-            (release.tasks || []).filter(t => t.status !== 'Done' && t.status !== 'Complete').forEach(t => {
-                tasks.push({
-                    id: `release-${release.id}-${t.id}`,
-                    title: t.type,
-                    dueDate: getTaskDueDate(t) || release.releaseDate,
-                    status: t.status,
-                    source: 'Release',
-                    sourceName: release.name,
-                    estimatedCost: t.estimatedCost || 0,
-                    quotedCost: t.quotedCost || 0,
-                    paidCost: t.paidCost || 0,
-                    effectiveCost: t.paidCost || t.quotedCost || t.estimatedCost || 0,
-                    isPaid: (t.paidCost || 0) > 0
-                });
-            });
-        });
-        
-        return tasks;
-    }, [data.tasks, data.songs, data.globalTasks, data.releases]);
+        // Add custom properties needed by ActiveView (effectiveCost, isPaid)
+        return tasks.map(t => ({
+            ...t,
+            dueDate: t.date, // Normalize date field
+            effectiveCost: t.paidCost || t.quotedCost || t.estimatedCost || 0,
+            isPaid: (t.paidCost || 0) > 0
+        })).filter(t => 
+            // Filter out completed/archived tasks
+            t.status !== 'Done' && t.status !== 'Complete' && !t.isArchived
+        );
+    }, [data]);
     
     // Filter tasks into categories
     const inProgress = allTasks.filter(t => t.status === 'In Progress' || t.status === 'In-Progress');
@@ -1698,31 +1626,59 @@ export const ActiveView = ({ onEdit }) => {
     const dueSoon = allTasks.filter(t => t.dueDate && t.dueDate >= today && t.dueDate <= nextWeek);
     const unpaid = allTasks.filter(t => !t.isPaid && t.effectiveCost > 0);
     
-    const TaskCard = ({ task, highlight }) => (
-        <div 
-            key={task.id} 
-            onClick={() => task.source === 'Legacy' ? onEdit(task) : undefined} 
-            className={cn(
-                "p-4 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 border-l-4",
-                THEME.punk.card,
-                highlight === 'overdue' ? 'border-l-red-500 bg-red-50 dark:bg-red-900/20' :
-                highlight === 'dueSoon' ? 'border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
-                highlight === 'inProgress' ? 'border-l-blue-500 bg-blue-50 dark:bg-blue-900/20' :
-                highlight === 'unpaid' ? 'border-l-purple-500 bg-purple-50 dark:bg-purple-900/20' :
-                'border-l-gray-300'
-            )}
-        >
-            <div className="font-bold text-lg">{task.title}</div>
-            <div className="text-xs font-bold text-gray-600">{task.source}: {task.sourceName}</div>
-            <div className="flex flex-wrap gap-2 mt-2 text-xs">
-                {task.dueDate && <span className={cn("px-2 py-1 font-bold border border-black", task.dueDate < today ? 'bg-red-200' : task.dueDate <= nextWeek ? 'bg-yellow-200' : 'bg-gray-200')}>
-                    {task.dueDate < today ? 'OVERDUE: ' : 'Due: '}{task.dueDate}
-                </span>}
-                <span className={cn("px-2 py-1 font-bold border border-black", (task.status === 'In Progress' || task.status === 'In-Progress') ? 'bg-blue-200' : 'bg-gray-200')}>{task.status}</span>
-                {task.effectiveCost > 0 && <span className={cn("px-2 py-1 font-bold border border-black", task.isPaid ? 'bg-green-200' : 'bg-purple-200')}>{task.isPaid ? 'Paid' : 'Unpaid'}: {formatMoney(task.effectiveCost)}</span>}
+    const TaskCard = ({ task, highlight }) => {
+        const sourceIcon = {
+            'Song': 'Music',
+            'Version': 'Music2',
+            'Release': 'Disc',
+            'Video': 'Video',
+            'Event': 'Calendar',
+            'Global': 'CheckCircle',
+            'Legacy': 'Archive'
+        }[task.source] || 'Circle';
+        
+        const sourceColor = {
+            'Song': 'bg-blue-100 text-blue-800 border-blue-500',
+            'Version': 'bg-blue-100 text-blue-800 border-blue-500',
+            'Release': 'bg-purple-100 text-purple-800 border-purple-500',
+            'Video': 'bg-pink-100 text-pink-800 border-pink-500',
+            'Event': 'bg-green-100 text-green-800 border-green-500',
+            'Global': 'bg-yellow-100 text-yellow-800 border-yellow-500',
+            'Legacy': 'bg-gray-100 text-gray-800 border-gray-500'
+        }[task.source] || 'bg-gray-100 text-gray-800 border-gray-500';
+        
+        return (
+            <div 
+                key={task.id} 
+                onClick={() => task.source === 'Legacy' ? onEdit(task) : undefined} 
+                className={cn(
+                    "p-4 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 border-l-4",
+                    THEME.punk.card,
+                    highlight === 'overdue' ? 'border-l-red-500 bg-red-50 dark:bg-red-900/20' :
+                    highlight === 'dueSoon' ? 'border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
+                    highlight === 'inProgress' ? 'border-l-blue-500 bg-blue-50 dark:bg-blue-900/20' :
+                    highlight === 'unpaid' ? 'border-l-purple-500 bg-purple-50 dark:bg-purple-900/20' :
+                    'border-l-gray-300'
+                )}
+            >
+                <div className="flex items-center justify-between mb-2">
+                    <div className="font-bold text-lg">{task.title}</div>
+                    <div className={cn("flex items-center gap-1 px-2 py-1 text-xs font-bold border-2", sourceColor)}>
+                        <Icon name={sourceIcon} size={12} />
+                        <span>{task.source}</span>
+                    </div>
+                </div>
+                <div className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">{task.sourceName}</div>
+                <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                    {task.dueDate && <span className={cn("px-2 py-1 font-bold border border-black", task.dueDate < today ? 'bg-red-200' : task.dueDate <= nextWeek ? 'bg-yellow-200' : 'bg-gray-200')}>
+                        {task.dueDate < today ? 'OVERDUE: ' : 'Due: '}{task.dueDate}
+                    </span>}
+                    <span className={cn("px-2 py-1 font-bold border border-black", (task.status === 'In Progress' || task.status === 'In-Progress') ? 'bg-blue-200' : 'bg-gray-200')}>{task.status}</span>
+                    {task.effectiveCost > 0 && <span className={cn("px-2 py-1 font-bold border border-black", task.isPaid ? 'bg-green-200' : 'bg-purple-200')}>{task.isPaid ? 'Paid' : 'Unpaid'}: {formatMoney(task.effectiveCost)}</span>}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
     
     return (
         <div className="p-6 pb-24">
