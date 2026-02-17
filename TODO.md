@@ -1,80 +1,326 @@
-# 🚀 Era Manifesto Usability Implementation Plan
+# 🚀 Era Manifesto — Implementation To-Do List
+
+Purpose: Structured engineering tasks for AI coding agent.
+Scope: Core logic, workflow efficiency, UI enhancements, data auditing, performance optimization.
+
+Priority Legend:
+P0 = Core System / Integrity
+P1 = Workflow & UX
+P2 = Enhancements / Optimization
 
 ---
 
-## 1. Navigation & Context Retention
+# ✅ P0 — Core System & Logic Configuration
 
-- [x] **Implement Route-Backed Navigation** ✅  
-  Transition from state-based tabs to URL-addressable routes using React Router.
-  *Completed: React Router implemented in App.jsx with routes for all entity types.*
+## [ ] Migrate Hardcoded Deadline Logic to Settings
 
-- [x] **Enable Deep-Linking** ✅  
-  Ensure primary list and detail views (e.g., `/songs/:id`) are directly accessible via URL.
-  *Completed: useRouteSync hook handles deep-linking for all entity types.*
+### Problem
+Auto-deadline offset formulas are hardcoded.
 
-- [x] **Add Breadcrumb Navigation** ✅  
-  Implement a "Parent-Child" navigation trail at the top of detail views (e.g., `Song > Version > Task`).
-  *Completed: Breadcrumb component added to Components.jsx and integrated into all detail views (Songs, Releases, Events, Expenses, Videos, Tasks).*
+### Required Changes
+- Move deadline offset formulas into a configurable settings module.
+- Create:
+  `settings/taskOffsets.ts`
+- Support user-defined offsets per:
+  - Stage
+  - Task Type
+  - Project Type
 
-- [ ] **Persistence Layer**  
-  Ensure scroll positions and unsaved field states are preserved when a user navigates away and returns to a detail view.
-
----
-
-## 2. Task Management Optimization
-
-- [ ] **(Optional) Contextual Task Visibility**  
-  Add a toggle in Settings to enable "Stage-gate" visibility, hiding future tasks (like "Release") until prerequisites (like "Recording") are met.
-
-- [ ] **Custom Project Templates**  
-  Create a system for users to define templates (e.g., "Single" vs "EP") to prevent the auto-generation of unnecessary tasks.
-
-- [ ] **Batch Editing Actions**  
-  Implement a multi-select "Bulk Actions" bar for list views to change Status, Era, or Stage for multiple tasks at once.
+### Acceptance Criteria
+- No hardcoded offset logic remains in task engine.
+- User settings override defaults.
+- Backwards compatibility maintained.
 
 ---
 
-## 3. Dashboard & "Today" View Enhancements
+## [ ] Implement Cost Calculation Flexibility
 
-- [x] **Task Source Badges** ✅  
-  Add visual indicators (icons or text labels) to tasks in the "Today" view to show their origin (Song, Video, Event, etc.).
-  *Completed: Enhanced ActiveView (Today view) with visual source badges using icons and colors. Each task now displays an icon badge showing its source type (Song, Video, Release, Event, Global Task, etc.) with appropriate colors.*
+### Problem
+Cost precedence logic is fixed.
 
-- [x] **"Next Best Action" Widget** ✅  
-  Create a prominent dashboard component that uses due dates and progress logic to suggest the single most important task for the user to focus on.
-  *Completed: Smart widget added to TaskDashboardView that prioritizes tasks by: 1) Overdue tasks, 2) Tasks due today/tomorrow, 3) In-progress tasks, 4) Upcoming tasks, 5) Not started tasks. Shows task details, source, status, due date, and cost.*
+### Required Changes
+- Add configuration UI to choose calculation model:
+  - Paid-first
+  - Quoted-first
+  - Custom precedence
+- Store preference in user settings.
+- Update cost aggregation selectors to respect configuration.
 
-- [x] **Aggregation Unification** ✅  
-  Ensure the "Today" view captures upcoming/overdue tasks from all sources, not just global tasks.
-  *Completed: ActiveView now uses the centralized collectAllTasks() function which aggregates tasks from all sources: Songs, Versions, Releases, Videos, Events, and Global Tasks.*
-
----
-
-## 4. Design & Accessibility (Focus Mode)
-
-- [ ] **Enhanced Focus Mode**  
-  Expand the existing "Focus Mode" to include standard typography settings (disabling forced uppercase) for better readability of dense data.
-
-- [x] **Semantic Color Overlays** ✅  
-  Integrate Green (Complete) and Red (Overdue) status colors into the brutalist UI borders for instant recognition.
-  *Completed: Added getTaskStatusColors() utility function that provides consistent semantic color scheme based on task status and due date. Integrated into ActiveView (Today view) TaskCard component with color-coded left borders and backgrounds: Red for overdue, Green for complete, Blue for in-progress, Orange for delayed, Gray for not started.*
+### Acceptance Criteria
+- Users can switch cost models without data mutation.
+- Totals update dynamically based on selected model.
 
 ---
 
-## 5. Data Entry Efficiency
+## [ ] Develop Data Integrity Diagnostics
 
-- [ ] **Quick-Add Wizards**  
-  Implement a simplified creation flow for Songs and Releases that only requires a name/Era to start, deferring detailed metadata.
+### Problem
+No automated validation of:
+- Orphaned tasks
+- Invalid statuses
+- Broken references
 
-- [ ] **Inline List Editing**  
-  Enable direct editing of task names, dates, and costs within the list/grid views to eliminate unnecessary navigation to detail screens.
+### Required Changes
+- Create diagnostic utility:
+  `utils/dataIntegrity.ts`
+- Implement checks for:
+  - Task without parent
+  - Invalid stage/status combinations
+  - Broken relational links
+- Provide:
+  - Report summary
+  - Optional auto-repair
+
+### Acceptance Criteria
+- Diagnostics run safely without mutation by default.
+- Repair mode fixes detected inconsistencies.
 
 ---
 
-## 6. System Integrity & Performance
+## [ ] Implement Navigation Persistence Layer
 
-- [ ] **Data Integrity Diagnostics**  
-  Add lightweight checks for orphan tasks or invalid statuses to prevent UI errors.
+### Problem
+Scroll positions and unsaved form state are lost during navigation.
 
-- [ ] **Selector Memoization**  
-  Optimize performance for large datasets by memoizing expensive derived data (like total budget calculations).
+### Required Changes
+- Persist:
+  - Scroll position per route
+  - Unsaved form draft state
+- Use:
+  - In-memory cache OR sessionStorage
+- Restore state when returning to detail view.
+
+### Acceptance Criteria
+- Returning to a detail view restores:
+  - Scroll location
+  - Unsaved inputs
+- No stale data leakage between routes.
+
+---
+
+# ⚙️ P1 — Efficiency & Workflow Enhancements
+
+## [ ] Build Quick-Add Wizards
+
+### Goal
+Allow minimal metadata creation for:
+- Songs
+- Releases
+
+### Required Changes
+- Implement simplified creation modal:
+  - Name
+  - Era
+- Defer advanced metadata to later editing.
+
+### Acceptance Criteria
+- Creation requires ≤ 2 required fields.
+- Auto-generated tasks respect project template.
+
+---
+
+## [ ] Enable Inline Editing in List/Grid Views
+
+### Goal
+Reduce navigation overhead.
+
+### Required Changes
+- Support inline editing for:
+  - Task name
+  - Due date
+  - Cost fields
+- Implement optimistic updates.
+
+### Acceptance Criteria
+- Edits persist without navigating to detail view.
+- No data corruption during rapid edits.
+
+---
+
+## [ ] Implement Batch Actions Bar
+
+### Goal
+Update multiple tasks simultaneously.
+
+### Required Changes
+- Multi-select capability.
+- Bulk update options:
+  - Status
+  - Era
+  - Stage
+
+### Acceptance Criteria
+- Single state update per bulk action.
+- UI reflects changes instantly.
+
+---
+
+## [ ] Implement Task Visibility Logic
+
+### Subtask A — Custom Project Templates
+
+#### Required Changes
+- Create template system:
+  - Single
+  - EP
+  - Album
+- Prevent auto-generation of irrelevant tasks.
+
+#### Acceptance Criteria
+- Templates determine initial task structure.
+- No unnecessary tasks created.
+
+---
+
+### Subtask B — Stage-Gate Visibility Toggle
+
+#### Required Changes
+- Add toggle in Settings:
+  `Enable Stage-Gate`
+- Hide future tasks (e.g., Release) until prerequisites complete.
+
+#### Acceptance Criteria
+- Hidden tasks remain in data but not rendered.
+- Toggle updates visibility without mutation.
+
+---
+
+# 🎨 P2 — UI, UX & Visualization Enhancements
+
+## [ ] Expand Enhanced Focus Mode
+
+### Required Changes
+- Add typography controls:
+  - Disable forced uppercase
+  - Adjustable font weight
+- Maintain brutalist styling consistency.
+
+### Acceptance Criteria
+- Focus Mode improves readability of dense views.
+- User preference persists.
+
+---
+
+## [ ] Add Dashboard Customization Toggles
+
+### Required Changes
+- Add settings toggles for:
+  - Notifications widget
+  - Progress bars
+  - Financial summaries
+- Persist layout preferences.
+
+### Acceptance Criteria
+- Widgets can be shown/hidden dynamically.
+- No layout breakage.
+
+---
+
+## [ ] Integrate Financial Charts
+
+### Required Changes
+- Add:
+  - Pie chart for cost breakdown by source type
+  - Bar chart comparing Estimated vs Paid totals
+- Memoize derived financial data.
+
+### Acceptance Criteria
+- Charts update reactively.
+- No performance degradation on large datasets.
+
+---
+
+## [ ] Implement Filter Presets
+
+### Required Changes
+- Allow users to:
+  - Save named filter configurations
+  - Restore saved filters across views
+- Persist presets in user settings.
+
+### Acceptance Criteria
+- Filters restore correctly across sessions.
+- Presets editable and deletable.
+
+---
+
+# 📊 P2 — Data Management & Auditing
+
+## [ ] Implement Activity Logging
+
+### Required Changes
+- Track changes to:
+  - Task status
+  - Budget values
+  - Team assignments
+- Store timestamp + user context (if applicable).
+- Provide read-only audit log UI.
+
+### Acceptance Criteria
+- All mutations generate log entries.
+- Log view sortable and filterable.
+
+---
+
+## [ ] Add CSV Export — Financial Summaries
+
+### Required Changes
+- Export:
+  - Budget totals
+  - Paid vs Estimated
+  - Cost breakdowns
+- Generate downloadable CSV.
+
+### Acceptance Criteria
+- CSV opens correctly in Excel/Sheets.
+- Values match UI totals.
+
+---
+
+## [ ] Add CSV Export — Task Lists
+
+### Required Changes
+- Enable CSV export from:
+  - Timeline view
+  - Global Tasks view
+
+### Acceptance Criteria
+- Export respects current filters.
+- Column headers standardized.
+
+---
+
+## [ ] Enhance Team Member Detail
+
+### Required Changes
+- Update team summaries to include:
+  - Cost splitting data
+  - Group/organization membership lists
+- Display aggregate financial contribution per member.
+
+### Acceptance Criteria
+- Accurate cost distribution shown.
+- Groups display full membership list.
+
+---
+
+# 🚀 P2 — Performance Optimization
+
+## [ ] Implement Selector Memoization
+
+### Problem
+Derived data recalculated unnecessarily.
+
+### Required Changes
+- Memoize expensive selectors:
+  - Total budget
+  - Aggregate progress
+  - Financial summaries
+- Use:
+  `useMemo`
+  OR
+  memoized selector utilities
+
+### Acceptance Criteria
+- Large projects render smoothly.
+- No unnecessary recomputation on unrelated state updates.
