@@ -95,6 +95,9 @@ export const filterTasksByStatus = (tasks = [], activeStatus = 'all', archivedFi
 /**
  * Scroll Position Persistence Utility
  * Saves and restores scroll positions for specific routes/views
+ * 
+ * Note: Enhanced version available in utils/navigationPersistence.js
+ * This is kept for backwards compatibility
  */
 const SCROLL_POSITIONS = new Map();
 
