@@ -47,6 +47,11 @@ import {
   isValidCostModel,
   isValidPrecedenceOrder
 } from './settings/costModels';
+import {
+  runDiagnostics,
+  autoRepair,
+  getDiagnosticStats
+} from './utils/dataIntegrity';
 
 const StoreContext = createContext();
 
@@ -73,6 +78,13 @@ export {
   getCostModelDescription,
   isValidCostModel,
   isValidPrecedenceOrder
+};
+
+// Export data integrity diagnostics
+export {
+  runDiagnostics,
+  autoRepair,
+  getDiagnosticStats
 };
 
 // Progress Calculation per APP_ARCHITECTURE.md Section 1.7:
@@ -1110,6 +1122,27 @@ export const StoreProvider = ({ children }) => {
      
      getCostModelConfig: () => {
        return getCostModelConfig(data.settings || {});
+     },
+     
+     // Data integrity diagnostics
+     runDataDiagnostics: () => {
+       return runDiagnostics(data);
+     },
+     
+     repairData: (issues = null) => {
+       const issuesToRepair = issues || runDiagnostics(data).issues;
+       const result = autoRepair(data, issuesToRepair);
+       
+       if (result.repairedCount > 0) {
+         // Update data with repaired version
+         setData(result.repairedData);
+         actions.logAudit('data_repair', 'system', 'diagnostics', {
+           repairedCount: result.repairedCount,
+           errorCount: result.errorCount
+         });
+       }
+       
+       return result;
      },
      
      runMigration: async (notes = '') => {
