@@ -4,14 +4,17 @@
 
 ## 1. Navigation & Context Retention
 
-- [ ] **Implement Route-Backed Navigation**  
+- [x] **Implement Route-Backed Navigation** ✅  
   Transition from state-based tabs to URL-addressable routes using React Router.
+  *Completed: React Router implemented in App.jsx with routes for all entity types.*
 
-- [ ] **Enable Deep-Linking**  
+- [x] **Enable Deep-Linking** ✅  
   Ensure primary list and detail views (e.g., `/songs/:id`) are directly accessible via URL.
+  *Completed: useRouteSync hook handles deep-linking for all entity types.*
 
-- [ ] **Add Breadcrumb Navigation**  
+- [x] **Add Breadcrumb Navigation** ✅  
   Implement a "Parent-Child" navigation trail at the top of detail views (e.g., `Song > Version > Task`).
+  *Completed: Breadcrumb component added to Components.jsx and integrated into all detail views (Songs, Releases, Events, Expenses, Videos, Tasks).*
 
 - [ ] **Persistence Layer**  
   Ensure scroll positions and unsaved field states are preserved when a user navigates away and returns to a detail view.

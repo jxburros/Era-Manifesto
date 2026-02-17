@@ -625,3 +625,57 @@ export const UnifiedTaskEditor = ({
         </div>
     );
 };
+
+/**
+ * Breadcrumb Navigation Component
+ * Displays a parent-child navigation trail (e.g., Song > Version > Task)
+ * 
+ * @param {Array} items - Array of breadcrumb items: [{ label: string, onClick?: () => void }]
+ * @param {string} separator - Separator character (default: '>')
+ */
+export const Breadcrumb = ({ items = [], separator = '>' }) => {
+    const { data } = useStore();
+    const settings = data.settings || {};
+    const isDark = settings.themeMode === 'dark';
+    const focusMode = settings.focusMode || false;
+
+    if (!items || items.length === 0) return null;
+
+    return (
+        <nav className={cn(
+            "flex items-center gap-2 text-sm mb-4 pb-3",
+            focusMode ? "border-b" : "border-b-2",
+            isDark ? "border-slate-700 text-slate-300" : "border-black text-slate-700"
+        )}>
+            {items.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                    {index > 0 && (
+                        <span className={cn(
+                            "select-none",
+                            isDark ? "text-slate-600" : "text-slate-400"
+                        )}>{separator}</span>
+                    )}
+                    {item.onClick ? (
+                        <button
+                            onClick={item.onClick}
+                            className={cn(
+                                "transition-colors",
+                                focusMode ? "hover:text-[var(--accent)] font-medium" : "hover:text-[var(--accent)] font-bold uppercase",
+                                isDark ? "text-slate-300 hover:text-[var(--accent)]" : "text-slate-700 hover:text-[var(--accent)]"
+                            )}
+                        >
+                            {item.label}
+                        </button>
+                    ) : (
+                        <span className={cn(
+                            focusMode ? "font-semibold" : "font-bold uppercase",
+                            isDark ? "text-slate-50" : "text-black"
+                        )}>
+                            {item.label}
+                        </span>
+                    )}
+                </div>
+            ))}
+        </nav>
+    );
+};

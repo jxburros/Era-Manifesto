@@ -17,7 +17,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useStore, STATUS_OPTIONS, RELEASE_TYPES, getEffectiveCost, calculateTaskProgress, resolveCostPrecedence, getPrimaryDate, getTaskDueDate, generateEventTasks, itemBelongsToEra, isEraLocked, collectAllTasks } from './Store';
 import { THEME, formatMoney, cn, getTaskBudget } from './utils';
-import { Icon } from './Components';
+import { Icon, Breadcrumb } from './Components';
 import { DetailPane, EraStageTagsModule, StandardListPage, StandardDetailPage, DisplayInfoSection, AutocompleteInput } from './ItemComponents';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 // Lazy load PDF export to reduce initial bundle size
@@ -600,6 +600,12 @@ export const SongDetailView = ({ song, onBack }) => {
 
   return (
     <div className="p-6 pb-24">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb items={[
+        { label: 'Songs', onClick: onBack },
+        { label: song.title || 'Untitled Song' }
+      ]} />
+
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
@@ -2294,6 +2300,12 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
 
   return (
     <div className="p-6 pb-24">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb items={[
+        { label: 'Releases', onClick: onBack },
+        { label: release.title || 'Untitled Release' }
+      ]} />
+
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}><Icon name="ChevronLeft" size={16} /> Back to Releases</button>
@@ -6160,13 +6172,16 @@ export const EventDetailView = ({ event, onBack }) => {
 
   return (
     <StandardDetailPage
-      item={currentEvent}
       onBack={onBack}
       backText="Back to Events"
       onDelete={async () => { await actions.deleteEvent(event.id); onBack(); }}
       displaySection={displaySection}
       editSection={editSection}
       tasksSection={tasksSection}
+      breadcrumbItems={[
+        { label: 'Events', onClick: onBack },
+        { label: event.title || 'Untitled Event' }
+      ]}
     />
   );
 };
@@ -6500,7 +6515,6 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
 
   return (
     <StandardDetailPage
-      item={currentExpense}
       onBack={onBack}
       backText="Back to Expenses"
       onDelete={async () => { await actions.deleteExpense(expense.id); onBack(); }}
@@ -6510,6 +6524,10 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
       displaySection={displaySection}
       editSection={editSection}
       extraSections={eraStageTagsSection}
+      breadcrumbItems={[
+        { label: 'Expenses', onClick: onBack },
+        { label: expense.name || 'Untitled Expense' }
+      ]}
     />
   );
 };
@@ -6900,6 +6918,12 @@ export const VideoDetailView = ({ video, onBack }) => {
 
   return (
     <div className="p-6 pb-24">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb items={[
+        { label: 'Videos', onClick: onBack },
+        { label: video.title || 'Untitled Video' }
+      ]} />
+
       <div className="flex justify-between items-center mb-6">
         <button onClick={onBack} className={cn("px-4 py-2 bg-white flex items-center gap-2", THEME.punk.btn)}>
           <Icon name="ChevronLeft" size={16} /> Back to Videos
@@ -8172,7 +8196,6 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
         </div>
       )}
       <StandardDetailPage
-        item={currentTask}
         onBack={onBack}
         backText="Back to Tasks"
         onDelete={isTaskLocked ? undefined : handleDelete}
@@ -8182,6 +8205,10 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
         displaySection={displaySection}
         editSection={editSection}
         extraSections={<>{teamSection}{eraStageTagsSection}</>}
+        breadcrumbItems={[
+          { label: 'Tasks', onClick: onBack },
+          { label: task.taskName || task.title || 'Untitled Task' }
+        ]}
       />
     </>
   );
