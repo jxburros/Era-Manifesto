@@ -2132,36 +2132,27 @@ export const SettingsView = () => {
       }
 
       const confirmMsg = repairOptions.removeOrphans 
-        ? 'This will fix invalid statuses and REMOVE orphaned tasks. This action cannot be undone. Continue?'
-        : 'This will fix invalid statuses but keep orphaned tasks. This action cannot be undone. Continue?';
+        ? 'This will generate a repair preview showing what would be fixed. No data will be changed automatically.'
+        : 'This will generate a repair preview showing what would be fixed. No data will be changed automatically.';
       
-      if (!confirm(confirmMsg)) return;
+      if (!window.confirm(confirmMsg)) return;
 
       try {
         const result = repairIssues(data, diagnosticReport, repairOptions);
         
-        // Apply the repaired data
-        // Note: This is a simplified version. In production, you'd need to
-        // update the store with the repaired data through proper actions
-        Object.keys(result.data).forEach(key => {
-          if (data[key] && JSON.stringify(data[key]) !== JSON.stringify(result.data[key])) {
-            // Data changed for this collection
-            console.log(`Repaired ${key}:`, result.data[key]);
-          }
-        });
-
+        // Store repair result for preview
         setRepairResult(result);
         
-        // Re-run diagnostics to show updated state
+        // Re-run diagnostics on the repaired data to show what would change
         setTimeout(() => {
-          const newReport = runDiagnostics(data);
+          const newReport = runDiagnostics(result.data);
           setDiagnosticReport(newReport);
-        }, 500);
+        }, 100);
 
-        alert(`Repair complete! ${result.repairLog.length} actions performed.`);
+        alert(`Repair preview generated! ${result.repairLog.length} potential fixes identified. Review the changes in the repair log below. To apply changes, manually fix issues or export/import the repaired data.`);
       } catch (error) {
         console.error('Repair error:', error);
-        alert('Failed to repair issues: ' + error.message);
+        alert('Failed to generate repair preview: ' + error.message);
       }
     };
 
@@ -2791,7 +2782,7 @@ export const SettingsView = () => {
                       {/* Repair Options */}
                       {diagnosticReport.totalIssues > 0 && (
                         <div className={cn("p-4", THEME.punk.card, "border-4 border-orange-500 bg-orange-50 dark:bg-orange-900")}>
-                          <div className="font-black text-sm mb-3">⚙️ Repair Options</div>
+                          <div className="font-black text-sm mb-3">🔍 Generate Repair Preview</div>
                           
                           <div className="space-y-2 mb-4">
                             <label className="flex items-center gap-2 text-sm">
@@ -2823,19 +2814,19 @@ export const SettingsView = () => {
                             disabled={!repairOptions.autoFix}
                             className={cn("w-full px-4 py-3 text-sm font-black", THEME.punk.btn, "bg-orange-600 text-white", !repairOptions.autoFix && "opacity-50 cursor-not-allowed")}
                           >
-                            🔧 Apply Repairs
+                            🔍 Generate Repair Preview
                           </button>
 
                           <div className="text-xs opacity-70 mt-2">
-                            ⚠️ Warning: Repairs cannot be undone. Export your data first as a backup.
+                            ℹ️ This generates a preview of what would be fixed. No data is automatically changed. Review the repair log and manually fix issues as needed.
                           </div>
                         </div>
                       )}
 
                       {/* Repair Result */}
                       {repairResult && repairResult.repairLog.length > 0 && (
-                        <div className={cn("p-3", THEME.punk.card, "border-4 border-green-500 bg-green-50 dark:bg-green-900")}>
-                          <div className="font-bold text-sm mb-2">✅ Repair Complete</div>
+                        <div className={cn("p-3", THEME.punk.card, "border-4 border-blue-500 bg-blue-50 dark:bg-blue-900")}>
+                          <div className="font-bold text-sm mb-2">📋 Repair Preview</div>
                           <div className="text-xs space-y-1 max-h-48 overflow-y-auto">
                             {repairResult.repairLog.map((log, idx) => (
                               <div key={idx} className="p-2 bg-white dark:bg-slate-800 border border-green-300">
