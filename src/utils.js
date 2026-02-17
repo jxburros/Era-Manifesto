@@ -99,18 +99,159 @@ export const filterTasksByStatus = (tasks = [], activeStatus = 'all', archivedFi
  * Note: Enhanced version available in utils/navigationPersistence.js
  * This is kept for backwards compatibility
  */
-const SCROLL_POSITIONS = new Map();
 
+// In-memory fallback for environments without sessionStorage
+const SCROLL_POSITIONS = new Map();
+const FORM_DRAFTS = new Map();
+
+/**
+ * Save scroll position to sessionStorage and memory
+ * @param {string} key - Unique key for the scroll position (e.g., route path + entity ID)
+ * @param {number} position - Scroll position in pixels
+ */
 export const saveScrollPosition = (key, position) => {
   SCROLL_POSITIONS.set(key, position);
+  try {
+    sessionStorage.setItem(`scroll:${key}`, String(position));
+  } catch (e) {
+    // sessionStorage not available or quota exceeded
+    console.warn('Failed to save scroll position to sessionStorage:', e);
+  }
 };
 
+/**
+ * Get scroll position from sessionStorage or memory
+ * @param {string} key - Unique key for the scroll position
+ * @returns {number} Scroll position in pixels
+ */
 export const getScrollPosition = (key) => {
+  // Try sessionStorage first
+  try {
+    const stored = sessionStorage.getItem(`scroll:${key}`);
+    if (stored !== null) {
+      const position = Number(stored);
+      if (Number.isFinite(position)) {
+        SCROLL_POSITIONS.set(key, position); // Update memory cache
+        return position;
+      }
+    }
+  } catch (e) {
+    // sessionStorage not available
+  }
+  
+  // Fallback to memory
   return SCROLL_POSITIONS.get(key) || 0;
 };
 
+/**
+ * Clear scroll position from both sessionStorage and memory
+ * @param {string} key - Unique key for the scroll position
+ */
 export const clearScrollPosition = (key) => {
   SCROLL_POSITIONS.delete(key);
+  try {
+    sessionStorage.removeItem(`scroll:${key}`);
+  } catch (e) {
+    // Ignore
+  }
+};
+
+/**
+ * Save form draft state to sessionStorage and memory
+ * @param {string} key - Unique key for the form (e.g., 'song-detail-123')
+ * @param {Object} formData - Form state to save
+ */
+export const saveFormDraft = (key, formData) => {
+  const serialized = JSON.stringify(formData);
+  FORM_DRAFTS.set(key, serialized);
+  try {
+    sessionStorage.setItem(`draft:${key}`, serialized);
+  } catch (e) {
+    console.warn('Failed to save form draft to sessionStorage:', e);
+  }
+};
+
+/**
+ * Get form draft state from sessionStorage or memory
+ * @param {string} key - Unique key for the form
+ * @returns {Object|null} Form state or null if not found
+ */
+export const getFormDraft = (key) => {
+  // Try sessionStorage first
+  try {
+    const stored = sessionStorage.getItem(`draft:${key}`);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      FORM_DRAFTS.set(key, stored); // Update memory cache
+      return parsed;
+    }
+  } catch (e) {
+    // sessionStorage not available or invalid JSON
+    console.warn('Failed to get form draft from sessionStorage:', e);
+  }
+  
+  // Fallback to memory
+  try {
+    const cached = FORM_DRAFTS.get(key);
+    return cached ? JSON.parse(cached) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+/**
+ * Clear form draft from both sessionStorage and memory
+ * @param {string} key - Unique key for the form
+ */
+export const clearFormDraft = (key) => {
+  FORM_DRAFTS.delete(key);
+  try {
+    sessionStorage.removeItem(`draft:${key}`);
+  } catch (e) {
+    // Ignore
+  }
+};
+
+/**
+ * Clear all form drafts for a specific route/pattern
+ * @param {string} pattern - Pattern to match (e.g., 'song-detail-' clears all song detail drafts)
+ */
+export const clearFormDraftsPattern = (pattern) => {
+  // Clear from memory
+  const keysToDelete = [];
+  for (const key of FORM_DRAFTS.keys()) {
+    if (key.startsWith(pattern)) {
+      keysToDelete.push(key);
+    }
+  }
+  keysToDelete.forEach(key => FORM_DRAFTS.delete(key));
+  
+  // Clear from sessionStorage
+  try {
+    const toRemove = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith(`draft:${pattern}`)) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach(key => sessionStorage.removeItem(key));
+  } catch (e) {
+    // Ignore
+  }
+};
+
+/**
+ * Check if a form draft exists for a key
+ * @param {string} key - Unique key for the form
+ * @returns {boolean} True if draft exists
+ */
+export const hasFormDraft = (key) => {
+  try {
+    return sessionStorage.getItem(`draft:${key}`) !== null || FORM_DRAFTS.has(key);
+  } catch (e) {
+    return FORM_DRAFTS.has(key);
+  }
 };
 
 /**

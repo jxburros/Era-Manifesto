@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { useState, useEffect, memo, useRef } from 'react';
+import { useState, useEffect, memo, useRef, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Music, List, Zap, Image, Users, Receipt, Calendar, PieChart, Archive, Settings, Menu, X, ChevronDown, ChevronRight, Plus, Split, Folder, Circle, PlayCircle, Activity, CheckCircle, Trash2, Camera, Download, Copy, Upload, DollarSign, TrendingUp, File, FileText, Video, FileSpreadsheet, AlertTriangle, AlertCircle, Eye, EyeOff, Layout, ChevronLeft, Star, Heart, Moon, Sun, Crown, Sparkles, Flame, Music2, Disc, Mic, Headphones, Radio, Guitar, Piano, Drum, Lock, Search } from 'lucide-react';
 import { useStore, STATUS_OPTIONS, getEffectiveCost } from './Store';
-import { THEME, COLORS, formatMoney, STAGES, cn, saveScrollPosition, getScrollPosition } from './utils';
+import { THEME, COLORS, formatMoney, STAGES, cn, saveScrollPosition, getScrollPosition, saveFormDraft, getFormDraft, clearFormDraft, hasFormDraft } from './utils';
 
 /**
  * Custom hook for scroll position persistence
@@ -64,6 +64,99 @@ export const useScrollPersistence = (scrollKey, containerRef = null) => {
 
   // Return the ref so it can be attached to the scrollable container
   return containerRef ? {} : { ref: internalRef };
+};
+
+/**
+ * Custom hook for form draft state persistence
+ * Automatically saves and restores form state for a specific key/entity
+ * Uses sessionStorage for persistence across page refreshes
+ * 
+ * @param {string} draftKey - Unique identifier for this form draft (e.g., 'song-detail-123')
+ * @param {Object} initialState - Initial form state (used if no draft exists)
+ * @param {Object} options - Options { autoSave: boolean, saveDelay: number, clearOnSave: boolean }
+ * @returns {Array} - [formState, setFormState, { hasDraft, clearDraft, saveDraft, isDirty }]
+ */
+export const useFormDraftPersistence = (draftKey, initialState = {}, options = {}) => {
+  const {
+    autoSave = true,
+    saveDelay = 1000,
+    clearOnSave = false
+  } = options;
+
+  const [formState, setFormState] = useState(() => {
+    // Try to restore from draft on initial mount
+    const draft = getFormDraft(draftKey);
+    return draft || initialState;
+  });
+
+  const [isDirty, setIsDirty] = useState(false);
+  const saveTimeoutRef = useRef(null);
+
+  // Check if there's a draft available
+  const hasDraft = hasFormDraft(draftKey);
+
+  // Save draft with debounce
+  const saveDraft = useCallback(() => {
+    if (JSON.stringify(formState) !== JSON.stringify(initialState)) {
+      saveFormDraft(draftKey, formState);
+      setIsDirty(false);
+    }
+  }, [draftKey, formState, initialState]);
+
+  // Clear draft
+  const clearDraft = useCallback(() => {
+    clearFormDraft(draftKey);
+    setIsDirty(false);
+  }, [draftKey]);
+
+  // Auto-save with debounce when form state changes
+  useEffect(() => {
+    if (!autoSave) return;
+
+    setIsDirty(true);
+
+    // Clear previous timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout to save
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraft();
+    }, saveDelay);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [formState, autoSave, saveDelay, saveDraft]);
+
+  // Save draft before route change
+  useEffect(() => {
+    return () => {
+      if (isDirty && !clearOnSave) {
+        saveFormDraft(draftKey, formState);
+      }
+    };
+  }, [draftKey, formState, isDirty, clearOnSave]);
+
+  // Custom setter that marks as dirty
+  const setFormStateWithDirty = useCallback((newStateOrUpdater) => {
+    setFormState(newStateOrUpdater);
+    setIsDirty(true);
+  }, []);
+
+  return [
+    formState,
+    setFormStateWithDirty,
+    {
+      hasDraft,
+      clearDraft,
+      saveDraft,
+      isDirty
+    }
+  ];
 };
 
 export const Icon = memo(function Icon({ name, ...props }) {
@@ -727,200 +820,107 @@ export const Breadcrumb = ({ items = [], separator = '>' }) => {
 };
 
 /**
- * QuickAddSongModal Component
- * Simplified song creation modal requiring only name and era
- * Auto-generates tasks based on project template when saved
- * 
- * @param {boolean} isOpen - Controls modal visibility
- * @param {function} onClose - Called when modal is closed
- * @param {function} onSongCreated - Called with the new song after creation
+ * Quick-Add Song Modal
+ * Simplified modal for quickly creating songs with minimal fields (Name + Era)
+ * Advanced metadata can be edited later in the detail view
  */
-export const QuickAddSongModal = ({ isOpen, onClose, onSongCreated }) => {
+export const QuickAddSongModal = ({ isOpen, onClose, onAdd }) => {
     const { data, actions } = useStore();
     const [name, setName] = useState('');
-    const [eraId, setEraId] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const settings = data.settings || {};
-    const isDark = settings.themeMode === 'dark';
+    const [selectedEraId, setSelectedEraId] = useState('');
+    const eras = useMemo(() => data.eras || [], [data.eras]);
 
-    // Set default era when modal opens
     useEffect(() => {
         if (isOpen) {
-            // Use Era Mode era, default era, or first available era
-            const defaultEra = (settings.eraModeActive && settings.eraModeEraId) 
-                ? settings.eraModeEraId 
-                : settings.defaultEraId || (data.eras?.[0]?.id || '');
-            setEraId(defaultEra);
+            // Reset form when modal opens
             setName('');
-            setIsSubmitting(false);
+            setSelectedEraId(data.settings?.defaultEraId || (eras.length > 0 ? eras[0].id : ''));
         }
-    }, [isOpen, settings.eraModeActive, settings.eraModeEraId, settings.defaultEraId, data.eras]);
-
-    if (!isOpen) return null;
+    }, [isOpen, data.settings, eras]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!name.trim()) return;
-        
-        setIsSubmitting(true);
-        try {
-            // Create song with minimal required fields
-            // Tasks will be auto-generated by addSong action based on project template
-            const newSong = await actions.addSong({
-                title: name.trim(),
-                eraIds: eraId ? [eraId] : [],
-                // Default values that allow task auto-generation
-                category: 'Album',
-                releaseDate: '',
-                isSingle: false,
-                videoType: 'None',
-                stemsNeeded: false
-            });
-            
-            if (onSongCreated) onSongCreated(newSong);
-            onClose();
-        } catch (error) {
-            console.error('Error creating song:', error);
-            setIsSubmitting(false);
+        if (!name.trim()) {
+            alert('Please enter a song name');
+            return;
         }
+
+        const newSong = {
+            title: name.trim(),
+            eraIds: selectedEraId ? [selectedEraId] : [],
+            releaseDate: '', // Will be set later
+            isSingle: false, // Default
+            videoType: 'None',
+            stemsNeeded: false,
+            deadlines: [], // Auto-tasks will be generated when release date is set
+            customTasks: [],
+            versions: [],
+            videos: []
+        };
+
+        await actions.addSong(newSong);
+        if (onAdd) onAdd(newSong);
+        setName('');
+        onClose();
     };
 
-    const handleCancel = () => {
-        if (!isSubmitting) {
-            setName('');
-            setEraId('');
-            onClose();
-        }
-    };
-
-    const availableEras = data.eras || [];
+    if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={handleCancel}>
-            <div 
-                className={cn(
-                    "w-full max-w-md p-6 max-h-[90vh] overflow-y-auto",
-                    THEME.punk.card,
-                    isDark ? "bg-slate-800" : "bg-white"
-                )} 
-                onClick={e => e.stopPropagation()}
-            >
-                <form onSubmit={handleSubmit}>
-                    <div className={cn(
-                        "flex justify-between items-center mb-6 pb-3 border-b-4",
-                        isDark ? "border-slate-600" : "border-black"
-                    )}>
-                        <h3 className={cn(
-                            "font-black uppercase text-lg",
-                            isDark ? "text-slate-50" : "text-black"
-                        )}>
-                            Quick Add Song
-                        </h3>
-                        <button 
-                            type="button"
-                            onClick={handleCancel} 
-                            disabled={isSubmitting}
-                            className={cn(
-                                "p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded",
-                                isSubmitting && "opacity-50 cursor-not-allowed"
-                            )}
-                        >
-                            <Icon name="X" size={20} />
-                        </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={cn("w-full max-w-md p-6", THEME.punk.card, "border-4 border-black dark:border-slate-600")}>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-black text-xl uppercase">Quick Add Song</h2>
+                    <button onClick={onClose} className={cn("p-2", THEME.punk.btn)}>
+                        <Icon name="X" size={20} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Song Name *</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            placeholder="Enter song name"
+                            className={cn("w-full", THEME.punk.input)}
+                            autoFocus
+                            required
+                        />
                     </div>
 
-                    <div className="space-y-4 mb-6">
-                        {/* Song Name (Required) */}
-                        <div>
-                            <label className={cn(
-                                "block text-xs font-bold uppercase mb-2",
-                                isDark ? "text-slate-300" : "text-black"
-                            )}>
-                                Song Name <span className="text-red-500">*</span>
-                            </label>
-                            <input 
-                                type="text"
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                                placeholder="Enter song name"
-                                className={cn("w-full", THEME.punk.input)}
-                                autoFocus
-                                required
-                                disabled={isSubmitting}
-                            />
-                        </div>
-
-                        {/* Era (Required) */}
-                        <div>
-                            <label className={cn(
-                                "block text-xs font-bold uppercase mb-2",
-                                isDark ? "text-slate-300" : "text-black"
-                            )}>
-                                Era <span className="text-red-500">*</span>
-                            </label>
-                            {availableEras.length === 0 ? (
-                                <div className={cn(
-                                    "p-3 text-xs border-2",
-                                    isDark ? "border-slate-600 bg-slate-700 text-slate-300" : "border-yellow-500 bg-yellow-50 text-yellow-800"
-                                )}>
-                                    <Icon name="AlertTriangle" size={14} className="inline mr-1" />
-                                    No eras available. Create an era first in Settings.
-                                </div>
-                            ) : (
-                                <select
-                                    value={eraId}
-                                    onChange={e => setEraId(e.target.value)}
-                                    className={cn("w-full", THEME.punk.input)}
-                                    required
-                                    disabled={isSubmitting}
-                                >
-                                    <option value="">Select an era...</option>
-                                    {availableEras.map(era => (
-                                        <option key={era.id} value={era.id}>
-                                            {era.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                        </div>
-
-                        {/* Info Note */}
-                        <div className={cn(
-                            "p-3 text-xs border-2",
-                            isDark ? "border-slate-600 bg-slate-700 text-slate-300" : "border-blue-500 bg-blue-50 text-blue-800"
-                        )}>
-                            <Icon name="AlertCircle" size={14} className="inline mr-1" />
-                            Tasks will be auto-generated. You can add details and customize later.
-                        </div>
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Era</label>
+                        <select
+                            value={selectedEraId}
+                            onChange={e => setSelectedEraId(e.target.value)}
+                            className={cn("w-full", THEME.punk.input)}
+                        >
+                            <option value="">No Era</option>
+                            {eras.map(era => (
+                                <option key={era.id} value={era.id}>{era.name}</option>
+                            ))}
+                        </select>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-3">
-                        <button
-                            type="button"
-                            onClick={handleCancel}
-                            disabled={isSubmitting}
-                            className={cn(
-                                "flex-1 px-4 py-3",
-                                THEME.punk.btn,
-                                isDark ? "bg-slate-700 text-slate-200" : "bg-white",
-                                isSubmitting && "opacity-50 cursor-not-allowed"
-                            )}
-                        >
-                            Cancel
-                        </button>
+                    <div className="text-xs opacity-60">
+                        ℹ️ You can set release date, video type, and other details later
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
                         <button
                             type="submit"
-                            disabled={!name.trim() || !eraId || availableEras.length === 0 || isSubmitting}
-                            className={cn(
-                                "flex-1 px-4 py-3 font-black",
-                                THEME.punk.btn,
-                                "bg-green-500 text-white",
-                                (!name.trim() || !eraId || availableEras.length === 0 || isSubmitting) && 
-                                "opacity-50 cursor-not-allowed hover:translate-y-0"
-                            )}
+                            className={cn("flex-1 py-3 font-black text-sm", THEME.punk.btn, "bg-green-600 text-white")}
                         >
-                            {isSubmitting ? 'Creating...' : 'Create Song'}
+                            ✅ Create Song
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className={cn("flex-1 py-3 font-black text-sm", THEME.punk.btn, "bg-gray-500 text-white")}
+                        >
+                            Cancel
                         </button>
                     </div>
                 </form>
@@ -930,220 +930,125 @@ export const QuickAddSongModal = ({ isOpen, onClose, onSongCreated }) => {
 };
 
 /**
- * QuickAddReleaseModal Component
- * Simplified release creation modal requiring only name and release date
- * Auto-generates tasks based on release type
- * 
- * @param {boolean} isOpen - Controls modal visibility
- * @param {function} onClose - Called when modal is closed
- * @param {function} onReleaseCreated - Called with the new release after creation
+ * Quick-Add Release Modal
+ * Simplified modal for quickly creating releases with minimal fields (Name + Era)
+ * Advanced metadata can be edited later in the detail view
  */
-export const QuickAddReleaseModal = ({ isOpen, onClose, onReleaseCreated }) => {
+export const QuickAddReleaseModal = ({ isOpen, onClose, onAdd }) => {
     const { data, actions } = useStore();
     const [name, setName] = useState('');
-    const [releaseDate, setReleaseDate] = useState('');
-    const [eraId, setEraId] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const settings = data.settings || {};
-    const isDark = settings.themeMode === 'dark';
+    const [selectedEraId, setSelectedEraId] = useState('');
+    const [releaseType, setReleaseType] = useState('Single');
+    const eras = useMemo(() => data.eras || [], [data.eras]);
 
-    // Set default era when modal opens
     useEffect(() => {
         if (isOpen) {
-            // Use Era Mode era, default era, or first available era
-            const defaultEra = (settings.eraModeActive && settings.eraModeEraId) 
-                ? settings.eraModeEraId 
-                : settings.defaultEraId || (data.eras?.[0]?.id || '');
-            setEraId(defaultEra);
+            // Reset form when modal opens
             setName('');
-            setReleaseDate('');
-            setIsSubmitting(false);
+            setSelectedEraId(data.settings?.defaultEraId || (eras.length > 0 ? eras[0].id : ''));
+            setReleaseType('Single');
         }
-    }, [isOpen, settings.eraModeActive, settings.eraModeEraId, settings.defaultEraId, data.eras]);
-
-    if (!isOpen) return null;
+    }, [isOpen, data.settings, eras]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!name.trim() || !releaseDate) return;
-        
-        setIsSubmitting(true);
-        try {
-            // Create release with minimal required fields
-            // Tasks will be auto-generated by addRelease action based on release date
-            const newRelease = await actions.addRelease({
-                name: name.trim(),
-                releaseDate: releaseDate,
-                eraIds: eraId ? [eraId] : [],
-                // Default values
-                type: 'Album',
-                hasPhysicalCopies: false,
-                hasExclusivity: false
-            });
-            
-            if (onReleaseCreated) onReleaseCreated(newRelease);
-            onClose();
-        } catch (error) {
-            console.error('Error creating release:', error);
-            setIsSubmitting(false);
+        if (!name.trim()) {
+            alert('Please enter a release name');
+            return;
         }
+
+        const newRelease = {
+            name: name.trim(),
+            releaseType,
+            eraIds: selectedEraId ? [selectedEraId] : [],
+            releaseDate: '', // Will be set later
+            attachedSongIds: [],
+            requiredRecordings: [],
+            hasPhysicalCopies: false,
+            tasks: [], // Auto-tasks will be generated when release date is set
+            customTasks: []
+        };
+
+        await actions.addRelease(newRelease);
+        if (onAdd) onAdd(newRelease);
+        setName('');
+        onClose();
     };
 
-    const handleCancel = () => {
-        if (!isSubmitting) {
-            setName('');
-            setReleaseDate('');
-            setEraId('');
-            onClose();
-        }
-    };
-
-    const availableEras = data.eras || [];
+    if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={handleCancel}>
-            <div 
-                className={cn(
-                    "w-full max-w-md p-6 max-h-[90vh] overflow-y-auto",
-                    THEME.punk.card,
-                    isDark ? "bg-slate-800" : "bg-white"
-                )} 
-                onClick={e => e.stopPropagation()}
-            >
-                <form onSubmit={handleSubmit}>
-                    <div className={cn(
-                        "flex justify-between items-center mb-6 pb-3 border-b-4",
-                        isDark ? "border-slate-600" : "border-black"
-                    )}>
-                        <h3 className={cn(
-                            "font-black uppercase text-lg",
-                            isDark ? "text-slate-50" : "text-black"
-                        )}>
-                            Quick Add Release
-                        </h3>
-                        <button 
-                            type="button"
-                            onClick={handleCancel} 
-                            disabled={isSubmitting}
-                            className={cn(
-                                "p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded",
-                                isSubmitting && "opacity-50 cursor-not-allowed"
-                            )}
-                        >
-                            <Icon name="X" size={20} />
-                        </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={cn("w-full max-w-md p-6", THEME.punk.card, "border-4 border-black dark:border-slate-600")}>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-black text-xl uppercase">Quick Add Release</h2>
+                    <button onClick={onClose} className={cn("p-2", THEME.punk.btn)}>
+                        <Icon name="X" size={20} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Release Name *</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            placeholder="Enter release name"
+                            className={cn("w-full", THEME.punk.input)}
+                            autoFocus
+                            required
+                        />
                     </div>
 
-                    <div className="space-y-4 mb-6">
-                        {/* Release Name (Required) */}
-                        <div>
-                            <label className={cn(
-                                "block text-xs font-bold uppercase mb-2",
-                                isDark ? "text-slate-300" : "text-black"
-                            )}>
-                                Release Name <span className="text-red-500">*</span>
-                            </label>
-                            <input 
-                                type="text"
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                                placeholder="Enter release name"
-                                className={cn("w-full", THEME.punk.input)}
-                                autoFocus
-                                required
-                                disabled={isSubmitting}
-                            />
-                        </div>
-
-                        {/* Release Date (Required) */}
-                        <div>
-                            <label className={cn(
-                                "block text-xs font-bold uppercase mb-2",
-                                isDark ? "text-slate-300" : "text-black"
-                            )}>
-                                Release Date <span className="text-red-500">*</span>
-                            </label>
-                            <input 
-                                type="date"
-                                value={releaseDate}
-                                onChange={e => setReleaseDate(e.target.value)}
-                                className={cn("w-full", THEME.punk.input)}
-                                required
-                                disabled={isSubmitting}
-                            />
-                        </div>
-
-                        {/* Era (Required) */}
-                        <div>
-                            <label className={cn(
-                                "block text-xs font-bold uppercase mb-2",
-                                isDark ? "text-slate-300" : "text-black"
-                            )}>
-                                Era <span className="text-red-500">*</span>
-                            </label>
-                            {availableEras.length === 0 ? (
-                                <div className={cn(
-                                    "p-3 text-xs border-2",
-                                    isDark ? "border-slate-600 bg-slate-700 text-slate-300" : "border-yellow-500 bg-yellow-50 text-yellow-800"
-                                )}>
-                                    <Icon name="AlertTriangle" size={14} className="inline mr-1" />
-                                    No eras available. Create an era first in Settings.
-                                </div>
-                            ) : (
-                                <select
-                                    value={eraId}
-                                    onChange={e => setEraId(e.target.value)}
-                                    className={cn("w-full", THEME.punk.input)}
-                                    required
-                                    disabled={isSubmitting}
-                                >
-                                    <option value="">Select an era...</option>
-                                    {availableEras.map(era => (
-                                        <option key={era.id} value={era.id}>
-                                            {era.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                        </div>
-
-                        {/* Info Note */}
-                        <div className={cn(
-                            "p-3 text-xs border-2",
-                            isDark ? "border-slate-600 bg-slate-700 text-slate-300" : "border-blue-500 bg-blue-50 text-blue-800"
-                        )}>
-                            <Icon name="AlertCircle" size={14} className="inline mr-1" />
-                            Tasks will be auto-generated based on release date. You can add details later.
-                        </div>
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Release Type *</label>
+                        <select
+                            value={releaseType}
+                            onChange={e => setReleaseType(e.target.value)}
+                            className={cn("w-full", THEME.punk.input)}
+                            required
+                        >
+                            <option value="Single">Single</option>
+                            <option value="EP">EP</option>
+                            <option value="Album">Album</option>
+                            <option value="Compilation">Compilation</option>
+                            <option value="Remix EP">Remix EP</option>
+                            <option value="Deluxe Edition">Deluxe Edition</option>
+                        </select>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-3">
-                        <button
-                            type="button"
-                            onClick={handleCancel}
-                            disabled={isSubmitting}
-                            className={cn(
-                                "flex-1 px-4 py-3",
-                                THEME.punk.btn,
-                                isDark ? "bg-slate-700 text-slate-200" : "bg-white",
-                                isSubmitting && "opacity-50 cursor-not-allowed"
-                            )}
+                    <div>
+                        <label className="font-bold text-sm block mb-1">Era</label>
+                        <select
+                            value={selectedEraId}
+                            onChange={e => setSelectedEraId(e.target.value)}
+                            className={cn("w-full", THEME.punk.input)}
                         >
-                            Cancel
-                        </button>
+                            <option value="">No Era</option>
+                            {eras.map(era => (
+                                <option key={era.id} value={era.id}>{era.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="text-xs opacity-60">
+                        ℹ️ You can add songs, set release date, and configure other details later
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
                         <button
                             type="submit"
-                            disabled={!name.trim() || !releaseDate || !eraId || availableEras.length === 0 || isSubmitting}
-                            className={cn(
-                                "flex-1 px-4 py-3 font-black",
-                                THEME.punk.btn,
-                                "bg-purple-500 text-white",
-                                (!name.trim() || !releaseDate || !eraId || availableEras.length === 0 || isSubmitting) && 
-                                "opacity-50 cursor-not-allowed hover:translate-y-0"
-                            )}
+                            className={cn("flex-1 py-3 font-black text-sm", THEME.punk.btn, "bg-green-600 text-white")}
                         >
-                            {isSubmitting ? 'Creating...' : 'Create Release'}
+                            ✅ Create Release
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className={cn("flex-1 py-3 font-black text-sm", THEME.punk.btn, "bg-gray-500 text-white")}
+                        >
+                            Cancel
                         </button>
                     </div>
                 </form>

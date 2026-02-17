@@ -17,185 +17,233 @@
 /**
  * Task Offset Configuration Module
  * 
- * Provides default and user-configurable deadline offset formulas for:
- * - Song production tasks
- * - Stems tasks
- * - Video tasks
- * - Release tasks
- * - Event tasks
+ * Manages deadline offset templates for different project types (Single, EP, Album).
+ * Replaces hardcoded offset values with user-configurable templates.
  * 
- * Supports user-defined offsets per Stage, Task Type, and Project Type.
+ * Usage:
+ * import { getTaskOffsets, DEFAULT_TEMPLATES } from './settings/taskOffsets';
+ * const offsets = getTaskOffsets(userSettings, 'single');
  */
 
-// Default offset configurations for song tasks (in days before release)
-export const DEFAULT_SONG_OFFSETS = {
-  'Demo': 100,
-  'Arrangement': 90,
-  'Record': 70,
-  'Vocal Recording': 60,
-  'Instrument Recording': 55,
-  'Mix': 42,
-  'Master': 21,
-  'DSP Upload': 14,
-  'Release': 0
+// Default template for Single releases
+export const SINGLE_TEMPLATE = {
+  id: 'single',
+  name: 'Single',
+  description: 'Optimized timeline for single song releases',
+  offsets: {
+    // Song Production
+    'Demo': 100,
+    'Arrangement': 90,
+    'Record': 70,
+    'Vocal Recording': 60,
+    'Instrument Recording': 55,
+    'Mix': 42,
+    'Master': 21,
+    'DSP Upload': 14,
+    'Release': 0,
+    // Stems
+    'Receive Stems': 35,
+    'Release Stems': 7,
+    // Video
+    'Plan Video': 60,
+    'Hire Crew': 45,
+    'Film Video': 35,
+    'Edit Video': 25,
+    'Submit Video': 14,
+    'Release Video': 0
+  }
 };
 
-// Default offset configurations for stems tasks
-export const DEFAULT_STEMS_OFFSETS = {
-  'Receive Stems': 35,
-  'Release Stems': 7
-};
-
-// Default offset configurations for video tasks
-export const DEFAULT_VIDEO_OFFSETS = {
-  'Plan Video': 60,
-  'Hire Crew': 45,
-  'Film Video': 35,
-  'Edit Video': 25,
-  'Submit Video': 14,
-  'Release Video': 0
-};
-
-// Default offset configurations for release tasks
-export const DEFAULT_RELEASE_OFFSETS = {
-  'Complete All Tracks': 60,
-  'Finalize Album Art': 45,
-  'Submit Release': 14,
-  'Release': 0
-};
-
-// Default offset configurations for physical release tasks
-export const DEFAULT_PHYSICAL_RELEASE_OFFSETS = {
-  'Submit Physical Design': 90,
-  'Receive Physical Copies': 21,
-  'Distribute Physical Copies': 7
-};
-
-// Default offset configurations for event tasks
-export const DEFAULT_EVENT_OFFSETS = {
-  'Attend Event': 0,
-  'Prepare for Event': 7,
-  'Rehearsal': 3,
-  'Travel Arrangements': 14,
-  'Equipment Setup': 1,
-  'Soundcheck': 0
-};
-
-// Project type-specific offsets (override defaults for specific project types)
-export const DEFAULT_PROJECT_TYPE_OFFSETS = {
-  'Single': {
-    // Singles have shorter timelines
-    'Demo': 60,
-    'Arrangement': 50,
-    'Record': 40,
-    'Mix': 28,
-    'Master': 14
-  },
-  'EP': {
-    // EPs use standard timelines
-  },
-  'Album': {
-    // Albums may need longer timelines
+// Default template for EP releases
+export const EP_TEMPLATE = {
+  id: 'ep',
+  name: 'EP',
+  description: 'Extended timeline for EP releases (3-6 tracks)',
+  offsets: {
+    // Song Production (slightly longer for multiple tracks)
     'Demo': 120,
     'Arrangement': 105,
-    'Record': 90,
+    'Record': 85,
     'Vocal Recording': 75,
-    'Instrument Recording': 70
+    'Instrument Recording': 70,
+    'Mix': 50,
+    'Master': 28,
+    'DSP Upload': 14,
+    'Release': 0,
+    // Stems
+    'Receive Stems': 42,
+    'Release Stems': 7,
+    // Video
+    'Plan Video': 75,
+    'Hire Crew': 60,
+    'Film Video': 45,
+    'Edit Video': 35,
+    'Submit Video': 14,
+    'Release Video': 0,
+    // Release Tasks
+    'Complete All Tracks': 70,
+    'Finalize Album Art': 50,
+    'Submit Release': 14,
+    // Physical (optional)
+    'Submit Physical Design': 100,
+    'Receive Physical Copies': 28,
+    'Distribute Physical Copies': 10
   }
 };
 
-/**
- * Get effective offset for a task type, considering user settings and defaults
- * @param {string} taskType - The task type (e.g., 'Mix', 'Master')
- * @param {string} category - Task category ('song', 'video', 'release', 'event', 'stems', 'physical')
- * @param {Object} userOffsets - User-defined custom offsets
- * @param {string} projectType - Optional project type for type-specific overrides
- * @returns {number} Days before release/event date
- */
-export const getEffectiveOffset = (taskType, category, userOffsets = {}, projectType = null) => {
-  // Priority 1: User-defined offset for specific project type
-  if (projectType && userOffsets.projectTypes?.[projectType]?.[taskType] !== undefined) {
-    return userOffsets.projectTypes[projectType][taskType];
+// Default template for Album releases
+export const ALBUM_TEMPLATE = {
+  id: 'album',
+  name: 'Album',
+  description: 'Full timeline for album releases (7+ tracks)',
+  offsets: {
+    // Song Production (longest timeline for full album)
+    'Demo': 150,
+    'Arrangement': 135,
+    'Record': 105,
+    'Vocal Recording': 90,
+    'Instrument Recording': 85,
+    'Mix': 60,
+    'Master': 35,
+    'DSP Upload': 14,
+    'Release': 0,
+    // Stems
+    'Receive Stems': 50,
+    'Release Stems': 7,
+    // Video
+    'Plan Video': 90,
+    'Hire Crew': 75,
+    'Film Video': 60,
+    'Edit Video': 45,
+    'Submit Video': 14,
+    'Release Video': 0,
+    // Release Tasks
+    'Complete All Tracks': 90,
+    'Finalize Album Art': 60,
+    'Submit Release': 14,
+    // Physical (optional)
+    'Submit Physical Design': 120,
+    'Receive Physical Copies': 35,
+    'Distribute Physical Copies': 14
   }
+};
 
-  // Priority 2: User-defined offset for task type
-  if (userOffsets[category]?.[taskType] !== undefined) {
-    return userOffsets[category][taskType];
+// Version-specific tasks template
+export const VERSION_TEMPLATE = {
+  id: 'version',
+  name: 'Song Version',
+  description: 'Timeline for alternate song versions',
+  offsets: {
+    'Arrangement': 60,
+    'Instrumentation': 50,
+    'Mix': 30,
+    'Master': 14,
+    'Release': 0
   }
+};
 
-  // Priority 3: Default project type offset
-  if (projectType && DEFAULT_PROJECT_TYPE_OFFSETS[projectType]?.[taskType] !== undefined) {
-    return DEFAULT_PROJECT_TYPE_OFFSETS[projectType][taskType];
-  }
-
-  // Priority 4: Default offset for category
-  const defaultOffsets = {
-    song: DEFAULT_SONG_OFFSETS,
-    stems: DEFAULT_STEMS_OFFSETS,
-    video: DEFAULT_VIDEO_OFFSETS,
-    release: DEFAULT_RELEASE_OFFSETS,
-    physical: DEFAULT_PHYSICAL_RELEASE_OFFSETS,
-    event: DEFAULT_EVENT_OFFSETS
-  };
-
-  return defaultOffsets[category]?.[taskType] ?? 0;
+// All default templates
+export const DEFAULT_TEMPLATES = {
+  single: SINGLE_TEMPLATE,
+  ep: EP_TEMPLATE,
+  album: ALBUM_TEMPLATE,
+  version: VERSION_TEMPLATE
 };
 
 /**
- * Get all default offsets for a category
- * @param {string} category - Task category
- * @returns {Object} Default offsets for the category
+ * Get task offsets for a specific project type with user overrides
+ * @param {Object} userSettings - User settings object containing custom offset overrides
+ * @param {string} projectType - Project type: 'single', 'ep', 'album', 'version'
+ * @returns {Object} Merged offset configuration
  */
-export const getDefaultOffsets = (category) => {
-  const defaults = {
-    song: DEFAULT_SONG_OFFSETS,
-    stems: DEFAULT_STEMS_OFFSETS,
-    video: DEFAULT_VIDEO_OFFSETS,
-    release: DEFAULT_RELEASE_OFFSETS,
-    physical: DEFAULT_PHYSICAL_RELEASE_OFFSETS,
-    event: DEFAULT_EVENT_OFFSETS
-  };
-  return defaults[category] || {};
-};
-
-/**
- * Validate and sanitize user-provided offsets
- * @param {Object} offsets - User offsets to validate
- * @returns {Object} Validated offsets
- */
-export const validateOffsets = (offsets) => {
-  if (!offsets || typeof offsets !== 'object') return {};
-
-  const validated = {};
+export const getTaskOffsets = (userSettings = {}, projectType = 'single') => {
+  // Get base template
+  const baseTemplate = DEFAULT_TEMPLATES[projectType] || SINGLE_TEMPLATE;
   
-  for (const [key, value] of Object.entries(offsets)) {
-    if (typeof value === 'object' && value !== null) {
-      validated[key] = {};
-      for (const [taskType, offset] of Object.entries(value)) {
-        const numOffset = Number(offset);
-        if (Number.isFinite(numOffset) && numOffset >= 0) {
-          validated[key][taskType] = numOffset;
-        }
-      }
-    }
-  }
-
-  return validated;
+  // Get user overrides for this project type
+  const userTemplateOffsets = userSettings?.templateOffsets?.[projectType] || {};
+  
+  // Get global user overrides (legacy deadlineOffsets)
+  const globalUserOffsets = userSettings?.deadlineOffsets || {};
+  
+  // Merge: base template < template-specific overrides < global overrides
+  return {
+    ...baseTemplate.offsets,
+    ...userTemplateOffsets,
+    ...globalUserOffsets
+  };
 };
 
 /**
- * Merge user offsets with defaults
- * @param {Object} userOffsets - User-defined offsets
- * @returns {Object} Complete offset configuration
+ * Get all available templates with user customizations applied
+ * @param {Object} userSettings - User settings object
+ * @returns {Array} Array of template objects with current offsets
  */
-export const mergeOffsets = (userOffsets = {}) => {
+export const getAllTemplates = (userSettings = {}) => {
+  return Object.keys(DEFAULT_TEMPLATES).map(key => {
+    const template = DEFAULT_TEMPLATES[key];
+    const offsets = getTaskOffsets(userSettings, key);
+    return {
+      ...template,
+      offsets,
+      isCustomized: JSON.stringify(offsets) !== JSON.stringify(template.offsets)
+    };
+  });
+};
+
+/**
+ * Save template offsets to user settings
+ * @param {Object} currentSettings - Current user settings
+ * @param {string} templateId - Template ID (single, ep, album, version)
+ * @param {Object} newOffsets - New offset values
+ * @returns {Object} Updated settings object
+ */
+export const saveTemplateOffsets = (currentSettings = {}, templateId, newOffsets) => {
   return {
-    song: { ...DEFAULT_SONG_OFFSETS, ...userOffsets.song },
-    stems: { ...DEFAULT_STEMS_OFFSETS, ...userOffsets.stems },
-    video: { ...DEFAULT_VIDEO_OFFSETS, ...userOffsets.video },
-    release: { ...DEFAULT_RELEASE_OFFSETS, ...userOffsets.release },
-    physical: { ...DEFAULT_PHYSICAL_RELEASE_OFFSETS, ...userOffsets.physical },
-    event: { ...DEFAULT_EVENT_OFFSETS, ...userOffsets.event },
-    projectTypes: { ...DEFAULT_PROJECT_TYPE_OFFSETS, ...userOffsets.projectTypes }
+    ...currentSettings,
+    templateOffsets: {
+      ...(currentSettings.templateOffsets || {}),
+      [templateId]: newOffsets
+    }
   };
+};
+
+/**
+ * Reset a template to default values
+ * @param {Object} currentSettings - Current user settings
+ * @param {string} templateId - Template ID to reset
+ * @returns {Object} Updated settings object
+ */
+export const resetTemplate = (currentSettings = {}, templateId) => {
+  const templateOffsets = { ...(currentSettings.templateOffsets || {}) };
+  delete templateOffsets[templateId];
+  
+  return {
+    ...currentSettings,
+    templateOffsets
+  };
+};
+
+/**
+ * Detect appropriate template based on release metadata
+ * @param {Object} release - Release object with tracks, type, etc.
+ * @returns {string} Suggested template ID
+ */
+export const detectProjectType = (release) => {
+  if (!release) return 'single';
+  
+  // Check explicit release type if available
+  if (release.releaseType) {
+    const type = release.releaseType.toLowerCase();
+    if (type.includes('album')) return 'album';
+    if (type.includes('ep')) return 'ep';
+    if (type.includes('single')) return 'single';
+  }
+  
+  // Infer from track count
+  const trackCount = release.attachedSongIds?.length || release.requiredRecordings?.length || 0;
+  
+  if (trackCount >= 7) return 'album';
+  if (trackCount >= 3) return 'ep';
+  return 'single';
 };

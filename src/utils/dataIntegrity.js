@@ -15,550 +15,605 @@
  */
 
 /**
- * Data Integrity Diagnostics Module
+ * Data Integrity Diagnostics
  * 
- * Provides automated validation and repair for:
- * - Orphaned tasks (tasks without valid parents)
- * - Invalid statuses
+ * Validates data consistency and identifies issues such as:
+ * - Orphaned tasks (tasks without valid parent references)
+ * - Invalid status values
  * - Broken relational links
- * - Inconsistent data
+ * - Missing required fields
+ * 
+ * Usage:
+ * import { runDiagnostics, repairIssues } from './utils/dataIntegrity';
+ * const report = runDiagnostics(data);
+ * const repairedData = repairIssues(data, report, { autoFix: true });
  */
 
-// Valid status options (from Store.jsx)
-const VALID_STATUSES = [
-  'Not Started',
-  'In-Progress',
-  'Waiting on Someone Else',
-  'Paid But Not Complete',
-  'Complete But Not Paid',
-  'Complete',
-  'Other',
-  'Delayed',
-  'Done', // Legacy alias
-  'In Progress' // Legacy alias
-];
-
-// Valid task categories
-const VALID_TASK_CATEGORIES = [
-  'Branding', 'Web', 'Legal', 'Visuals', 'Marketing', 
-  'Events', 'Audio', 'Video', 'Merch', 'Other',
-  'Production', 'Recording', 'Post-Production', 'Distribution'
-];
+import { STATUS_OPTIONS } from '../domain/taskLogic.js';
 
 /**
- * Check for orphaned tasks (tasks without valid parent references)
- * @param {Object} data - Application data
- * @returns {Array} List of orphaned task issues
+ * Validates that referenced entities exist
  */
-export const checkOrphanedTasks = (data = {}) => {
+const validateReference = (id, collection, collectionName) => {
+  if (!id) return null;
+  const found = collection.find(item => item.id === id);
+  if (!found) {
+    return {
+      type: 'broken_reference',
+      severity: 'warning',
+      message: `Referenced ${collectionName} with ID "${id}" does not exist`,
+      referenceId: id,
+      collectionName
+    };
+  }
+  return null;
+};
+
+/**
+ * Check for orphaned tasks (tasks with invalid parent references)
+ */
+const checkOrphanedTasks = (data) => {
   const issues = [];
-  const { songs = [], releases = [], videos = [], events = [], globalTasks = [] } = data;
-  
-  // Create lookup maps for parent entities
+  const { songs = [], releases = [], standaloneVideos = [], events = [] } = data;
+
+  // Build parent lookup maps
   const songIds = new Set(songs.map(s => s.id));
   const releaseIds = new Set(releases.map(r => r.id));
-  const videoIds = new Set(videos.map(v => v.id));
+  const videoIds = new Set(standaloneVideos.map(v => v.id));
   const eventIds = new Set(events.map(e => e.id));
-  
-  // Check songs for orphaned tasks
+
+  // Check song tasks
   songs.forEach(song => {
-    if (song.tasks && Array.isArray(song.tasks)) {
-      song.tasks.forEach((task, index) => {
-        if (!task.id) {
+    (song.deadlines || []).forEach(task => {
+      if (task.parentSongId && !songIds.has(task.parentSongId)) {
+        issues.push({
+          type: 'orphaned_task',
+          severity: 'error',
+          message: `Song task "${task.type || task.title}" references non-existent parent song`,
+          taskId: task.id || `${song.id}-${task.type}`,
+          parentId: task.parentSongId,
+          parentType: 'song',
+          suggestedFix: 'Remove parentSongId or delete task'
+        });
+      }
+    });
+
+    (song.customTasks || []).forEach(task => {
+      if (task.parentSongId && !songIds.has(task.parentSongId)) {
+        issues.push({
+          type: 'orphaned_task',
+          severity: 'error',
+          message: `Song custom task "${task.title}" references non-existent parent song`,
+          taskId: task.id,
+          parentId: task.parentSongId,
+          parentType: 'song',
+          suggestedFix: 'Remove parentSongId or delete task'
+        });
+      }
+    });
+
+    // Check song versions
+    (song.versions || []).forEach(version => {
+      (version.tasks || []).forEach(task => {
+        if (task.parentVersionId && !version.id) {
           issues.push({
-            type: 'missing_id',
-            severity: 'high',
-            entity: 'song',
-            entityId: song.id,
-            entityName: song.name || song.title || 'Unnamed Song',
-            taskIndex: index,
-            message: `Task at index ${index} in song "${song.name || song.title}" is missing an ID`
+            type: 'orphaned_task',
+            severity: 'error',
+            message: `Version task "${task.type}" references version without ID`,
+            taskId: task.id || `${version.name}-${task.type}`,
+            parentId: task.parentVersionId,
+            parentType: 'version',
+            suggestedFix: 'Assign version ID or delete task'
           });
         }
       });
-    }
-    
-    // Check for versions with invalid parent references
-    if (song.versions && Array.isArray(song.versions)) {
-      song.versions.forEach(version => {
-        if (version.tasks && Array.isArray(version.tasks)) {
-          version.tasks.forEach((task, index) => {
-            if (!task.id) {
-              issues.push({
-                type: 'missing_id',
-                severity: 'high',
-                entity: 'version',
-                entityId: version.id,
-                entityName: version.name || 'Unnamed Version',
-                parentId: song.id,
-                parentName: song.name || song.title,
-                taskIndex: index,
-                message: `Task at index ${index} in version "${version.name}" is missing an ID`
-              });
-            }
-          });
-        }
-      });
-    }
+    });
   });
-  
-  // Check releases for orphaned tasks
+
+  // Check release tasks
   releases.forEach(release => {
-    if (release.tasks && Array.isArray(release.tasks)) {
-      release.tasks.forEach((task, index) => {
-        if (!task.id) {
-          issues.push({
-            type: 'missing_id',
-            severity: 'high',
-            entity: 'release',
-            entityId: release.id,
-            entityName: release.name || release.title || 'Unnamed Release',
-            taskIndex: index,
-            message: `Task at index ${index} in release "${release.name || release.title}" is missing an ID`
-          });
-        }
-      });
-    }
+    (release.tasks || []).forEach(task => {
+      if (task.parentReleaseId && !releaseIds.has(task.parentReleaseId)) {
+        issues.push({
+          type: 'orphaned_task',
+          severity: 'error',
+          message: `Release task "${task.type || task.title}" references non-existent parent release`,
+          taskId: task.id || `${release.id}-${task.type}`,
+          parentId: task.parentReleaseId,
+          parentType: 'release',
+          suggestedFix: 'Remove parentReleaseId or delete task'
+        });
+      }
+    });
+
+    (release.customTasks || []).forEach(task => {
+      if (task.parentReleaseId && !releaseIds.has(task.parentReleaseId)) {
+        issues.push({
+          type: 'orphaned_task',
+          severity: 'error',
+          message: `Release custom task "${task.title}" references non-existent parent release`,
+          taskId: task.id,
+          parentId: task.parentReleaseId,
+          parentType: 'release',
+          suggestedFix: 'Remove parentReleaseId or delete task'
+        });
+      }
+    });
   });
-  
-  // Check videos for orphaned tasks
-  videos.forEach(video => {
-    if (video.tasks && Array.isArray(video.tasks)) {
-      video.tasks.forEach((task, index) => {
-        if (!task.id) {
-          issues.push({
-            type: 'missing_id',
-            severity: 'high',
-            entity: 'video',
-            entityId: video.id,
-            entityName: video.name || video.title || 'Unnamed Video',
-            taskIndex: index,
-            message: `Task at index ${index} in video "${video.name || video.title}" is missing an ID`
-          });
-        }
-      });
-    }
+
+  // Check video tasks
+  standaloneVideos.forEach(video => {
+    (video.tasks || []).forEach(task => {
+      if (task.parentVideoId && !videoIds.has(task.parentVideoId)) {
+        issues.push({
+          type: 'orphaned_task',
+          severity: 'error',
+          message: `Video task "${task.type || task.title}" references non-existent parent video`,
+          taskId: task.id || `${video.id}-${task.type}`,
+          parentId: task.parentVideoId,
+          parentType: 'video',
+          suggestedFix: 'Remove parentVideoId or delete task'
+        });
+      }
+    });
   });
-  
-  // Check events for orphaned tasks
+
+  // Check event tasks
   events.forEach(event => {
-    if (event.tasks && Array.isArray(event.tasks)) {
-      event.tasks.forEach((task, index) => {
-        if (!task.id) {
-          issues.push({
-            type: 'missing_id',
-            severity: 'high',
-            entity: 'event',
-            entityId: event.id,
-            entityName: event.name || event.title || 'Unnamed Event',
-            taskIndex: index,
-            message: `Task at index ${index} in event "${event.name || event.title}" is missing an ID`
-          });
-        }
-      });
-    }
+    (event.customTasks || []).forEach(task => {
+      if (task.parentEventId && !eventIds.has(task.parentEventId)) {
+        issues.push({
+          type: 'orphaned_task',
+          severity: 'error',
+          message: `Event task "${task.title}" references non-existent parent event`,
+          taskId: task.id,
+          parentId: task.parentEventId,
+          parentType: 'event',
+          suggestedFix: 'Remove parentEventId or delete task'
+        });
+      }
+    });
   });
-  
+
   return issues;
 };
 
 /**
- * Check for invalid statuses
- * @param {Object} data - Application data
- * @returns {Array} List of invalid status issues
+ * Check for invalid status values
  */
-export const checkInvalidStatuses = (data = {}) => {
+const checkInvalidStatuses = (data) => {
   const issues = [];
-  const { songs = [], releases = [], videos = [], events = [], globalTasks = [] } = data;
-  
-  const checkTaskStatus = (task, parentType, parentId, parentName) => {
-    if (task.status && !VALID_STATUSES.includes(task.status)) {
+  const validStatuses = new Set(STATUS_OPTIONS);
+  const { songs = [], releases = [], standaloneVideos = [], events = [], globalTasks = [] } = data;
+
+  const checkTaskStatus = (task, location) => {
+    if (task.status && !validStatuses.has(task.status)) {
       issues.push({
         type: 'invalid_status',
-        severity: 'medium',
-        entity: parentType,
-        entityId: parentId,
-        entityName: parentName,
+        severity: 'warning',
+        message: `Invalid status "${task.status}" in ${location}`,
         taskId: task.id,
-        taskName: task.name || task.title || 'Unnamed Task',
         currentStatus: task.status,
-        message: `Task "${task.name || task.title}" has invalid status: "${task.status}"`
+        suggestedFix: 'Set to "Not Started" or another valid status'
       });
     }
   };
-  
-  // Check songs
+
+  // Check all tasks
   songs.forEach(song => {
-    if (song.tasks) {
-      song.tasks.forEach(task => checkTaskStatus(task, 'song', song.id, song.name || song.title));
-    }
-    if (song.versions) {
-      song.versions.forEach(version => {
-        if (version.tasks) {
-          version.tasks.forEach(task => checkTaskStatus(task, 'version', version.id, version.name));
-        }
-      });
-    }
+    (song.deadlines || []).forEach(task => checkTaskStatus(task, `song "${song.title}"`));
+    (song.customTasks || []).forEach(task => checkTaskStatus(task, `song "${song.title}" custom tasks`));
+    (song.versions || []).forEach(version => {
+      (version.tasks || []).forEach(task => checkTaskStatus(task, `song "${song.title}" version "${version.name}"`));
+    });
   });
-  
-  // Check releases
+
   releases.forEach(release => {
-    if (release.tasks) {
-      release.tasks.forEach(task => checkTaskStatus(task, 'release', release.id, release.name || release.title));
-    }
+    (release.tasks || []).forEach(task => checkTaskStatus(task, `release "${release.name}"`));
+    (release.customTasks || []).forEach(task => checkTaskStatus(task, `release "${release.name}" custom tasks`));
   });
-  
-  // Check videos
-  videos.forEach(video => {
-    if (video.tasks) {
-      video.tasks.forEach(task => checkTaskStatus(task, 'video', video.id, video.name || video.title));
-    }
+
+  standaloneVideos.forEach(video => {
+    (video.tasks || []).forEach(task => checkTaskStatus(task, `video "${video.title}"`));
   });
-  
-  // Check events
+
   events.forEach(event => {
-    if (event.tasks) {
-      event.tasks.forEach(task => checkTaskStatus(task, 'event', event.id, event.name || event.title));
-    }
+    (event.customTasks || []).forEach(task => checkTaskStatus(task, `event "${event.title}"`));
   });
-  
-  // Check global tasks
+
   globalTasks.forEach(task => {
-    if (task.status && !VALID_STATUSES.includes(task.status)) {
+    checkTaskStatus(task, 'global tasks');
+  });
+
+  return issues;
+};
+
+/**
+ * Check for broken reference links (eras, stages, tags, team members)
+ */
+const checkBrokenReferences = (data) => {
+  const issues = [];
+  const { songs = [], releases = [], standaloneVideos = [], events = [], globalTasks = [], 
+          eras = [], stages = [], tags = [], teamMembers = [] } = data;
+
+  // Check era references
+  songs.forEach(song => {
+    (song.eraIds || []).forEach(eraId => {
+      const issue = validateReference(eraId, eras, 'era');
+      if (issue) {
+        issues.push({ ...issue, entityType: 'song', entityId: song.id, entityName: song.title });
+      }
+    });
+  });
+
+  releases.forEach(release => {
+    (release.eraIds || []).forEach(eraId => {
+      const issue = validateReference(eraId, eras, 'era');
+      if (issue) {
+        issues.push({ ...issue, entityType: 'release', entityId: release.id, entityName: release.name });
+      }
+    });
+  });
+
+  // Check stage references
+  songs.forEach(song => {
+    (song.stageIds || []).forEach(stageId => {
+      const issue = validateReference(stageId, stages, 'stage');
+      if (issue) {
+        issues.push({ ...issue, entityType: 'song', entityId: song.id, entityName: song.title });
+      }
+    });
+  });
+
+  // Check tag references
+  const checkTags = (item, type) => {
+    (item.tagIds || []).forEach(tagId => {
+      const issue = validateReference(tagId, tags, 'tag');
+      if (issue) {
+        issues.push({ ...issue, entityType: type, entityId: item.id, entityName: item.title || item.name });
+      }
+    });
+  };
+
+  songs.forEach(song => checkTags(song, 'song'));
+  releases.forEach(release => checkTags(release, 'release'));
+  standaloneVideos.forEach(video => checkTags(video, 'video'));
+  events.forEach(event => checkTags(event, 'event'));
+  globalTasks.forEach(task => checkTags(task, 'global_task'));
+
+  // Check team member references in tasks
+  const checkTeamMembers = (task, location) => {
+    (task.assignedMembers || []).forEach(assignment => {
+      if (assignment.memberId) {
+        const issue = validateReference(assignment.memberId, teamMembers, 'team member');
+        if (issue) {
+          issues.push({ 
+            ...issue, 
+            taskId: task.id, 
+            location,
+            suggestedFix: 'Remove assignment or add team member' 
+          });
+        }
+      }
+    });
+  };
+
+  songs.forEach(song => {
+    (song.deadlines || []).forEach(task => checkTeamMembers(task, `song "${song.title}"`));
+    (song.customTasks || []).forEach(task => checkTeamMembers(task, `song "${song.title}" custom tasks`));
+    (song.versions || []).forEach(version => {
+      (version.tasks || []).forEach(task => checkTeamMembers(task, `song "${song.title}" version "${version.name}"`));
+    });
+  });
+
+  releases.forEach(release => {
+    (release.tasks || []).forEach(task => checkTeamMembers(task, `release "${release.name}"`));
+    (release.customTasks || []).forEach(task => checkTeamMembers(task, `release "${release.name}" custom tasks`));
+  });
+
+  globalTasks.forEach(task => checkTeamMembers(task, 'global tasks'));
+
+  return issues;
+};
+
+/**
+ * Check for missing required fields
+ */
+const checkMissingRequiredFields = (data) => {
+  const issues = [];
+  const { songs = [], releases = [], globalTasks = [] } = data;
+
+  // Check songs
+  songs.forEach((song, index) => {
+    if (!song.id) {
       issues.push({
-        type: 'invalid_status',
-        severity: 'medium',
-        entity: 'globalTask',
-        entityId: task.id,
-        taskName: task.name || task.title || 'Unnamed Task',
-        currentStatus: task.status,
-        message: `Global task "${task.name || task.title}" has invalid status: "${task.status}"`
+        type: 'missing_required_field',
+        severity: 'error',
+        message: `Song at index ${index} is missing required field: id`,
+        entityType: 'song',
+        entityIndex: index,
+        field: 'id',
+        suggestedFix: 'Generate a unique ID'
+      });
+    }
+    if (!song.title || song.title.trim() === '') {
+      issues.push({
+        type: 'missing_required_field',
+        severity: 'warning',
+        message: `Song "${song.id}" is missing title`,
+        entityType: 'song',
+        entityId: song.id,
+        field: 'title',
+        suggestedFix: 'Add a title'
       });
     }
   });
-  
+
+  // Check releases
+  releases.forEach((release, index) => {
+    if (!release.id) {
+      issues.push({
+        type: 'missing_required_field',
+        severity: 'error',
+        message: `Release at index ${index} is missing required field: id`,
+        entityType: 'release',
+        entityIndex: index,
+        field: 'id',
+        suggestedFix: 'Generate a unique ID'
+      });
+    }
+    if (!release.name || release.name.trim() === '') {
+      issues.push({
+        type: 'missing_required_field',
+        severity: 'warning',
+        message: `Release "${release.id}" is missing name`,
+        entityType: 'release',
+        entityId: release.id,
+        field: 'name',
+        suggestedFix: 'Add a name'
+      });
+    }
+  });
+
+  // Check global tasks
+  globalTasks.forEach((task, index) => {
+    if (!task.id) {
+      issues.push({
+        type: 'missing_required_field',
+        severity: 'error',
+        message: `Global task at index ${index} is missing required field: id`,
+        entityType: 'global_task',
+        entityIndex: index,
+        field: 'id',
+        suggestedFix: 'Generate a unique ID'
+      });
+    }
+    if (!task.taskName || task.taskName.trim() === '') {
+      issues.push({
+        type: 'missing_required_field',
+        severity: 'warning',
+        message: `Global task "${task.id}" is missing taskName`,
+        entityType: 'global_task',
+        entityId: task.id,
+        field: 'taskName',
+        suggestedFix: 'Add a task name'
+      });
+    }
+  });
+
   return issues;
 };
 
 /**
- * Check for broken relational links
- * @param {Object} data - Application data
- * @returns {Array} List of broken link issues
+ * Run all diagnostics and return a comprehensive report
+ * @param {Object} data - The application data
+ * @returns {Object} Diagnostic report with issues grouped by type and severity
  */
-export const checkBrokenLinks = (data = {}) => {
-  const issues = [];
-  const {
-    songs = [],
-    releases = [],
-    videos = [],
-    events = [],
-    eras = [],
-    stages = [],
-    tags = [],
-    teamMembers = [],
-    artists = []
-  } = data;
-  
-  // Create lookup sets
-  const eraIds = new Set(eras.map(e => e.id));
-  const stageIds = new Set(stages.map(s => s.id));
-  const tagIds = new Set(tags.map(t => t.id));
-  const teamMemberIds = new Set(teamMembers.map(tm => tm.id));
-  const artistIds = new Set(artists.map(a => a.id));
-  const releaseIds = new Set(releases.map(r => r.id));
-  
-  const checkEntityLinks = (entity, entityType) => {
-    // Check era references
-    if (entity.era_ids || entity.eraIds) {
-      const eraList = entity.era_ids || entity.eraIds || [];
-      eraList.forEach(eraId => {
-        if (eraId && !eraIds.has(eraId)) {
-          issues.push({
-            type: 'broken_era_link',
-            severity: 'low',
-            entity: entityType,
-            entityId: entity.id,
-            entityName: entity.name || entity.title || 'Unnamed',
-            brokenId: eraId,
-            message: `${entityType} "${entity.name || entity.title}" references non-existent era: ${eraId}`
-          });
-        }
-      });
-    }
-    
-    // Check stage references
-    if (entity.stage_ids || entity.stageIds) {
-      const stageList = entity.stage_ids || entity.stageIds || [];
-      stageList.forEach(stageId => {
-        if (stageId && !stageIds.has(stageId)) {
-          issues.push({
-            type: 'broken_stage_link',
-            severity: 'low',
-            entity: entityType,
-            entityId: entity.id,
-            entityName: entity.name || entity.title || 'Unnamed',
-            brokenId: stageId,
-            message: `${entityType} "${entity.name || entity.title}" references non-existent stage: ${stageId}`
-          });
-        }
-      });
-    }
-    
-    // Check tag references
-    if (entity.tag_ids || entity.tagIds) {
-      const tagList = entity.tag_ids || entity.tagIds || [];
-      tagList.forEach(tagId => {
-        if (tagId && !tagIds.has(tagId)) {
-          issues.push({
-            type: 'broken_tag_link',
-            severity: 'low',
-            entity: entityType,
-            entityId: entity.id,
-            entityName: entity.name || entity.title || 'Unnamed',
-            brokenId: tagId,
-            message: `${entityType} "${entity.name || entity.title}" references non-existent tag: ${tagId}`
-          });
-        }
-      });
-    }
-    
-    // Check team member references
-    if (entity.team_member_ids || entity.teamMemberIds || entity.assignedMembers) {
-      const memberList = entity.team_member_ids || entity.teamMemberIds || entity.assignedMembers || [];
-      memberList.forEach(memberId => {
-        const id = typeof memberId === 'object' ? (memberId.memberId || memberId.id) : memberId;
-        if (id && !teamMemberIds.has(id)) {
-          issues.push({
-            type: 'broken_team_member_link',
-            severity: 'medium',
-            entity: entityType,
-            entityId: entity.id,
-            entityName: entity.name || entity.title || 'Unnamed',
-            brokenId: id,
-            message: `${entityType} "${entity.name || entity.title}" references non-existent team member: ${id}`
-          });
-        }
-      });
-    }
-  };
-  
-  // Check all entities
-  songs.forEach(song => checkEntityLinks(song, 'song'));
-  releases.forEach(release => checkEntityLinks(release, 'release'));
-  videos.forEach(video => checkEntityLinks(video, 'video'));
-  events.forEach(event => checkEntityLinks(event, 'event'));
-  
-  return issues;
-};
+export const runDiagnostics = (data) => {
+  const issues = [
+    ...checkOrphanedTasks(data),
+    ...checkInvalidStatuses(data),
+    ...checkBrokenReferences(data),
+    ...checkMissingRequiredFields(data)
+  ];
 
-/**
- * Run all diagnostic checks
- * @param {Object} data - Application data
- * @returns {Object} Diagnostic report with all issues
- */
-export const runDiagnostics = (data = {}) => {
-  const orphanedTasks = checkOrphanedTasks(data);
-  const invalidStatuses = checkInvalidStatuses(data);
-  const brokenLinks = checkBrokenLinks(data);
-  
-  const allIssues = [...orphanedTasks, ...invalidStatuses, ...brokenLinks];
-  
-  const summary = {
-    total: allIssues.length,
-    high: allIssues.filter(i => i.severity === 'high').length,
-    medium: allIssues.filter(i => i.severity === 'medium').length,
-    low: allIssues.filter(i => i.severity === 'low').length
-  };
-  
+  // Group issues by type and severity
+  const byType = {};
+  const bySeverity = { error: [], warning: [], info: [] };
+
+  issues.forEach(issue => {
+    // Group by type
+    if (!byType[issue.type]) {
+      byType[issue.type] = [];
+    }
+    byType[issue.type].push(issue);
+
+    // Group by severity
+    bySeverity[issue.severity].push(issue);
+  });
+
   return {
-    summary,
-    issues: allIssues,
-    orphanedTasks,
-    invalidStatuses,
-    brokenLinks,
+    totalIssues: issues.length,
+    errorCount: bySeverity.error.length,
+    warningCount: bySeverity.warning.length,
+    infoCount: bySeverity.info.length,
+    issues,
+    byType,
+    bySeverity,
     timestamp: new Date().toISOString()
   };
 };
 
 /**
- * Auto-repair data issues
- * @param {Object} data - Application data
- * @param {Array} issues - Issues to repair
+ * Repair data issues based on diagnostic report
+ * @param {Object} data - The application data
+ * @param {Object} report - Diagnostic report from runDiagnostics
+ * @param {Object} options - Repair options { autoFix: boolean, removeOrphans: boolean }
  * @returns {Object} Repaired data and repair log
  */
-export const autoRepair = (data = {}, issues = []) => {
+export const repairIssues = (data, report, options = {}) => {
+  const { autoFix = false, removeOrphans = false } = options;
   const repairLog = [];
-  let repairedData = JSON.parse(JSON.stringify(data)); // Deep clone
-  
-  issues.forEach(issue => {
-    try {
-      if (issue.type === 'missing_id') {
-        // Generate IDs for tasks missing them
-        const id = crypto.randomUUID();
-        
-        // Find and repair the task
-        if (issue.entity === 'song' && repairedData.songs) {
-          const song = repairedData.songs.find(s => s.id === issue.entityId);
-          if (song && song.tasks && song.tasks[issue.taskIndex]) {
-            song.tasks[issue.taskIndex].id = id;
-            repairLog.push({
-              type: 'generated_id',
-              entity: issue.entity,
-              entityId: issue.entityId,
-              taskIndex: issue.taskIndex,
-              generatedId: id,
-              message: `Generated ID for task in ${issue.entity} "${issue.entityName}"`
-            });
-          }
-        } else if (issue.entity === 'version' && repairedData.songs) {
-          const song = repairedData.songs.find(s => s.id === issue.parentId);
-          if (song && song.versions) {
-            const version = song.versions.find(v => v.id === issue.entityId);
-            if (version && version.tasks && version.tasks[issue.taskIndex]) {
-              version.tasks[issue.taskIndex].id = id;
-              repairLog.push({
-                type: 'generated_id',
-                entity: issue.entity,
-                entityId: issue.entityId,
-                taskIndex: issue.taskIndex,
-                generatedId: id,
-                message: `Generated ID for task in version "${issue.entityName}"`
-              });
-            }
-          }
-        }
-        // Similar logic for releases, videos, events...
-      } else if (issue.type === 'invalid_status') {
-        // Reset invalid statuses to 'Not Started'
-        const defaultStatus = 'Not Started';
-        
-        // Find and repair the entity
-        const collections = {
-          song: 'songs',
-          release: 'releases',
-          video: 'videos',
-          event: 'events',
-          globalTask: 'globalTasks'
-        };
-        
-        const collectionKey = collections[issue.entity];
-        if (collectionKey && repairedData[collectionKey]) {
-          const entity = repairedData[collectionKey].find(e => e.id === issue.entityId);
-          if (entity) {
-            if (issue.taskId) {
-              // Task-level status
-              if (entity.tasks) {
-                const task = entity.tasks.find(t => t.id === issue.taskId);
-                if (task) {
-                  task.status = defaultStatus;
-                  repairLog.push({
-                    type: 'fixed_status',
-                    entity: issue.entity,
-                    entityId: issue.entityId,
-                    taskId: issue.taskId,
-                    oldStatus: issue.currentStatus,
-                    newStatus: defaultStatus,
-                    message: `Reset invalid status "${issue.currentStatus}" to "${defaultStatus}"`
-                  });
-                }
-              }
-            } else {
-              // Entity-level status
-              entity.status = defaultStatus;
-              repairLog.push({
-                type: 'fixed_status',
-                entity: issue.entity,
-                entityId: issue.entityId,
-                oldStatus: issue.currentStatus,
-                newStatus: defaultStatus,
-                message: `Reset invalid status "${issue.currentStatus}" to "${defaultStatus}"`
-              });
-            }
-          }
-        }
-      } else if (issue.type.startsWith('broken_')) {
-        // Remove broken references
-        const collections = {
-          song: 'songs',
-          release: 'releases',
-          video: 'videos',
-          event: 'events'
-        };
-        
-        const collectionKey = collections[issue.entity];
-        if (collectionKey && repairedData[collectionKey]) {
-          const entity = repairedData[collectionKey].find(e => e.id === issue.entityId);
-          if (entity) {
-            // Remove broken ID from appropriate array
-            const fieldMappings = {
-              broken_era_link: ['era_ids', 'eraIds'],
-              broken_stage_link: ['stage_ids', 'stageIds'],
-              broken_tag_link: ['tag_ids', 'tagIds'],
-              broken_team_member_link: ['team_member_ids', 'teamMemberIds', 'assignedMembers']
-            };
-            
-            const fields = fieldMappings[issue.type] || [];
-            fields.forEach(field => {
-              if (entity[field] && Array.isArray(entity[field])) {
-                const originalLength = entity[field].length;
-                entity[field] = entity[field].filter(id => {
-                  const checkId = typeof id === 'object' ? (id.memberId || id.id) : id;
-                  return checkId !== issue.brokenId;
-                });
-                
-                if (entity[field].length < originalLength) {
-                  repairLog.push({
-                    type: 'removed_broken_link',
-                    entity: issue.entity,
-                    entityId: issue.entityId,
-                    field,
-                    brokenId: issue.brokenId,
-                    message: `Removed broken reference ${issue.brokenId} from ${field}`
-                  });
-                }
-              }
-            });
-          }
-        }
-      }
-    } catch (error) {
-      repairLog.push({
-        type: 'repair_error',
-        issue,
-        error: error.message,
-        message: `Failed to repair issue: ${error.message}`
-      });
-    }
-  });
-  
-  return {
-    repairedData,
-    repairLog,
-    repairedCount: repairLog.filter(r => r.type !== 'repair_error').length,
-    errorCount: repairLog.filter(r => r.type === 'repair_error').length
-  };
-};
+  const repairedData = JSON.parse(JSON.stringify(data)); // Deep clone
 
-/**
- * Get diagnostic summary statistics
- * @param {Object} diagnostics - Diagnostic report
- * @returns {Object} Summary statistics
- */
-export const getDiagnosticStats = (diagnostics = {}) => {
-  const { summary = {}, issues = [] } = diagnostics;
-  
+  if (!autoFix) {
+    return {
+      data: repairedData,
+      repairLog: [{
+        action: 'none',
+        message: 'Auto-repair is disabled. No changes made.',
+        timestamp: new Date().toISOString()
+      }]
+    };
+  }
+
+  // Repair invalid statuses
+  report.bySeverity.warning
+    .filter(issue => issue.type === 'invalid_status')
+    .forEach(issue => {
+      // Find and fix the task
+      const fixTask = (task) => {
+        if (task.id === issue.taskId) {
+          task.status = 'Not Started';
+          repairLog.push({
+            action: 'fix_status',
+            message: `Changed status from "${issue.currentStatus}" to "Not Started" for task ${issue.taskId}`,
+            taskId: issue.taskId,
+            oldValue: issue.currentStatus,
+            newValue: 'Not Started',
+            timestamp: new Date().toISOString()
+          });
+        }
+      };
+
+      // Search through all collections
+      (repairedData.songs || []).forEach(song => {
+        (song.deadlines || []).forEach(fixTask);
+        (song.customTasks || []).forEach(fixTask);
+        (song.versions || []).forEach(version => {
+          (version.tasks || []).forEach(fixTask);
+        });
+      });
+      (repairedData.releases || []).forEach(release => {
+        (release.tasks || []).forEach(fixTask);
+        (release.customTasks || []).forEach(fixTask);
+      });
+      (repairedData.standaloneVideos || []).forEach(video => {
+        (video.tasks || []).forEach(fixTask);
+      });
+      (repairedData.events || []).forEach(event => {
+        (event.customTasks || []).forEach(fixTask);
+      });
+      (repairedData.globalTasks || []).forEach(fixTask);
+    });
+
+  // Remove orphaned tasks if requested
+  if (removeOrphans) {
+    report.bySeverity.error
+      .filter(issue => issue.type === 'orphaned_task')
+      .forEach(issue => {
+        // Remove orphaned tasks by filtering them out
+        (repairedData.songs || []).forEach(song => {
+          const beforeCount = (song.deadlines || []).length + (song.customTasks || []).length;
+          song.deadlines = (song.deadlines || []).filter(task => 
+            (task.id || `${song.id}-${task.type}`) !== issue.taskId
+          );
+          song.customTasks = (song.customTasks || []).filter(task => 
+            task.id !== issue.taskId
+          );
+          const afterCount = song.deadlines.length + song.customTasks.length;
+          
+          if (beforeCount !== afterCount) {
+            repairLog.push({
+              action: 'remove_orphan',
+              message: `Removed orphaned task ${issue.taskId} from song ${song.id}`,
+              taskId: issue.taskId,
+              parentId: song.id,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+
+        // Similar for releases, videos, events
+        (repairedData.releases || []).forEach(release => {
+          const beforeCount = (release.tasks || []).length + (release.customTasks || []).length;
+          release.tasks = (release.tasks || []).filter(task => 
+            (task.id || `${release.id}-${task.type}`) !== issue.taskId
+          );
+          release.customTasks = (release.customTasks || []).filter(task => 
+            task.id !== issue.taskId
+          );
+          const afterCount = release.tasks.length + release.customTasks.length;
+          
+          if (beforeCount !== afterCount) {
+            repairLog.push({
+              action: 'remove_orphan',
+              message: `Removed orphaned task ${issue.taskId} from release ${release.id}`,
+              taskId: issue.taskId,
+              parentId: release.id,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+      });
+  }
+
+  // Remove broken references (eras, stages, tags)
+  report.bySeverity.warning
+    .filter(issue => issue.type === 'broken_reference')
+    .forEach(issue => {
+      const removeRef = (item) => {
+        if (issue.collectionName === 'era' && item.eraIds) {
+          const before = item.eraIds.length;
+          item.eraIds = item.eraIds.filter(id => id !== issue.referenceId);
+          if (before !== item.eraIds.length) {
+            repairLog.push({
+              action: 'remove_broken_ref',
+              message: `Removed broken era reference ${issue.referenceId}`,
+              entityId: item.id,
+              refId: issue.referenceId,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+        if (issue.collectionName === 'stage' && item.stageIds) {
+          const before = item.stageIds.length;
+          item.stageIds = item.stageIds.filter(id => id !== issue.referenceId);
+          if (before !== item.stageIds.length) {
+            repairLog.push({
+              action: 'remove_broken_ref',
+              message: `Removed broken stage reference ${issue.referenceId}`,
+              entityId: item.id,
+              refId: issue.referenceId,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+        if (issue.collectionName === 'tag' && item.tagIds) {
+          const before = item.tagIds.length;
+          item.tagIds = item.tagIds.filter(id => id !== issue.referenceId);
+          if (before !== item.tagIds.length) {
+            repairLog.push({
+              action: 'remove_broken_ref',
+              message: `Removed broken tag reference ${issue.referenceId}`,
+              entityId: item.id,
+              refId: issue.referenceId,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      };
+
+      (repairedData.songs || []).forEach(removeRef);
+      (repairedData.releases || []).forEach(removeRef);
+      (repairedData.standaloneVideos || []).forEach(removeRef);
+      (repairedData.events || []).forEach(removeRef);
+      (repairedData.globalTasks || []).forEach(removeRef);
+    });
+
   return {
-    totalIssues: summary.total || 0,
-    highSeverity: summary.high || 0,
-    mediumSeverity: summary.medium || 0,
-    lowSeverity: summary.low || 0,
-    issuesByType: issues.reduce((acc, issue) => {
-      acc[issue.type] = (acc[issue.type] || 0) + 1;
-      return acc;
-    }, {}),
-    issuesByEntity: issues.reduce((acc, issue) => {
-      acc[issue.entity] = (acc[issue.entity] || 0) + 1;
-      return acc;
-    }, {})
+    data: repairedData,
+    repairLog,
+    timestamp: new Date().toISOString()
   };
 };

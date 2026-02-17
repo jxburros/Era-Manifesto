@@ -21,6 +21,8 @@ import { Icon } from './Components';
 import { DetailPane } from './ItemComponents';
 // Lazy load PDF export to reduce initial bundle size
 import { exportEraPDF } from './pdfExportLazy';
+import { runDiagnostics, repairIssues } from './utils/dataIntegrity';
+import { getAllTemplates, saveTemplateOffsets, resetTemplate } from './settings/taskOffsets';
 
 export const ListView = ({ onEdit }) => {
     const { data, actions } = useStore();
@@ -2037,7 +2039,7 @@ const StorageInfo = ({ actions }) => {
 
 export const SettingsView = () => {
     const { data, actions, mode, mods } = useStore();
-    const settings = data.settings || {};
+    const settings = useMemo(() => data.settings || {}, [data.settings]);
     const themeMode = settings.themeMode || 'light';
     const accent = settings.themeColor || 'pink';
     const isConnected = mode === 'cloud';
@@ -2054,6 +2056,18 @@ export const SettingsView = () => {
     const [isImporting, setIsImporting] = useState(false);
     const [financialPresetName, setFinancialPresetName] = useState('');
     const [selectedFinancialPreset, setSelectedFinancialPreset] = useState('');
+
+    // Data diagnostics state
+    const [diagnosticReport, setDiagnosticReport] = useState(null);
+    const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
+    const [showDiagnosticDetails, setShowDiagnosticDetails] = useState(false);
+    const [repairOptions, setRepairOptions] = useState({ autoFix: false, removeOrphans: false });
+    const [repairResult, setRepairResult] = useState(null);
+
+    // Task offset templates state
+    const [selectedTemplate, setSelectedTemplate] = useState(settings.defaultTemplateType || 'single');
+    const [editingOffsets, setEditingOffsets] = useState({});
+    const [showAllOffsets, setShowAllOffsets] = useState(false);
 
     useEffect(() => {
       setTemplateDrafts(settings.templates || []);
@@ -2100,6 +2114,54 @@ export const SettingsView = () => {
       URL.revokeObjectURL(url);
     };
 
+    // Data diagnostic handlers
+    const handleRunDiagnostics = () => {
+      setIsRunningDiagnostics(true);
+      try {
+        const report = runDiagnostics(data);
+        setDiagnosticReport(report);
+        setRepairResult(null); // Clear previous repair result
+      } catch (error) {
+        console.error('Diagnostics error:', error);
+        alert('Failed to run diagnostics: ' + error.message);
+      } finally {
+        setIsRunningDiagnostics(false);
+      }
+    };
+
+    const handleRepairIssues = () => {
+      if (!diagnosticReport || diagnosticReport.totalIssues === 0) return;
+      
+      if (!repairOptions.autoFix) {
+        alert('Please enable "Auto-fix issues" to proceed with repairs');
+        return;
+      }
+
+      const confirmMsg = repairOptions.removeOrphans 
+        ? 'This will generate a repair preview showing what would be fixed. No data will be changed automatically.'
+        : 'This will generate a repair preview showing what would be fixed. No data will be changed automatically.';
+      
+      if (!window.confirm(confirmMsg)) return;
+
+      try {
+        const result = repairIssues(data, diagnosticReport, repairOptions);
+        
+        // Store repair result for preview
+        setRepairResult(result);
+        
+        // Re-run diagnostics on the repaired data to show what would change
+        setTimeout(() => {
+          const newReport = runDiagnostics(result.data);
+          setDiagnosticReport(newReport);
+        }, 100);
+
+        alert(`Repair preview generated! ${result.repairLog.length} potential fixes identified. Review the changes in the repair log below. To apply changes, manually fix issues or export/import the repaired data.`);
+      } catch (error) {
+        console.error('Repair error:', error);
+        alert('Failed to generate repair preview: ' + error.message);
+      }
+    };
+
     const modExample = JSON.stringify({
       id: 'release-ops-mod',
       name: 'Release Ops Booster',
@@ -2136,6 +2198,58 @@ export const SettingsView = () => {
 
     const handleRemoveMod = (modId) => {
       actions.removeMod(modId);
+    };
+
+    // Task offset template handlers
+    const templates = useMemo(() => getAllTemplates(settings), [settings]);
+    
+    const handleSelectTemplate = (templateId) => {
+      setSelectedTemplate(templateId);
+      actions.saveSettings({ defaultTemplateType: templateId });
+    };
+
+    const handleOffsetChange = (templateId, taskType, value) => {
+      const numValue = Number(value || 0);
+      setEditingOffsets(prev => ({
+        ...prev,
+        [templateId]: {
+          ...(prev[templateId] || {}),
+          [taskType]: numValue
+        }
+      }));
+    };
+
+    const handleSaveTemplateOffsets = (templateId) => {
+      const offsets = editingOffsets[templateId];
+      if (!offsets) return;
+      
+      const updatedSettings = saveTemplateOffsets(settings, templateId, offsets);
+      actions.saveSettings(updatedSettings);
+      
+      // Clear editing state for this template
+      setEditingOffsets(prev => {
+        const next = { ...prev };
+        delete next[templateId];
+        return next;
+      });
+      
+      alert(`Template "${templateId}" offsets saved!`);
+    };
+
+    const handleResetTemplate = (templateId) => {
+      if (!window.confirm(`Reset "${templateId}" template to default values?`)) return;
+      
+      const updatedSettings = resetTemplate(settings, templateId);
+      actions.saveSettings(updatedSettings);
+      
+      // Clear editing state
+      setEditingOffsets(prev => {
+        const next = { ...prev };
+        delete next[templateId];
+        return next;
+      });
+      
+      alert(`Template "${templateId}" reset to defaults!`);
     };
 
     // Enhanced export with version metadata
@@ -2258,27 +2372,7 @@ export const SettingsView = () => {
       upcomingTable: true
     };
 
-    const deadlineOffsets = settings.deadlineOffsets || {};
-    const defaultOffsetRows = [
-      { key: 'Demo', value: 100 },
-      { key: 'Record', value: 70 },
-      { key: 'Mix', value: 42 },
-      { key: 'Master', value: 21 },
-      { key: 'Release', value: 0 },
-      { key: 'Plan Video', value: 60 },
-      { key: 'Release Video', value: 0 }
-    ];
-
-    const allStatuses = [];
-    (data.globalTasks || []).forEach(t => allStatuses.push(t.status));
-    (data.songs || []).forEach(song => {
-      (song.deadlines || []).forEach(t => allStatuses.push(t.status));
-      (song.customTasks || []).forEach(t => allStatuses.push(t.status));
-      (song.versions || []).forEach(v => (v.tasks || []).forEach(t => allStatuses.push(t.status)));
-    });
-    (data.releases || []).forEach(r => (r.tasks || []).forEach(t => allStatuses.push(t.status)));
-    (data.events || []).forEach(e => (e.tasks || []).forEach(t => allStatuses.push(t.status)));
-    const invalidStatusCount = allStatuses.filter(Boolean).filter(s => !STATUS_OPTIONS.includes(s) && s !== 'Done' && s !== 'In Progress' && s !== 'Delayed').length;
+    // Legacy: allStatuses collection removed - replaced by comprehensive diagnostics utility
 
     const financialPresets = settings.financialPresets || [];
 
@@ -2538,6 +2632,51 @@ export const SettingsView = () => {
                   ))}
                 </div>
 
+                {/* Cost Calculation Model */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <h3 className="font-black text-xs uppercase">Cost Calculation Model</h3>
+                  <div className="text-xs opacity-60 mb-3">
+                    Choose how costs are calculated when multiple values exist (Estimated, Quoted, Paid)
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { value: 'paid-first', label: 'Paid-First (Default)', desc: 'Prioritize actual paid costs over estimates' },
+                      { value: 'quoted-first', label: 'Quoted-First', desc: 'Prioritize quoted costs over paid costs' },
+                      { value: 'estimated-first', label: 'Estimated-First', desc: 'Always use estimated budget values' }
+                    ].map(model => (
+                      <label
+                        key={model.value}
+                        className={cn(
+                          "flex items-start gap-3 p-3 cursor-pointer",
+                          THEME.punk.card,
+                          "border-4",
+                          (settings.costPrecedenceModel || 'paid-first') === model.value
+                            ? "border-green-500 bg-green-50 dark:bg-green-900"
+                            : "border-black dark:border-slate-600"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="costModel"
+                          value={model.value}
+                          checked={(settings.costPrecedenceModel || 'paid-first') === model.value}
+                          onChange={e => actions.saveSettings({ costPrecedenceModel: e.target.value })}
+                          className="mt-1"
+                        />
+                        <div>
+                          <div className="font-bold text-sm">{model.label}</div>
+                          <div className="text-xs opacity-70 mt-1">{model.desc}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <div className={cn("p-3 bg-blue-50 dark:bg-blue-900 border-4 border-blue-500 text-xs")}>
+                    <div className="font-bold mb-1">ℹ️ Info</div>
+                    <div className="opacity-80">
+                      This setting affects how costs are displayed throughout the app. Changes apply immediately to all cost calculations. No data is modified - only how costs are calculated and displayed.
+                    </div>
+                  </div>
+                </div>
 
                 {/* Dashboard Customization */}
                 <div className="pt-4 border-t-4 border-black space-y-3">
@@ -2554,21 +2693,131 @@ export const SettingsView = () => {
                   ))}
                 </div>
 
-                {/* Deadline Offset Editor */}
-                <div className="pt-4 border-t-4 border-black space-y-3">
-                  <h3 className="font-black text-xs uppercase">Auto-Deadline Offsets (days before release)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {defaultOffsetRows.map(row => (
-                      <label key={row.key} className="text-sm font-bold flex items-center justify-between gap-2">
-                        <span>{row.key}</span>
-                        <input
-                          type="number"
-                          className={cn("w-24", THEME.punk.input)}
-                          value={deadlineOffsets[row.key] ?? row.value}
-                          onChange={e => actions.saveSettings({ deadlineOffsets: { ...deadlineOffsets, [row.key]: Number(e.target.value || 0) } })}
-                        />
-                      </label>
+                {/* Task Deadline Templates */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-xs uppercase">Task Deadline Templates</h3>
+                    <button
+                      onClick={() => setShowAllOffsets(!showAllOffsets)}
+                      className={cn("px-3 py-2 text-xs", THEME.punk.btn, showAllOffsets ? "bg-black text-white" : "bg-white dark:bg-slate-700")}
+                    >
+                      {showAllOffsets ? 'Show Less' : 'Show All'}
+                    </button>
+                  </div>
+
+                  <div className="text-xs opacity-70">
+                    Configure task deadline offsets for different project types (Single, EP, Album). Offsets are in days before release date.
+                  </div>
+
+                  {/* Template Selector */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {templates.map(template => (
+                      <button
+                        key={template.id}
+                        onClick={() => handleSelectTemplate(template.id)}
+                        className={cn(
+                          "p-3 text-sm font-bold text-left",
+                          THEME.punk.btn,
+                          "border-4",
+                          selectedTemplate === template.id
+                            ? "border-green-500 bg-green-50 dark:bg-green-900"
+                            : "border-black dark:border-slate-600"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{template.name}</span>
+                          {template.isCustomized && (
+                            <span className="text-xs">✏️</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] opacity-60 mt-1">{template.description}</div>
+                      </button>
                     ))}
+                  </div>
+
+                  {/* Selected Template Editor */}
+                  {selectedTemplate && (() => {
+                    const template = templates.find(t => t.id === selectedTemplate);
+                    if (!template) return null;
+
+                    const currentOffsets = editingOffsets[selectedTemplate] || template.offsets;
+                    const offsetKeys = Object.keys(currentOffsets).sort();
+                    const displayKeys = showAllOffsets ? offsetKeys : offsetKeys.slice(0, 8);
+
+                    return (
+                      <div className={cn("p-4", THEME.punk.card, "border-4 border-black dark:border-slate-600")}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <div className="font-black text-sm">{template.name} Template</div>
+                            <div className="text-xs opacity-70">{template.description}</div>
+                          </div>
+                          {template.isCustomized && (
+                            <button
+                              onClick={() => handleResetTemplate(selectedTemplate)}
+                              className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-orange-500 text-white")}
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {displayKeys.map(taskType => (
+                            <label key={taskType} className="text-sm flex items-center justify-between gap-2">
+                              <span className="font-bold">{taskType}</span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  className={cn("w-20", THEME.punk.input)}
+                                  value={currentOffsets[taskType]}
+                                  onChange={e => handleOffsetChange(selectedTemplate, taskType, e.target.value)}
+                                  min="0"
+                                  max="365"
+                                />
+                                <span className="text-xs opacity-60">days</span>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+
+                        {!showAllOffsets && offsetKeys.length > 8 && (
+                          <div className="text-xs opacity-60 text-center mt-3">
+                            ...and {offsetKeys.length - 8} more. Click &quot;Show All&quot; to see all offsets.
+                          </div>
+                        )}
+
+                        {Object.keys(editingOffsets[selectedTemplate] || {}).length > 0 && (
+                          <div className="mt-4 pt-3 border-t-2 border-gray-300 dark:border-slate-600 flex gap-2">
+                            <button
+                              onClick={() => handleSaveTemplateOffsets(selectedTemplate)}
+                              className={cn("flex-1 px-4 py-2 text-sm font-black", THEME.punk.btn, "bg-green-600 text-white")}
+                            >
+                              ✅ Save Changes
+                            </button>
+                            <button
+                              onClick={() => setEditingOffsets(prev => {
+                                const next = { ...prev };
+                                delete next[selectedTemplate];
+                                return next;
+                              })}
+                              className={cn("flex-1 px-4 py-2 text-sm font-black", THEME.punk.btn, "bg-gray-500 text-white")}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <div className={cn("p-3 bg-blue-50 dark:bg-blue-900 border-4 border-blue-500 text-xs")}>
+                    <div className="font-bold mb-1">ℹ️ How Templates Work</div>
+                    <div className="opacity-80 space-y-1">
+                      <div>• Templates provide default offset values for different project types</div>
+                      <div>• Your custom offsets override template defaults</div>
+                      <div>• Changes only affect newly created tasks</div>
+                      <div>• Existing tasks retain their original deadlines</div>
+                    </div>
                   </div>
                 </div>
 
@@ -2595,12 +2844,167 @@ export const SettingsView = () => {
                 </div>
 
                 {/* Data Quality Diagnostics */}
-                <div className="pt-4 border-t-4 border-black space-y-2">
-                  <h3 className="font-black text-xs uppercase">Data Diagnostics</h3>
-                  <div className={cn("p-3", THEME.punk.card)}>
-                    <div className="text-sm font-bold">Invalid task status values: {invalidStatusCount}</div>
-                    <div className="text-xs opacity-70 mt-1">Legacy values Done / In Progress / Delayed are tolerated; any other unknown value is flagged.</div>
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-xs uppercase">Data Integrity Diagnostics</h3>
+                    <button 
+                      onClick={handleRunDiagnostics}
+                      disabled={isRunningDiagnostics}
+                      className={cn("px-3 py-2 text-xs", THEME.punk.btn, "bg-blue-600 text-white", isRunningDiagnostics && "opacity-50")}
+                    >
+                      {isRunningDiagnostics ? 'Running...' : '🔍 Run Diagnostics'}
+                    </button>
                   </div>
+                  
+                  <div className="text-xs opacity-70">
+                    Check for orphaned tasks, invalid statuses, broken references, and missing required fields
+                  </div>
+
+                  {diagnosticReport && (
+                    <div className="space-y-3">
+                      {/* Summary Card */}
+                      <div className={cn("p-4", THEME.punk.card, "border-4", 
+                        diagnosticReport.totalIssues === 0 ? "border-green-500 bg-green-50 dark:bg-green-900" : 
+                        diagnosticReport.errorCount > 0 ? "border-red-500 bg-red-50 dark:bg-red-900" : 
+                        "border-yellow-500 bg-yellow-50 dark:bg-yellow-900"
+                      )}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="font-black text-lg">
+                            {diagnosticReport.totalIssues === 0 ? '✅ All Good!' : `⚠️ ${diagnosticReport.totalIssues} Issue${diagnosticReport.totalIssues !== 1 ? 's' : ''} Found`}
+                          </div>
+                          {diagnosticReport.totalIssues > 0 && (
+                            <button
+                              onClick={() => setShowDiagnosticDetails(!showDiagnosticDetails)}
+                              className="text-xs font-bold uppercase underline"
+                            >
+                              {showDiagnosticDetails ? 'Hide Details' : 'Show Details'}
+                            </button>
+                          )}
+                        </div>
+                        
+                        {diagnosticReport.totalIssues > 0 && (
+                          <div className="grid grid-cols-3 gap-3 text-sm">
+                            <div>
+                              <div className="font-bold text-red-600">Errors</div>
+                              <div className="text-2xl font-black">{diagnosticReport.errorCount}</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-yellow-600">Warnings</div>
+                              <div className="text-2xl font-black">{diagnosticReport.warningCount}</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-blue-600">Info</div>
+                              <div className="text-2xl font-black">{diagnosticReport.infoCount}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {diagnosticReport.totalIssues === 0 && (
+                          <div className="text-sm opacity-80">
+                            No data integrity issues detected. Your data is in good shape!
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Issue Details */}
+                      {showDiagnosticDetails && diagnosticReport.totalIssues > 0 && (
+                        <div className="space-y-2">
+                          {Object.entries(diagnosticReport.byType).map(([type, issues]) => (
+                            <div key={type} className={cn("p-3", THEME.punk.card, "border-2 border-black dark:border-slate-600")}>
+                              <div className="font-bold text-sm mb-2">
+                                {type.replace(/_/g, ' ').toUpperCase()} ({issues.length})
+                              </div>
+                              <div className="space-y-1 max-h-48 overflow-y-auto">
+                                {issues.slice(0, 10).map((issue, idx) => (
+                                  <div key={idx} className="text-xs p-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600">
+                                    <div className="font-bold">{issue.message}</div>
+                                    {issue.suggestedFix && (
+                                      <div className="text-blue-600 dark:text-blue-400 mt-1">
+                                        💡 {issue.suggestedFix}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                                {issues.length > 10 && (
+                                  <div className="text-xs opacity-60 italic">
+                                    ...and {issues.length - 10} more
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Repair Options */}
+                      {diagnosticReport.totalIssues > 0 && (
+                        <div className={cn("p-4", THEME.punk.card, "border-4 border-orange-500 bg-orange-50 dark:bg-orange-900")}>
+                          <div className="font-black text-sm mb-3">🔍 Generate Repair Preview</div>
+                          
+                          <div className="space-y-2 mb-4">
+                            <label className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={repairOptions.autoFix}
+                                onChange={e => setRepairOptions({ ...repairOptions, autoFix: e.target.checked })}
+                                className="w-4 h-4"
+                              />
+                              <span className="font-bold">Enable auto-fix for invalid statuses</span>
+                            </label>
+                            
+                            <label className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={repairOptions.removeOrphans}
+                                onChange={e => setRepairOptions({ ...repairOptions, removeOrphans: e.target.checked })}
+                                disabled={!repairOptions.autoFix}
+                                className="w-4 h-4"
+                              />
+                              <span className={cn("font-bold", !repairOptions.autoFix && "opacity-50")}>
+                                Remove orphaned tasks
+                              </span>
+                            </label>
+                          </div>
+
+                          <button
+                            onClick={handleRepairIssues}
+                            disabled={!repairOptions.autoFix}
+                            className={cn("w-full px-4 py-3 text-sm font-black", THEME.punk.btn, "bg-orange-600 text-white", !repairOptions.autoFix && "opacity-50 cursor-not-allowed")}
+                          >
+                            🔍 Generate Repair Preview
+                          </button>
+
+                          <div className="text-xs opacity-70 mt-2">
+                            ℹ️ This generates a preview of what would be fixed. No data is automatically changed. Review the repair log and manually fix issues as needed.
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Repair Result */}
+                      {repairResult && repairResult.repairLog.length > 0 && (
+                        <div className={cn("p-3", THEME.punk.card, "border-4 border-blue-500 bg-blue-50 dark:bg-blue-900")}>
+                          <div className="font-bold text-sm mb-2">📋 Repair Preview</div>
+                          <div className="text-xs space-y-1 max-h-48 overflow-y-auto">
+                            {repairResult.repairLog.map((log, idx) => (
+                              <div key={idx} className="p-2 bg-white dark:bg-slate-800 border border-green-300">
+                                {log.message}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="text-xs opacity-60 italic">
+                        Last run: {new Date(diagnosticReport.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                  )}
+
+                  {!diagnosticReport && (
+                    <div className={cn("p-3", THEME.punk.card, "text-sm opacity-70")}>
+                      Click &quot;Run Diagnostics&quot; to check your data for issues
+                    </div>
+                  )}
                 </div>
 
                 {/* Templates */}
