@@ -30,6 +30,12 @@ import {
   resolveCostPrecedence,
   getEffectiveCost
 } from './domain/taskLogic';
+import {
+  getEffectiveOffset,
+  getDefaultOffsets,
+  mergeOffsets,
+  validateOffsets
+} from './settings/taskOffsets';
 
 const StoreContext = createContext();
 
@@ -41,6 +47,9 @@ export const APP_VERSION = '2.0.0';
 
 // Status enum for consistency across all entities - per APP_ARCHITECTURE.md Section 1.7
 export { STATUS_OPTIONS, STATUS_POINTS, getStatusPoints, calculateTaskProgress, getTaskDueDate, getPrimaryDate, resolveCostPrecedence, getEffectiveCost };
+
+// Export task offset configuration functions
+export { getEffectiveOffset, getDefaultOffsets, mergeOffsets, validateOffsets };
 
 // Progress Calculation per APP_ARCHITECTURE.md Section 1.7:
 // Complete = 1 point
@@ -1047,6 +1056,17 @@ export const StoreProvider = ({ children }) => {
          if (mode === 'cloud') await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_tasks', 'settings'), newSettings, { merge: true });
          else setData(p => ({...p, settings: {...p.settings, ...newSettings}}));
      },
+     
+     // Task offset management
+     saveTaskOffsets: async (offsets) => {
+       const validated = validateOffsets(offsets);
+       await actions.saveSettings({ deadlineOffsets: validated });
+     },
+     
+     getTaskOffsets: () => {
+       return mergeOffsets(data.settings?.deadlineOffsets || {});
+     },
+     
      runMigration: async (notes = '') => {
         actions.logAudit('migration', 'system', 'onboarding', { notes });
         const marker = { migrationRanAt: new Date().toISOString(), migrationNotes: notes, lastBackup: data.settings?.lastBackup || '' };
