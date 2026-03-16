@@ -21,13 +21,11 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-export const formatMoney = (amount) => {
-  if (typeof amount !== 'number' || isNaN(amount)) return '$0';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0
-  }).format(amount);
+export const formatMoney = (amount, currencySymbol = null) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol || '$'}0`;
+  const symbol = currencySymbol || '$';
+  const formatted = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
+  return `${symbol}${formatted}`;
 };
 
 // Phase 10: Dark mode variants

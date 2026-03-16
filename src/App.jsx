@@ -960,6 +960,20 @@ function AppInner() {
     }
   }, [isDark]);
 
+  // Apply typography settings to root element
+  useEffect(() => {
+    if (settings.uppercaseDisabled) {
+      document.documentElement.classList.add('no-uppercase');
+    } else {
+      document.documentElement.classList.remove('no-uppercase');
+    }
+  }, [settings.uppercaseDisabled]);
+
+  useEffect(() => {
+    const weight = settings.listFontWeight || 'bold';
+    document.documentElement.dataset.listFontWeight = weight;
+  }, [settings.listFontWeight]);
+
   
   useEffect(() => {
     const onKeyDown = (event) => {

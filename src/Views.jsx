@@ -23,6 +23,8 @@ import { DetailPane } from './ItemComponents';
 import { exportEraPDF } from './pdfExportLazy';
 import { runDiagnostics, repairIssues } from './utils/dataIntegrity';
 import { getAllTemplates, saveTemplateOffsets, resetTemplate } from './settings/taskOffsets';
+import { clearAllScrollPositions, clearAllFormDrafts } from './utils/navigationPersistence';
+import { COST_MODELS, getCostModelLabel, getCostModelDescription, isValidPrecedenceOrder } from './settings/costModels';
 
 export const ListView = ({ onEdit }) => {
     const { data, actions } = useStore();
@@ -2070,6 +2072,18 @@ export const SettingsView = () => {
     const [editingOffsets, setEditingOffsets] = useState({});
     const [showAllOffsets, setShowAllOffsets] = useState(false);
 
+    // Cost model custom precedence state
+    const [customPrecedenceOrder, setCustomPrecedenceOrder] = useState(
+      settings.costPrecedenceOrder || ['actual', 'paid', 'partially_paid', 'quoted', 'estimated']
+    );
+
+    // Audit log state
+    const [auditLogPage, setAuditLogPage] = useState(0);
+    const AUDIT_LOG_PAGE_SIZE = 20;
+
+    // Navigation cache status
+    const [navCacheStatus, setNavCacheStatus] = useState('');
+
     useEffect(() => {
       setTemplateDrafts(settings.templates || []);
     }, [settings.templates]);
@@ -2669,37 +2683,66 @@ export const SettingsView = () => {
                 {/* Auto Task Toggles */}
                 <div className="pt-4 border-t-4 border-black space-y-3">
                   <h3 className="font-black text-xs uppercase">Auto-Generated Tasks</h3>
-                  {[{ key: 'autoTaskSongs', label: 'Auto-generate song tasks' }, { key: 'autoTaskVideos', label: 'Auto-generate video tasks' }, { key: 'autoTaskReleases', label: 'Auto-generate release tasks' }, { key: 'autoTaskEvents', label: 'Auto-generate event tasks' }].map(toggle => (
-                    <label key={toggle.key} className="flex items-center gap-2 text-sm font-bold">
-                      <input
-                        type="checkbox"
-                        checked={settings[toggle.key] !== false}
-                        onChange={e => actions.saveSettings({ [toggle.key]: e.target.checked })}
-                      />
-                      {toggle.label}
-                    </label>
-                  ))}
+                  <p className="text-xs opacity-70">Control which task types are auto-generated when creating new items.</p>
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-black uppercase opacity-60 mt-2">By Item Type</div>
+                    {[{ key: 'autoTaskSongs', label: 'Auto-generate song tasks' }, { key: 'autoTaskVideos', label: 'Auto-generate video tasks' }, { key: 'autoTaskReleases', label: 'Auto-generate release tasks' }, { key: 'autoTaskEvents', label: 'Auto-generate event tasks' }].map(toggle => (
+                      <label key={toggle.key} className="flex items-center gap-2 text-sm font-bold">
+                        <input
+                          type="checkbox"
+                          checked={settings[toggle.key] !== false}
+                          onChange={e => actions.saveSettings({ [toggle.key]: e.target.checked })}
+                          className="w-4 h-4"
+                        />
+                        {toggle.label}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-black uppercase opacity-60 mt-2">By Task Category</div>
+                    <p className="text-[10px] opacity-60">Fine-tune which categories of tasks are included when auto-generation is enabled above.</p>
+                    {(() => {
+                      const cats = settings.autoTaskCategories || {};
+                      const categoryToggles = [
+                        { key: 'songCore', label: 'Song Core', desc: 'Demo, Record, Mix, Master, DSP Upload' },
+                        { key: 'versioning', label: 'Versioning', desc: 'Arrangement, Instrumentation, Mix, Master (for versions)' },
+                        { key: 'stems', label: 'Stems', desc: 'Receive Stems, Release Stems' },
+                        { key: 'videoProduction', label: 'Video Production', desc: 'Plan, Hire Crew, Film, Edit, Submit, Release Video' },
+                        { key: 'physicalProduction', label: 'Physical Production', desc: 'Submit Design, Receive Copies, Distribute' }
+                      ];
+                      return categoryToggles.map(cat => (
+                        <label key={cat.key} className="flex items-start gap-2 text-sm font-bold">
+                          <input
+                            type="checkbox"
+                            checked={cats[cat.key] !== false}
+                            onChange={e => actions.saveSettings({ autoTaskCategories: { ...cats, [cat.key]: e.target.checked } })}
+                            className="w-4 h-4 mt-0.5"
+                          />
+                          <div>
+                            <div>{cat.label}</div>
+                            <div className="text-[10px] font-normal opacity-60">{cat.desc}</div>
+                          </div>
+                        </label>
+                      ));
+                    })()}
+                  </div>
                 </div>
 
                 {/* Cost Calculation Model */}
                 <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
                   <h3 className="font-black text-xs uppercase">Cost Calculation Model</h3>
                   <div className="text-xs opacity-60 mb-3">
-                    Choose how costs are calculated when multiple values exist (Estimated, Quoted, Paid)
+                    Choose how costs are calculated when multiple values exist (Actual, Paid, Quoted, Estimated)
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    {[
-                      { value: 'paid-first', label: 'Paid-First (Default)', desc: 'Prioritize actual paid costs over estimates' },
-                      { value: 'quoted-first', label: 'Quoted-First', desc: 'Prioritize quoted costs over paid costs' },
-                      { value: 'estimated-first', label: 'Estimated-First', desc: 'Always use estimated budget values' }
-                    ].map(model => (
+                    {Object.values(COST_MODELS).map(modelValue => (
                       <label
-                        key={model.value}
+                        key={modelValue}
                         className={cn(
                           "flex items-start gap-3 p-3 cursor-pointer",
                           THEME.punk.card,
                           "border-4",
-                          (settings.costPrecedenceModel || 'paid-first') === model.value
+                          (settings.costModel || COST_MODELS.ACTUAL_FIRST) === modelValue
                             ? "border-green-500 bg-green-50 dark:bg-green-900"
                             : "border-black dark:border-slate-600"
                         )}
@@ -2707,24 +2750,184 @@ export const SettingsView = () => {
                         <input
                           type="radio"
                           name="costModel"
-                          value={model.value}
-                          checked={(settings.costPrecedenceModel || 'paid-first') === model.value}
-                          onChange={e => actions.saveSettings({ costPrecedenceModel: e.target.value })}
+                          value={modelValue}
+                          checked={(settings.costModel || COST_MODELS.ACTUAL_FIRST) === modelValue}
+                          onChange={e => actions.saveCostModel(e.target.value, customPrecedenceOrder)}
                           className="mt-1"
                         />
                         <div>
-                          <div className="font-bold text-sm">{model.label}</div>
-                          <div className="text-xs opacity-70 mt-1">{model.desc}</div>
+                          <div className="font-bold text-sm">{getCostModelLabel(modelValue)}</div>
+                          <div className="text-xs opacity-70 mt-1">{getCostModelDescription(modelValue)}</div>
                         </div>
                       </label>
                     ))}
                   </div>
+                  {/* Custom order editor */}
+                  {(settings.costModel || COST_MODELS.ACTUAL_FIRST) === COST_MODELS.CUSTOM && (
+                    <div className={cn("p-3 border-4 border-violet-500 bg-violet-50 dark:bg-violet-900 space-y-2")}>
+                      <div className="font-bold text-sm">Custom Precedence Order</div>
+                      <p className="text-xs opacity-70">Drag to reorder, or retype the order below (comma-separated).</p>
+                      {['actual', 'paid', 'partially_paid', 'quoted', 'estimated'].map((item) => {
+                        const currentOrder = customPrecedenceOrder;
+                        const pos = currentOrder.indexOf(item);
+                        return (
+                          <div key={item} className="flex items-center gap-2 text-sm">
+                            <span className="w-6 text-center font-black opacity-40">{pos + 1}</span>
+                            <div className={cn("flex-1 p-2 font-bold border-2 border-black", pos === 0 ? "bg-green-100" : "bg-white dark:bg-slate-800")}>
+                              {item.replace(/_/g, ' ')}
+                            </div>
+                            <div className="flex gap-1">
+                              <button disabled={pos <= 0} onClick={() => {
+                                const next = [...currentOrder];
+                                const i = next.indexOf(item);
+                                if (i > 0) { [next[i-1], next[i]] = [next[i], next[i-1]]; }
+                                setCustomPrecedenceOrder(next);
+                                if (isValidPrecedenceOrder(next)) actions.saveCostModel(COST_MODELS.CUSTOM, next);
+                              }} className={cn("px-2 py-1 text-xs", THEME.punk.btn, pos <= 0 ? "opacity-30" : "")}>↑</button>
+                              <button disabled={pos >= currentOrder.length - 1} onClick={() => {
+                                const next = [...currentOrder];
+                                const i = next.indexOf(item);
+                                if (i < next.length - 1) { [next[i+1], next[i]] = [next[i], next[i+1]]; }
+                                setCustomPrecedenceOrder(next);
+                                if (isValidPrecedenceOrder(next)) actions.saveCostModel(COST_MODELS.CUSTOM, next);
+                              }} className={cn("px-2 py-1 text-xs", THEME.punk.btn, pos >= currentOrder.length - 1 ? "opacity-30" : "")}>↓</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <p className="text-[10px] opacity-60">Top item = highest priority. First non-zero value will be used.</p>
+                    </div>
+                  )}
                   <div className={cn("p-3 bg-blue-50 dark:bg-blue-900 border-4 border-blue-500 text-xs")}>
                     <div className="font-bold mb-1">ℹ️ Info</div>
                     <div className="opacity-80">
-                      This setting affects how costs are displayed throughout the app. Changes apply immediately to all cost calculations. No data is modified - only how costs are calculated and displayed.
+                      This setting affects how costs are displayed throughout the app. Changes apply immediately to all cost calculations. No data is modified — only how costs are calculated and displayed.
                     </div>
                   </div>
+                </div>
+
+                {/* Currency Settings */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <h3 className="font-black text-xs uppercase">Currency</h3>
+                  <p className="text-xs opacity-70">Set the currency symbol used throughout budgets and financial summaries.</p>
+                  <div className="flex items-center gap-3">
+                    <label className="font-bold text-sm w-32">Currency Symbol</label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={settings.currencySymbol || '$'}
+                      onChange={e => actions.saveSettings({ currencySymbol: e.target.value || '$' })}
+                      className={cn("w-24", THEME.punk.input)}
+                      placeholder="$"
+                    />
+                    <span className="text-xs opacity-60">e.g., $, €, £, ¥, ₩</span>
+                  </div>
+                  <div className="text-xs opacity-60">
+                    Preview: <span className="font-black">{settings.currencySymbol || '$'}1,500</span>
+                  </div>
+                </div>
+
+                {/* Privacy Mode */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <h3 className="font-black text-xs uppercase">Privacy Mode</h3>
+                  <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.privacyMode || false}
+                      onChange={e => actions.saveSettings({ privacyMode: e.target.checked })}
+                      className="w-5 h-5"
+                    />
+                    Hide Financial Totals
+                  </label>
+                  <p className="text-xs opacity-70">When enabled, all financial values (budgets, costs, totals) are hidden with &quot;••••&quot; throughout the Dashboard and Financials views. Useful for screen sharing or public demos.</p>
+                </div>
+
+                {/* Typography Controls */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <h3 className="font-black text-xs uppercase">Typography</h3>
+                  <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.uppercaseDisabled || false}
+                      onChange={e => actions.saveSettings({ uppercaseDisabled: e.target.checked })}
+                      className="w-5 h-5"
+                    />
+                    Disable Uppercase Styling
+                  </label>
+                  <p className="text-xs opacity-70">Disables the punk/brutalist ALL-CAPS label style for improved readability. Titles and navigation labels will display in mixed case.</p>
+                  <div className="space-y-2">
+                    <label className="font-bold text-sm block">List Font Weight</label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 'normal', label: 'Normal' },
+                        { value: 'bold', label: 'Bold' },
+                        { value: 'black', label: 'Black' }
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => actions.saveSettings({ listFontWeight: opt.value })}
+                          className={cn(
+                            "flex-1 py-2 text-xs",
+                            THEME.punk.btn,
+                            (settings.listFontWeight || 'bold') === opt.value ? "bg-black text-white dark:bg-white dark:text-black" : "bg-white dark:bg-slate-700"
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs opacity-60">Controls font weight in dense list views (task lists, song lists, etc.).</p>
+                  </div>
+                </div>
+
+                {/* Navigation Persistence */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <h3 className="font-black text-xs uppercase">Navigation &amp; Drafts</h3>
+                  <p className="text-xs opacity-70">Manage the navigation cache and auto-saved form drafts.</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <label className="font-bold text-sm w-40">Form Draft TTL (hours)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={168}
+                        value={Math.round((settings.formDraftTTL || 3600000) / 3600000)}
+                        onChange={e => {
+                          const hours = Math.max(1, Math.min(168, Number(e.target.value) || 1));
+                          actions.saveSettings({ formDraftTTL: hours * 3600000 });
+                        }}
+                        className={cn("w-24", THEME.punk.input)}
+                      />
+                      <span className="text-xs opacity-60">1–168h</span>
+                    </div>
+                    <p className="text-xs opacity-60">Unsaved form drafts are kept for this many hours before being discarded.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        clearAllScrollPositions();
+                        clearAllFormDrafts();
+                        setNavCacheStatus('✓ Navigation cache cleared!');
+                        setTimeout(() => setNavCacheStatus(''), 3000);
+                      }}
+                      className={cn("flex-1 px-3 py-2 text-xs", THEME.punk.btn, "bg-orange-500 text-white")}
+                    >
+                      Clear Navigation Cache
+                    </button>
+                    <button
+                      onClick={() => {
+                        clearAllFormDrafts();
+                        setNavCacheStatus('✓ Form drafts cleared!');
+                        setTimeout(() => setNavCacheStatus(''), 3000);
+                      }}
+                      className={cn("flex-1 px-3 py-2 text-xs", THEME.punk.btn, "bg-red-500 text-white")}
+                    >
+                      Discard All Drafts
+                    </button>
+                  </div>
+                  {navCacheStatus && (
+                    <div className="text-xs font-bold text-green-700">{navCacheStatus}</div>
+                  )}
                 </div>
 
                 {/* Dashboard Customization */}
@@ -3160,6 +3363,163 @@ export const SettingsView = () => {
                       </button>
                     </div>
                     <div className="text-[11px] opacity-70">Supported actions: createTask, createGlobalTask, addTemplate, addStage, addTag, openLink.</div>
+                  </div>
+                </div>
+
+                {/* Audit Log */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-xs uppercase">Audit Log</h3>
+                    <span className="text-[10px] opacity-60">{(data.auditLog || []).length} entries</span>
+                  </div>
+                  <p className="text-xs opacity-70">Read-only history of changes to task statuses, costs, and team assignments.</p>
+                  {(data.auditLog || []).length === 0 ? (
+                    <div className={cn("p-3 text-xs opacity-60", THEME.punk.card)}>No audit log entries yet. Actions like status changes and cost updates will appear here.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {(data.auditLog || []).slice(auditLogPage * AUDIT_LOG_PAGE_SIZE, (auditLogPage + 1) * AUDIT_LOG_PAGE_SIZE).map(log => (
+                        <div key={log.id || log.timestamp} className={cn("p-3 text-xs", THEME.punk.card)}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="font-black uppercase text-[10px]">{log.action || log.type || 'Update'}</div>
+                            <div className="text-[10px] opacity-60 shrink-0">{log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}</div>
+                          </div>
+                          <div className="mt-1 opacity-80">{log.entityType && <span className="font-bold">{log.entityType}</span>}{log.entityId && <span className="opacity-50 ml-1">#{log.entityId.slice(-6)}</span>}</div>
+                          {log.actor && <div className="text-[10px] opacity-60">By: {log.actor}</div>}
+                          {log.reason && <div className="italic opacity-70 mt-1">{log.reason}</div>}
+                          {log.changes && <div className="mt-1 opacity-60">{JSON.stringify(log.changes)}</div>}
+                        </div>
+                      ))}
+                      {/* Pagination */}
+                      {(data.auditLog || []).length > AUDIT_LOG_PAGE_SIZE && (
+                        <div className="flex items-center justify-between pt-2">
+                          <button
+                            onClick={() => setAuditLogPage(p => Math.max(0, p - 1))}
+                            disabled={auditLogPage === 0}
+                            className={cn("px-3 py-1 text-xs", THEME.punk.btn, auditLogPage === 0 ? "opacity-40" : "")}
+                          >
+                            ← Prev
+                          </button>
+                          <span className="text-xs opacity-60">Page {auditLogPage + 1} / {Math.ceil((data.auditLog || []).length / AUDIT_LOG_PAGE_SIZE)}</span>
+                          <button
+                            onClick={() => setAuditLogPage(p => Math.min(Math.ceil((data.auditLog || []).length / AUDIT_LOG_PAGE_SIZE) - 1, p + 1))}
+                            disabled={(auditLogPage + 1) * AUDIT_LOG_PAGE_SIZE >= (data.auditLog || []).length}
+                            className={cn("px-3 py-1 text-xs", THEME.punk.btn, (auditLogPage + 1) * AUDIT_LOG_PAGE_SIZE >= (data.auditLog || []).length ? "opacity-40" : "")}
+                          >
+                            Next →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Advanced Exports */}
+                <div className="pt-4 border-t-4 border-black dark:border-slate-600 space-y-3">
+                  <h3 className="font-black text-xs uppercase">Advanced Exports</h3>
+                  <p className="text-xs opacity-70">Export specific data slices as CSV or PDF reports.</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {/* CSV Financial Summary */}
+                    <button
+                      onClick={() => {
+                        const currency = settings.currencySymbol || '$';
+                        const formatCsvMoney = (v) => `${currency}${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+                        const songs = data.songs || [];
+                        const releases = data.releases || [];
+                        const expenses = data.expenses || [];
+                        // Helper to normalize cost fields across entity types
+                        const getEntityCost = (entity, field) => {
+                          if (field === 'paid') return entity.paidCost || entity.amount_paid || 0;
+                          if (field === 'quoted') return entity.quotedCost || entity.quoted_cost || 0;
+                          if (field === 'estimated') return entity.estimatedCost || entity.estimated_cost || 0;
+                          return entity.paidCost || entity.amount_paid || entity.quotedCost || entity.quoted_cost || entity.estimatedCost || entity.estimated_cost || 0;
+                        };
+                        const rows = [
+                          ['Type', 'Title', 'Artist', 'Estimated Cost', 'Quoted Cost', 'Paid Cost', 'Effective Cost'],
+                          ...songs.map(s => ['Song', s.title || 'Untitled Song', s.artist || '', formatCsvMoney(getEntityCost(s, 'estimated')), formatCsvMoney(getEntityCost(s, 'quoted')), formatCsvMoney(getEntityCost(s, 'paid')), formatCsvMoney(getEntityCost(s, 'effective'))]),
+                          ...releases.map(r => ['Release', r.title || 'Untitled Release', '', formatCsvMoney(getEntityCost(r, 'estimated')), formatCsvMoney(getEntityCost(r, 'quoted')), formatCsvMoney(getEntityCost(r, 'paid')), formatCsvMoney(getEntityCost(r, 'effective'))]),
+                          ...expenses.map(e => ['Expense', e.description || e.title || 'Untitled Expense', e.vendor || '', formatCsvMoney(getEntityCost(e, 'estimated')), formatCsvMoney(getEntityCost(e, 'quoted')), formatCsvMoney(getEntityCost(e, 'paid')), formatCsvMoney(getEntityCost(e, 'effective'))])
+                        ];
+                        const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `financial-summary-${new Date().toISOString().split('T')[0]}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className={cn("w-full px-4 py-3 text-sm font-black text-left flex items-center gap-3", THEME.punk.btn, "bg-lime-400 border-lime-600 text-black")}
+                    >
+                      <Icon name="Download" size={16} />
+                      <div>
+                        <div>CSV Export: Financial Summary</div>
+                        <div className="text-[10px] font-normal opacity-70">Songs, releases, and expenses with estimated, quoted, and paid costs</div>
+                      </div>
+                    </button>
+
+                    {/* CSV Master Task List */}
+                    <button
+                      onClick={() => {
+                        const allTasks = [
+                          ...(data.tasks || []).map(t => ({ ...t, _source: 'Global Tasks' })),
+                          ...(data.songs || []).flatMap(s => (s.tasks || s.deadlines || []).map(t => ({ ...t, _source: s.title || 'Untitled Song', _parent: s.title || 'Untitled Song' }))),
+                          ...(data.releases || []).flatMap(r => (r.tasks || []).map(t => ({ ...t, _source: 'Release: ' + (r.title || 'Untitled Release'), _parent: r.title || 'Untitled Release' }))),
+                          ...(data.events || []).flatMap(e => (e.tasks || []).map(t => ({ ...t, _source: 'Event: ' + (e.name || 'Untitled Event'), _parent: e.name || 'Untitled Event' }))),
+                        ];
+                        const rows = [
+                          ['Source', 'Parent', 'Task Name / Type', 'Status', 'Due Date', 'Category', 'Estimated Cost', 'Assigned To'],
+                          ...allTasks.map(t => [
+                            t._source || '',
+                            t._parent || '',
+                            t.title || t.taskName || t.type || '',
+                            t.status || '',
+                            t.dueDate || t.date || t.deadline || '',
+                            t.category || '',
+                            String(t.estimatedCost || 0),
+                            (t.assignedMembers || []).map(m => {
+                              const member = (data.teamMembers || []).find(tm => tm.id === m.memberId);
+                              return member?.name || m.memberId || '';
+                            }).join('; ')
+                          ])
+                        ];
+                        const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `master-task-list-${new Date().toISOString().split('T')[0]}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className={cn("w-full px-4 py-3 text-sm font-black text-left flex items-center gap-3", THEME.punk.btn, "bg-cyan-400 border-cyan-600 text-black")}
+                    >
+                      <Icon name="Download" size={16} />
+                      <div>
+                        <div>CSV Export: Master Task List</div>
+                        <div className="text-[10px] font-normal opacity-70">All tasks across songs, releases, events, and global tasks</div>
+                      </div>
+                    </button>
+
+                    {/* PDF Era Report */}
+                    <button
+                      onClick={() => {
+                        const activeEra = settings.eraModeEraId
+                          ? (data.eras || []).find(e => e.id === settings.eraModeEraId)
+                          : (data.eras || [])[0];
+                        if (!activeEra) {
+                          alert('No era found. Create an era first or enable Era Mode in settings to select one.');
+                          return;
+                        }
+                        exportEraPDF(activeEra, data.releases || [], data.songs || []);
+                      }}
+                      className={cn("w-full px-4 py-3 text-sm font-black text-left flex items-center gap-3", THEME.punk.btn, "bg-pink-500 border-pink-700 text-white")}
+                    >
+                      <Icon name="FileText" size={16} />
+                      <div>
+                        <div>PDF Export: Era Manifesto Report</div>
+                        <div className="text-[10px] font-normal opacity-70">Complete report for the active era (or first era if no era mode)</div>
+                      </div>
+                    </button>
                   </div>
                 </div>
 

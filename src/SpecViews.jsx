@@ -4287,15 +4287,15 @@ export const TaskDashboardView = () => {
           <div className="text-xs font-bold uppercase">Completed</div>
         </div>
         <div className={cn("p-4 text-center", THEME.punk.card)}>
-          <div className={cn("text-2xl font-black", isDark ? "text-pink-400" : "text-pink-600")}>{formatMoney(stats.totalPaid)}</div>
+          <div className={cn("text-2xl font-black", isDark ? "text-pink-400" : "text-pink-600")}>{settings.privacyMode ? '••••' : formatMoney(stats.totalPaid, settings.currencySymbol)}</div>
           <div className="text-xs font-bold uppercase">Paid</div>
         </div>
         <div className={cn("p-4 text-center", THEME.punk.card)}>
-          <div className={cn("text-2xl font-black", isDark ? "text-indigo-400" : "text-indigo-600")}>{formatMoney(stats.remaining)}</div>
+          <div className={cn("text-2xl font-black", isDark ? "text-indigo-400" : "text-indigo-600")}>{settings.privacyMode ? '••••' : formatMoney(stats.remaining, settings.currencySymbol)}</div>
           <div className="text-xs font-bold uppercase">Estimated Remaining</div>
         </div>
         <div className={cn("p-4 text-center", THEME.punk.card, isDark ? "bg-purple-900" : "bg-purple-50")}>
-          <div className={cn("text-2xl font-black", isDark ? "text-purple-300" : "text-purple-600")}>{formatMoney(stats.totalCost)}</div>
+          <div className={cn("text-2xl font-black", isDark ? "text-purple-300" : "text-purple-600")}>{settings.privacyMode ? '••••' : formatMoney(stats.totalCost, settings.currencySymbol)}</div>
           <div className="text-xs font-bold uppercase">Total Estimated</div>
         </div>
       </div>
@@ -5214,19 +5214,19 @@ export const FinancialsView = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className={cn("p-4 text-center", THEME.punk.card)}>
-          <div className="text-2xl font-black text-gray-600">{formatMoney(totals.estimated)}</div>
+          <div className="text-2xl font-black text-gray-600">{settings.privacyMode ? '••••' : formatMoney(totals.estimated, settings.currencySymbol)}</div>
           <div className="text-xs font-bold uppercase">Estimated</div>
         </div>
         <div className={cn("p-4 text-center", THEME.punk.card)}>
-          <div className="text-2xl font-black text-blue-600">{formatMoney(totals.quoted)}</div>
+          <div className="text-2xl font-black text-blue-600">{settings.privacyMode ? '••••' : formatMoney(totals.quoted, settings.currencySymbol)}</div>
           <div className="text-xs font-bold uppercase">Quoted</div>
         </div>
         <div className={cn("p-4 text-center", THEME.punk.card, "bg-green-50")}>
-          <div className="text-2xl font-black text-green-600">{formatMoney(totals.paid)}</div>
+          <div className="text-2xl font-black text-green-600">{settings.privacyMode ? '••••' : formatMoney(totals.paid, settings.currencySymbol)}</div>
           <div className="text-xs font-bold uppercase">Paid</div>
         </div>
         <div className={cn("p-4 text-center", THEME.punk.card, "bg-pink-100")}>
-          <div className="text-2xl font-black text-pink-600">{formatMoney(totals.effective)}</div>
+          <div className="text-2xl font-black text-pink-600">{settings.privacyMode ? '••••' : formatMoney(totals.effective, settings.currencySymbol)}</div>
           <div className="text-xs font-bold uppercase">Effective Total</div>
         </div>
       </div>
@@ -5251,10 +5251,10 @@ export const FinancialsView = () => {
                 <tr key={source} className="border-b border-gray-200">
                   <td className="p-2 font-bold">{source}</td>
                   <td className="p-2 text-right">{data.count}</td>
-                  <td className="p-2 text-right">{formatMoney(data.estimated)}</td>
-                  <td className="p-2 text-right">{formatMoney(data.quoted)}</td>
-                  <td className="p-2 text-right text-green-600 font-bold">{formatMoney(data.paid)}</td>
-                  <td className="p-2 text-right text-pink-600 font-bold">{formatMoney(data.effective)}</td>
+                  <td className="p-2 text-right">{settings.privacyMode ? '••••' : formatMoney(data.estimated, settings.currencySymbol)}</td>
+                  <td className="p-2 text-right">{settings.privacyMode ? '••••' : formatMoney(data.quoted, settings.currencySymbol)}</td>
+                  <td className="p-2 text-right text-green-600 font-bold">{settings.privacyMode ? '••••' : formatMoney(data.paid, settings.currencySymbol)}</td>
+                  <td className="p-2 text-right text-pink-600 font-bold">{settings.privacyMode ? '••••' : formatMoney(data.effective, settings.currencySymbol)}</td>
                 </tr>
               ))}
             </tbody>
@@ -5262,10 +5262,10 @@ export const FinancialsView = () => {
               <tr className="bg-black text-white font-bold">
                 <td className="p-2">TOTAL</td>
                 <td className="p-2 text-right">{costItems.length}</td>
-                <td className="p-2 text-right">{formatMoney(totals.estimated)}</td>
-                <td className="p-2 text-right">{formatMoney(totals.quoted)}</td>
-                <td className="p-2 text-right">{formatMoney(totals.paid)}</td>
-                <td className="p-2 text-right">{formatMoney(totals.effective)}</td>
+                <td className="p-2 text-right">{settings.privacyMode ? '••••' : formatMoney(totals.estimated, settings.currencySymbol)}</td>
+                <td className="p-2 text-right">{settings.privacyMode ? '••••' : formatMoney(totals.quoted, settings.currencySymbol)}</td>
+                <td className="p-2 text-right">{settings.privacyMode ? '••••' : formatMoney(totals.paid, settings.currencySymbol)}</td>
+                <td className="p-2 text-right">{settings.privacyMode ? '••••' : formatMoney(totals.effective, settings.currencySymbol)}</td>
               </tr>
             </tfoot>
           </table>
