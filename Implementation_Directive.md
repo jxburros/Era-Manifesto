@@ -1,38 +1,58 @@
-# Implementation Directive: System Optimization & Feature Expansion
+# Engineering Plan: Settings Menu Enhancements
 
-## 1. Code & Module Consolidation
-Objective: Reduce logic duplication and standardize data handling across the application.
+## Core Intent
+Expose recently implemented backend logic (`taskOffsets.js`, `costModels.js`, and `dataIntegrity.js`) to the UI while providing granular control over automation, financials, and dashboard customization.
 
-* Standardized Task Engine:
-    * Consolidate task handling for Songs, Versions, Videos, Releases, and Events into a unified TaskEngine module.
-    * Centralize auto-generation logic, cost precedence rules (Paid > Quoted > Estimated), and progress point calculations (0.5 for in-progress, 1.0 for complete).
-* Schema & Naming Unification:
-    * Migrate all UI components and database operations to use the unified underscore_case schema (e.g., primary_date).
-    * Deprecate and remove legacy camelCase aliases (e.g., primaryDate) once UI consistency is verified.
-* Performance Optimization:
-    * Centralize all cost and progress calculations within src/utils/memoization.js.
-    * Refactor the Store context to expose only these memoized values to prevent redundant heavy calculations.
+---
 
-## 2. Customer Experience (UX) Smoothing
-Objective: Enhance workflow automation and provide better visual feedback.
+## Phase 1: Automation & Task Logic (P0)
+**Goal:** Transition from hardcoded auto-generation to user-defined templates.
 
-* Automated Era Synchronization:
-    * Implement a background prompt or "Sync Era" button that automatically propagates Era changes from parent items to all children and linked tasks.
-* Contextual Theming:
-    * Expand "Focus Mode" to include "Era-Specific Themes".
-    * Automatically shift UI accent colors based on the themeColor or metadata of the active Era to provide immediate environmental context.
-* Dynamic Scheduling (Smart Deadlines):
-    * Implement "Dependency Tracking" for auto-deadlines.
-    * When a Release Date is modified, automatically shift all "upstream" production tasks while preserving manual user overrides.
+* **Granular Task Toggles**: Replace the global `autoGenerateTasks` toggle with a hierarchical checklist.
+    * Enable/disable by category: Song Core, Versioning, Video Production, Physical Production.
+* **Deadline Offset Manager**: Implement a UI for `src/settings/taskOffsets.js`.
+    * Input fields for `daysBeforeRelease` per task type (e.g., "Mastering: -14 days", "Art: -30 days").
+* **Workflow Templates**: Allow users to save "Project Types" (e.g., "Acoustic Single" vs. "Deluxe Album") that determine which auto-tasks are triggered upon creation.
 
-## 3. Functionality Expansion
-Objective: Fill gaps in project blueprints, financial tracking, and multi-user management.
+## Phase 2: Financial Configuration (P1)
+**Goal:** Expose the flexible cost calculation engine to the end-user.
 
-* Release Blueprints Library:
-    * Develop a centralized library for "Release Blueprints" (e.g., Social Media Heavy, Physical-Only) to allow users to swap global task templates quickly.
-* Team Financial Dashboard (Payables):
-    * Implement a "Payables" view to aggregate "Amount Owed" per Team Member across all songs, videos, and tasks.
-    * Ensure cost allocation data from tasks is correctly summarized in this view.
-* Multi-User Role Permissions:
-    * Enhance the "Manager Mode" security rules beyond Anonymous Auth.
-    * Define specific permission levels for "Manager," "Artist," and "Band Member" to control data access and edit rights.
+* **Cost Model Selector**: A dropdown menu to select the active model from `src/settings/costModels.js`:
+    1.  `actual-first` (Paid > Quoted > Estimated).
+    2.  `paid-only`.
+    3.  `quoted-only`.
+    4.  `estimated-only`.
+    5.  `custom-precedence`.
+* **Currency Settings**: Global input for currency symbol (e.g., $, €, £) used in `calculateTotalBudget`.
+* **Privacy Mode**: Toggle to blur or hide financial totals across the Dashboard and Financials views.
+
+## Phase 3: Dashboard & UX Personalization (P1)
+**Goal:** Reduce UI clutter and improve readability for different device types.
+
+* **Widget Manager**: Checkbox list to show/hide Dashboard modules:
+    * Notifications / Upcoming Tasks.
+    * Random Item Spotlight.
+    * Financial Overviews.
+* **Typography Controls**: Add settings for the "Punk/Brutalist" design system:
+    * Toggle `uppercase` styling (Disable for improved readability).
+    * Adjustable font weight for dense list views.
+* **Navigation Persistence**: Settings to clear the navigation cache or adjust the TTL (Time-to-Live) for unsaved form drafts.
+
+## Phase 4: Data Maintenance & Exports (P2)
+**Goal:** Utilize diagnostic utilities and expand reporting capabilities.
+
+* **Diagnostic Tools**: A "Data Health" section to trigger functions from `src/utils/dataIntegrity.js`:
+    * `runDiagnostics()`: Scan for orphaned tasks or broken relational links.
+    * `repairData()`: Safe mutation to fix detected inconsistencies.
+* **Audit Log View**: A read-only history of changes to task statuses, costs, and team assignments.
+* **Advanced Exports**: Dedicated buttons for specific data slices:
+    * `CSV Export`: Financial Summary.
+    * `CSV Export`: Master Task List.
+    * `PDF Export`: Complete Era Manifesto Report.
+
+---
+
+## Technical Implementation Notes for AI
+* **Storage**: All settings must persist in `localStorage` or `IndexedDB` via the `Store.jsx` actions `saveTaskOffsets()` and `saveCostModel()`.
+* **Reactivity**: Use the existing `memoization.js` logic to ensure that changing a cost model or offset immediately triggers a recalculation of aggregate progress and budgets across the app.
+* **Styling**: Maintain the 4px border, hard shadow, and high-contrast color palette (Pink, Cyan, Lime, Violet) in all new settings components.
