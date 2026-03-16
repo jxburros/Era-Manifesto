@@ -71,7 +71,7 @@ const _checkOrphanedParentRefs = (data) => {
           severity: 'error',
           message: `Song task "${task.type || task.title}" references non-existent parent song`,
           taskId: task.id || `${song.id}-${task.type}`,
-          parentId: task.parentSongId,
+          parent_item_id: task.parentSongId,
           parentType: 'song',
           suggestedFix: 'Remove parentSongId or delete task'
         });
@@ -85,7 +85,7 @@ const _checkOrphanedParentRefs = (data) => {
           severity: 'error',
           message: `Song custom task "${task.title}" references non-existent parent song`,
           taskId: task.id,
-          parentId: task.parentSongId,
+          parent_item_id: task.parentSongId,
           parentType: 'song',
           suggestedFix: 'Remove parentSongId or delete task'
         });
@@ -101,7 +101,7 @@ const _checkOrphanedParentRefs = (data) => {
             severity: 'error',
             message: `Version task "${task.type}" references version without ID`,
             taskId: task.id || `${version.name}-${task.type}`,
-            parentId: task.parentVersionId,
+            parent_item_id: task.parentVersionId,
             parentType: 'version',
             suggestedFix: 'Assign version ID or delete task'
           });
@@ -119,7 +119,7 @@ const _checkOrphanedParentRefs = (data) => {
           severity: 'error',
           message: `Release task "${task.type || task.title}" references non-existent parent release`,
           taskId: task.id || `${release.id}-${task.type}`,
-          parentId: task.parentReleaseId,
+          parent_item_id: task.parentReleaseId,
           parentType: 'release',
           suggestedFix: 'Remove parentReleaseId or delete task'
         });
@@ -133,7 +133,7 @@ const _checkOrphanedParentRefs = (data) => {
           severity: 'error',
           message: `Release custom task "${task.title}" references non-existent parent release`,
           taskId: task.id,
-          parentId: task.parentReleaseId,
+          parent_item_id: task.parentReleaseId,
           parentType: 'release',
           suggestedFix: 'Remove parentReleaseId or delete task'
         });
@@ -150,7 +150,7 @@ const _checkOrphanedParentRefs = (data) => {
           severity: 'error',
           message: `Video task "${task.type || task.title}" references non-existent parent video`,
           taskId: task.id || `${video.id}-${task.type}`,
-          parentId: task.parentVideoId,
+          parent_item_id: task.parentVideoId,
           parentType: 'video',
           suggestedFix: 'Remove parentVideoId or delete task'
         });
@@ -167,7 +167,7 @@ const _checkOrphanedParentRefs = (data) => {
           severity: 'error',
           message: `Event task "${task.title}" references non-existent parent event`,
           taskId: task.id,
-          parentId: task.parentEventId,
+          parent_item_id: task.parentEventId,
           parentType: 'event',
           suggestedFix: 'Remove parentEventId or delete task'
         });
@@ -238,7 +238,7 @@ const _checkBrokenReferences = (data) => {
 
   // Check era references
   songs.forEach(song => {
-    (song.eraIds || []).forEach(eraId => {
+    (song.era_ids || []).forEach(eraId => {
       const issue = validateReference(eraId, eras, 'era');
       if (issue) {
         issues.push({ ...issue, entityType: 'song', entityId: song.id, entityName: song.title });
@@ -247,7 +247,7 @@ const _checkBrokenReferences = (data) => {
   });
 
   releases.forEach(release => {
-    (release.eraIds || []).forEach(eraId => {
+    (release.era_ids || []).forEach(eraId => {
       const issue = validateReference(eraId, eras, 'era');
       if (issue) {
         issues.push({ ...issue, entityType: 'release', entityId: release.id, entityName: release.name });
@@ -257,7 +257,7 @@ const _checkBrokenReferences = (data) => {
 
   // Check stage references
   songs.forEach(song => {
-    (song.stageIds || []).forEach(stageId => {
+    (song.stage_ids || []).forEach(stageId => {
       const issue = validateReference(stageId, stages, 'stage');
       if (issue) {
         issues.push({ ...issue, entityType: 'song', entityId: song.id, entityName: song.title });
@@ -267,7 +267,7 @@ const _checkBrokenReferences = (data) => {
 
   // Check tag references
   const checkTags = (item, type) => {
-    (item.tagIds || []).forEach(tagId => {
+    (item.tag_ids || []).forEach(tagId => {
       const issue = validateReference(tagId, tags, 'tag');
       if (issue) {
         issues.push({ ...issue, entityType: type, entityId: item.id, entityName: item.title || item.name });
@@ -528,7 +528,7 @@ export const repairIssues = (data, report, options = {}) => {
               action: 'remove_orphan',
               message: `Removed orphaned task ${issue.taskId} from song ${song.id}`,
               taskId: issue.taskId,
-              parentId: song.id,
+              parent_item_id: song.id,
               timestamp: new Date().toISOString()
             });
           }
@@ -550,7 +550,7 @@ export const repairIssues = (data, report, options = {}) => {
               action: 'remove_orphan',
               message: `Removed orphaned task ${issue.taskId} from release ${release.id}`,
               taskId: issue.taskId,
-              parentId: release.id,
+              parent_item_id: release.id,
               timestamp: new Date().toISOString()
             });
           }
@@ -563,10 +563,10 @@ export const repairIssues = (data, report, options = {}) => {
     .filter(issue => issue.type === 'broken_reference')
     .forEach(issue => {
       const removeRef = (item) => {
-        if (issue.collectionName === 'era' && item.eraIds) {
-          const before = item.eraIds.length;
-          item.eraIds = item.eraIds.filter(id => id !== issue.referenceId);
-          if (before !== item.eraIds.length) {
+        if (issue.collectionName === 'era' && item.era_ids) {
+          const before = item.era_ids.length;
+          item.era_ids = item.era_ids.filter(id => id !== issue.referenceId);
+          if (before !== item.era_ids.length) {
             repairLog.push({
               action: 'remove_broken_ref',
               message: `Removed broken era reference ${issue.referenceId}`,
@@ -576,10 +576,10 @@ export const repairIssues = (data, report, options = {}) => {
             });
           }
         }
-        if (issue.collectionName === 'stage' && item.stageIds) {
-          const before = item.stageIds.length;
-          item.stageIds = item.stageIds.filter(id => id !== issue.referenceId);
-          if (before !== item.stageIds.length) {
+        if (issue.collectionName === 'stage' && item.stage_ids) {
+          const before = item.stage_ids.length;
+          item.stage_ids = item.stage_ids.filter(id => id !== issue.referenceId);
+          if (before !== item.stage_ids.length) {
             repairLog.push({
               action: 'remove_broken_ref',
               message: `Removed broken stage reference ${issue.referenceId}`,
@@ -589,10 +589,10 @@ export const repairIssues = (data, report, options = {}) => {
             });
           }
         }
-        if (issue.collectionName === 'tag' && item.tagIds) {
-          const before = item.tagIds.length;
-          item.tagIds = item.tagIds.filter(id => id !== issue.referenceId);
-          if (before !== item.tagIds.length) {
+        if (issue.collectionName === 'tag' && item.tag_ids) {
+          const before = item.tag_ids.length;
+          item.tag_ids = item.tag_ids.filter(id => id !== issue.referenceId);
+          if (before !== item.tag_ids.length) {
             repairLog.push({
               action: 'remove_broken_ref',
               message: `Removed broken tag reference ${issue.referenceId}`,

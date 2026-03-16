@@ -33,7 +33,7 @@ export const ItemCard = memo(function ItemCard({ item, onClick }) {
   >
     <div className="flex items-center justify-between gap-2">
       <div className="font-black uppercase text-sm flex-1 truncate">{item.name}</div>
-      {item.primaryDate && <span className="text-[11px] font-bold px-2 py-1 border-2 border-black bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200">{item.primaryDate}</span>}
+      {item.primary_date && <span className="text-[11px] font-bold px-2 py-1 border-2 border-black bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200">{item.primary_date}</span>}
     </div>
     {item.stage && <div className="text-[11px] font-bold uppercase text-left opacity-70">{item.stage}</div>}
     <div className="flex flex-wrap gap-2 items-center text-[11px]">
@@ -65,7 +65,7 @@ export const ItemRow = memo(function ItemRow({ item, onClick }) {
     onClick={() => onClick?.(item)}
   >
     <div className="font-black truncate">{item.name}</div>
-    <div className="text-xs font-bold">{item.primaryDate || '-'}</div>
+    <div className="text-xs font-bold">{item.primary_date || '-'}</div>
     <div className="text-xs flex flex-wrap gap-1">
       {item.tags?.map(tag => (
         <span key={tag} className="px-2 py-1 bg-gray-100 border border-black dark:bg-slate-700 dark:border-slate-600 text-[10px] font-bold">{tag}</span>
@@ -96,7 +96,7 @@ export const ItemTimelineEntry = memo(function ItemTimelineEntry({ item, onClick
   >
     <div className="flex items-center justify-between">
       <div className="font-black uppercase text-sm">{item.name}</div>
-      <div className="text-xs font-bold px-2 py-1 bg-black text-white">{item.primaryDate || '-'}</div>
+      <div className="text-xs font-bold px-2 py-1 bg-black text-white">{item.primary_date || '-'}</div>
     </div>
     <div className="flex flex-wrap gap-2 text-[11px] items-center">
       <span className="px-2 py-1 bg-white border border-black font-bold">{item.source || 'Item'}</span>
@@ -483,7 +483,7 @@ export const EraStageTagsPicker = ({
   };
   
   const handleTagsChange = (newTagIds) => {
-    onChange({ ...value, tagIds: newTagIds });
+    onChange({ ...value, tag_ids: newTagIds });
   };
 
   const containerClass = layout === 'horizontal' 
@@ -500,7 +500,7 @@ export const EraStageTagsPicker = ({
         <div className={showPropagateButton ? 'flex gap-2' : ''}>
           <div className="flex-1">
             <UniversalEraPicker
-              value={value.eraIds || []}
+              value={value.era_ids || []}
               onChange={handleEraChange}
               eras={data.eras || []}
               multiple={multipleEras}
@@ -509,7 +509,7 @@ export const EraStageTagsPicker = ({
           </div>
           {showPropagateButton && onPropagate && (
             <button 
-              onClick={() => onPropagate('era', value.eraIds)}
+              onClick={() => onPropagate('era', value.era_ids)}
               className={cn("px-3 py-2 text-xs", THEME.punk.btn, "bg-purple-500 text-white")}
               title="Apply to all child tasks"
             >
@@ -523,7 +523,7 @@ export const EraStageTagsPicker = ({
       <div className={compact ? '' : 'flex-1 min-w-[200px]'}>
         <label className="block text-xs font-bold uppercase mb-1">Stage</label>
         <UniversalStagePicker
-          value={value.stageIds || []}
+          value={value.stage_ids || []}
           onChange={handleStageChange}
           stages={data.stages || []}
           multiple={multipleStages}
@@ -535,7 +535,7 @@ export const EraStageTagsPicker = ({
       <div className={compact ? '' : 'flex-1 min-w-[200px]'}>
         <label className="block text-xs font-bold uppercase mb-1">Tags</label>
         <UniversalTagsPicker
-          value={value.tagIds || []}
+          value={value.tag_ids || []}
           onChange={handleTagsChange}
           tags={data.tags || []}
           onCreateTag={actions.addTag}
@@ -591,8 +591,8 @@ export const TaskEditModal = ({
       ...form,
       title: form.title || form.type || 'New Task',
       type: form.type || form.title || 'Custom',
-      date: form.date || form.dueDate || '',
-      dueDate: form.date || form.dueDate || '',
+      date: form.date || form.due_date || '',
+      due_date: form.date || form.due_date || '',
       status: form.status || 'Not Started',
       isAutoTask: form.isAutoTask ?? false
     });
@@ -635,7 +635,7 @@ export const TaskEditModal = ({
             <label className="block text-xs font-bold uppercase mb-1">Due Date</label>
             <input 
               type="date" 
-              value={form.date || form.dueDate || ''} 
+              value={form.date || form.due_date || ''} 
               onChange={e => handleChange('date', e.target.value)}
               className={cn("w-full", THEME.punk.input)}
             />
@@ -660,9 +660,9 @@ export const TaskEditModal = ({
           <div className="md:col-span-2">
             <EraStageTagsPicker
               value={{
-                eraIds: form.eraIds || [],
-                stageIds: form.stageIds || [],
-                tagIds: form.tagIds || []
+                era_ids: form.era_ids || [],
+                stage_ids: form.stage_ids || [],
+                tag_ids: form.tag_ids || []
               }}
               onChange={handleEraStageTagsChange}
               compact
@@ -674,8 +674,8 @@ export const TaskEditModal = ({
             <label className="block text-xs font-bold uppercase mb-1">Estimated Cost</label>
             <input 
               type="number" 
-              value={form.estimatedCost || 0} 
-              onChange={e => handleChange('estimatedCost', parseFloat(e.target.value) || 0)}
+              value={form.estimated_cost || 0} 
+              onChange={e => handleChange('estimated_cost', parseFloat(e.target.value) || 0)}
               className={cn("w-full", THEME.punk.input)}
             />
           </div>
@@ -683,8 +683,8 @@ export const TaskEditModal = ({
             <label className="block text-xs font-bold uppercase mb-1">Quoted Cost</label>
             <input 
               type="number" 
-              value={form.quotedCost || 0} 
-              onChange={e => handleChange('quotedCost', parseFloat(e.target.value) || 0)}
+              value={form.quoted_cost || 0} 
+              onChange={e => handleChange('quoted_cost', parseFloat(e.target.value) || 0)}
               className={cn("w-full", THEME.punk.input)}
             />
           </div>
@@ -692,8 +692,8 @@ export const TaskEditModal = ({
             <label className="block text-xs font-bold uppercase mb-1">Paid Cost</label>
             <input 
               type="number" 
-              value={form.paidCost || 0} 
-              onChange={e => handleChange('paidCost', parseFloat(e.target.value) || 0)}
+              value={form.amount_paid || 0} 
+              onChange={e => handleChange('amount_paid', parseFloat(e.target.value) || 0)}
               className={cn("w-full", THEME.punk.input)}
             />
           </div>
@@ -785,16 +785,16 @@ export const TaskEditModal = ({
  * @param {Function} onUpdateTask - Callback to update task
  * @param {Function} onDeleteTask - Callback to delete task
  * @param {string} parentType - Parent item type
- * @param {string} parentId - Parent item ID
+ * @param {string} parent_item_id - Parent item ID
  * @param {boolean} showLegend - Whether to show auto/custom task legend
  */
-export const StandardTaskList = ({ 
-  tasks = [], 
-  onAddTask, 
-  onUpdateTask, 
+export const StandardTaskList = ({
+  tasks = [],
+  onAddTask,
+  onUpdateTask,
   onDeleteTask,
   parentType,
-  parentId,
+  parent_item_id,
   showLegend = true
 }) => {
   const [sortBy, setSortBy] = useState('date');
@@ -828,8 +828,8 @@ export const StandardTaskList = ({
     result.sort((a, b) => {
       let valA, valB;
       if (sortBy === 'date') {
-        valA = a.date || a.dueDate || '';
-        valB = b.date || b.dueDate || '';
+        valA = a.due_date || '';
+        valB = b.due_date || '';
       } else {
         valA = a[sortBy] || '';
         valB = b[sortBy] || '';
@@ -862,11 +862,11 @@ export const StandardTaskList = ({
   };
 
   const handleAddNewTask = () => {
-    setEditingTask({ 
-      _isNew: true, 
+    setEditingTask({
+      _isNew: true,
       status: 'Not Started',
       parentType,
-      parentId
+      parent_item_id
     });
   };
 
@@ -935,7 +935,7 @@ export const StandardTaskList = ({
               </tr>
             ) : (
               filteredTasks.map(task => {
-                const taskDate = task.date || task.dueDate || '';
+                const taskDate = task.date || task.due_date || '';
                 const isOverdue = taskDate && new Date(taskDate) < new Date() && 
                   task.status !== 'Complete' && task.status !== 'Done';
                 return (
@@ -1446,7 +1446,7 @@ export const EraStageTagsModule = ({
   };
   
   const handleTagsChange = (newTagIds) => {
-    onChange({ ...value, tagIds: newTagIds });
+    onChange({ ...value, tag_ids: newTagIds });
     if (onSave) setTimeout(onSave, 0);
   };
 
@@ -1460,7 +1460,7 @@ export const EraStageTagsModule = ({
         <div className="min-w-0">
           <label className="block text-xs font-bold uppercase mb-1">Era</label>
           <UniversalEraPicker
-            value={value.eraIds || []}
+            value={value.era_ids || []}
             onChange={handleEraChange}
             eras={data.eras || []}
             multiple={false}
@@ -1472,7 +1472,7 @@ export const EraStageTagsModule = ({
         <div className="min-w-0">
           <label className="block text-xs font-bold uppercase mb-1">Stage</label>
           <UniversalStagePicker
-            value={value.stageIds || []}
+            value={value.stage_ids || []}
             onChange={handleStageChange}
             stages={data.stages || []}
             multiple={false}
@@ -1484,7 +1484,7 @@ export const EraStageTagsModule = ({
         <div className="min-w-0">
           <label className="block text-xs font-bold uppercase mb-1">Tags</label>
           <UniversalTagsPicker
-            value={value.tagIds || []}
+            value={value.tag_ids || []}
             onChange={handleTagsChange}
             tags={data.tags || []}
             onCreateTag={actions.addTag}

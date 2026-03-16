@@ -200,9 +200,9 @@ export const calculateFinancialSummary = (data = {}, costModel = 'actual-first')
     };
 
     entities.forEach(entity => {
-      const estimated = entity.estimated_cost || entity.estimatedCost || 0;
-      const quoted = entity.quoted_cost || entity.quotedCost || 0;
-      const paid = entity.amount_paid || entity.paidCost || entity.amountPaid || 0;
+      const estimated = entity.estimated_cost || 0;
+      const quoted = entity.quoted_cost || 0;
+      const paid = entity.amount_paid || 0;
 
       summary.totalEstimated += estimated;
       summary.totalQuoted += quoted;

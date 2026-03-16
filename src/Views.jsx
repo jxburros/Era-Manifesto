@@ -30,17 +30,17 @@ export const ListView = ({ onEdit }) => {
     const { data, actions } = useStore();
     const [filter, setFilter] = useState('all');
 
-    const buildTree = (pid) => data.tasks.filter(t => t.parentId === pid && !t.archived && (filter === 'all' || t.stageId === filter)).map(t => ({...t, children: buildTree(t.id)}));
+    const buildTree = (pid) => data.tasks.filter(t => t.parent_item_id === pid && !t.archived && (filter === 'all' || t.stageId === filter)).map(t => ({...t, children: buildTree(t.id)}));
     const tree = buildTree(null);
 
     const handleAdd = (type, pid) => {
         const stageId = filter !== 'all' ? filter : (data.stages[0]?.id || '');
-        actions.add('tasks', { title: `New ${type}`, isCategory: type === 'category', parentId: pid, status: 'Not Started', stageId });
+        actions.add('tasks', { title: `New ${type}`, isCategory: type === 'category', parent_item_id: pid, status: 'Not Started', stageId });
     };
 
     const TaskRow = ({ task, level = 0 }) => {
         const [open, setOpen] = useState(true);
-        const cost = task.actualCost || task.quotedCost || task.estimatedCost || 0;
+        const cost = task.actualCost || task.quoted_cost || task.estimated_cost || 0;
         
         return (
             <div className="select-none">
@@ -50,7 +50,7 @@ export const ListView = ({ onEdit }) => {
                     <button onClick={(e) => { e.stopPropagation(); setOpen(!open); }} className={cn("p-1 hover:bg-gray-300 rounded", task.children.length ? "visible" : "invisible")}><Icon name={open ? "ChevronDown" : "ChevronRight"} size={14} /></button>
                     <div className={cn("p-1 rounded", task.isCategory ? "bg-black text-white" : "bg-gray-200")}><Icon name={task.isCategory ? "Folder" : "Circle"} size={14} /></div>
                     <span className="flex-1 font-bold truncate">{task.title}</span>
-                    {task.dueDate && <span className="text-[10px] bg-yellow-300 px-1 border border-black font-bold">{task.dueDate}</span>}
+                    {task.due_date && <span className="text-[10px] bg-yellow-300 px-1 border border-black font-bold">{task.due_date}</span>}
                     {cost > 0 && <span className="text-[10px] font-bold px-1 border border-black bg-white">{formatMoney(cost)}</span>}
                     <button onClick={(e) => { e.stopPropagation(); handleAdd('task', task.id); }} className="p-1 hover:bg-gray-300 rounded"><Icon name="Plus" size={14} /></button>
                 </div>
@@ -112,7 +112,7 @@ export const CalendarView = ({ onEdit, onSelectEvent }) => {
             const due = getTaskDueDate(t);
             if (!due) return;
             map[due] = map[due] || [];
-            map[due].push({ ...t, dueDate: due, _kind: 'task' });
+            map[due].push({ ...t, due_date: due, _kind: 'task' });
         });
 
         // Events
@@ -385,7 +385,7 @@ export const CalendarView = ({ onEdit, onSelectEvent }) => {
                                                 title: 'New Task',
                                                 date: '',
                                                 status: 'Not Started',
-                                                estimatedCost: 0,
+                                                estimated_cost: 0,
                                                 notes: '',
                                                 isNew: true
                                             })}
@@ -474,8 +474,8 @@ export const CalendarView = ({ onEdit, onSelectEvent }) => {
                                 <label className="block text-xs font-bold uppercase mb-1">Estimated Cost</label>
                                 <input 
                                     type="number" 
-                                    value={editingEventTask.estimatedCost || 0} 
-                                    onChange={e => setEditingEventTask(prev => ({ ...prev, estimatedCost: parseFloat(e.target.value) || 0 }))} 
+                                    value={editingEventTask.estimated_cost || 0} 
+                                    onChange={e => setEditingEventTask(prev => ({ ...prev, estimated_cost: parseFloat(e.target.value) || 0 }))} 
                                     className={cn("w-full", THEME.punk.input)}
                                 />
                             </div>
@@ -499,7 +499,7 @@ export const CalendarView = ({ onEdit, onSelectEvent }) => {
                                             title: editingEventTask.title,
                                             date: editingEventTask.date,
                                             status: editingEventTask.status,
-                                            estimatedCost: editingEventTask.estimatedCost,
+                                            estimated_cost: editingEventTask.estimated_cost,
                                             notes: editingEventTask.notes
                                         });
                                     } else {
@@ -1430,7 +1430,7 @@ export const MiscView = () => {
             rows.push({ id: `${source}-${name}-${date}`, name, source, date: date || 'TBD', cost, notes });
         };
 
-        data.tasks.forEach(t => pushItem(t.title, 'Standalone Task', t.dueDate, getEffectiveCost(t), t.notes));
+        data.tasks.forEach(t => pushItem(t.title, 'Standalone Task', t.due_date, getEffectiveCost(t), t.notes));
 
         (data.songs || []).forEach(song => {
             (song.deadlines || []).forEach(task => pushItem(`${task.type} — ${song.title}`, 'Song Task', task.date, getEffectiveCost(task), task.notes));
@@ -1471,7 +1471,7 @@ export const MiscView = () => {
         if (!expenseDraft.description || isNaN(amount)) return;
         actions.addExpense({
             name: expenseDraft.description,
-            paidCost: amount,
+            amount_paid: amount,
             category: expenseDraft.category,
             date: new Date().toISOString().split('T')[0],
             status: 'Complete'
@@ -1615,9 +1615,9 @@ export const ActiveView = ({ onEdit }) => {
         // Add custom properties needed by ActiveView (effectiveCost, isPaid)
         return tasks.map(t => ({
             ...t,
-            dueDate: t.date, // Normalize date field
-            effectiveCost: t.paidCost || t.quotedCost || t.estimatedCost || 0,
-            isPaid: (t.paidCost || 0) > 0
+            due_date: t.date, // Normalize date field
+            effectiveCost: t.amount_paid || t.quoted_cost || t.estimated_cost || 0,
+            isPaid: (t.amount_paid || 0) > 0
         })).filter(t => 
             // Filter out completed/archived tasks
             t.status !== 'Done' && t.status !== 'Complete' && !t.isArchived
@@ -1626,8 +1626,8 @@ export const ActiveView = ({ onEdit }) => {
     
     // Filter tasks into categories
     const inProgress = allTasks.filter(t => t.status === 'In Progress' || t.status === 'In-Progress');
-    const overdue = allTasks.filter(t => t.dueDate && t.dueDate < today);
-    const dueSoon = allTasks.filter(t => t.dueDate && t.dueDate >= today && t.dueDate <= nextWeek);
+    const overdue = allTasks.filter(t => t.due_date && t.due_date < today);
+    const dueSoon = allTasks.filter(t => t.due_date && t.due_date >= today && t.due_date <= nextWeek);
     const unpaid = allTasks.filter(t => !t.isPaid && t.effectiveCost > 0);
     
     const TaskCard = ({ task }) => {
@@ -1654,7 +1654,7 @@ export const ActiveView = ({ onEdit }) => {
         }[task.source] || 'bg-gray-100 text-gray-800 border-gray-500';
         
         // Get semantic status colors
-        const statusColors = getTaskStatusColors(task.status, task.dueDate);
+        const statusColors = getTaskStatusColors(task.status, task.due_date);
         
         return (
             <div 
@@ -1677,8 +1677,8 @@ export const ActiveView = ({ onEdit }) => {
                 </div>
                 <div className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">{task.sourceName}</div>
                 <div className="flex flex-wrap gap-2 mt-2 text-xs">
-                    {task.dueDate && <span className={cn("px-2 py-1 font-bold border-2", statusColors.badge)}>
-                        {task.dueDate < today ? 'OVERDUE: ' : 'Due: '}{task.dueDate}
+                    {task.due_date && <span className={cn("px-2 py-1 font-bold border-2", statusColors.badge)}>
+                        {task.due_date < today ? 'OVERDUE: ' : 'Due: '}{task.due_date}
                     </span>}
                     <span className={cn("px-2 py-1 font-bold border-2", statusColors.badge)}>{task.status}</span>
                     {task.effectiveCost > 0 && <span className={cn("px-2 py-1 font-bold border-2", task.isPaid ? 'bg-green-100 border-green-500 text-green-800' : 'bg-purple-100 border-purple-500 text-purple-800')}>{task.isPaid ? 'Paid' : 'Unpaid'}: {formatMoney(task.effectiveCost)}</span>}
@@ -3428,10 +3428,10 @@ export const SettingsView = () => {
                         const expenses = data.expenses || [];
                         // Helper to normalize cost fields across entity types
                         const getEntityCost = (entity, field) => {
-                          if (field === 'paid') return entity.paidCost || entity.amount_paid || 0;
-                          if (field === 'quoted') return entity.quotedCost || entity.quoted_cost || 0;
-                          if (field === 'estimated') return entity.estimatedCost || entity.estimated_cost || 0;
-                          return entity.paidCost || entity.amount_paid || entity.quotedCost || entity.quoted_cost || entity.estimatedCost || entity.estimated_cost || 0;
+                          if (field === 'paid') return entity.amount_paid || entity.amount_paid || 0;
+                          if (field === 'quoted') return entity.quoted_cost || entity.quoted_cost || 0;
+                          if (field === 'estimated') return entity.estimated_cost || entity.estimated_cost || 0;
+                          return entity.amount_paid || entity.amount_paid || entity.quoted_cost || entity.quoted_cost || entity.estimated_cost || entity.estimated_cost || 0;
                         };
                         const rows = [
                           ['Type', 'Title', 'Artist', 'Estimated Cost', 'Quoted Cost', 'Paid Cost', 'Effective Cost'],
@@ -3473,9 +3473,9 @@ export const SettingsView = () => {
                             t._parent || '',
                             t.title || t.taskName || t.type || '',
                             t.status || '',
-                            t.dueDate || t.date || t.deadline || '',
+                            t.due_date || t.date || t.deadline || '',
                             t.category || '',
-                            String(t.estimatedCost || 0),
+                            String(t.estimated_cost || 0),
                             (t.assignedMembers || []).map(m => {
                               const member = (data.teamMembers || []).find(tm => tm.id === m.memberId);
                               return member?.name || m.memberId || '';

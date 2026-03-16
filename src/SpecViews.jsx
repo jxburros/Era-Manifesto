@@ -91,7 +91,7 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
     { field: 'exclusiveType', label: 'Exclusive', render: (item) => item.exclusiveType && item.exclusiveType !== 'None' ? item.exclusiveType : '-' },
     { field: 'stemsNeeded', label: 'Stems?', align: 'center', render: (item) => item.stemsNeeded ? 'Yes' : 'No' },
     { field: 'progress', label: 'Progress', align: 'right', render: (item) => `${songProgress(item)}%` },
-    { field: 'estimatedCost', label: 'Est. Cost', sortable: true, align: 'right', render: (item) => formatMoney(item.estimatedCost || 0) }
+    { field: 'estimated_cost', label: 'Est. Cost', sortable: true, align: 'right', render: (item) => formatMoney(item.estimated_cost || 0) }
   ];
 
   // Filter options
@@ -105,7 +105,7 @@ export const SongListView = ({ onSelectSong, onSongCreated }) => {
       <div className="text-xs space-y-1">
         <div className="flex justify-between"><span className="opacity-60">Release:</span><span className="font-bold">{song.releaseDate || 'TBD'}</span></div>
         <div className="flex justify-between"><span className="opacity-60">Progress:</span><span className="font-bold">{songProgress(song)}%</span></div>
-        <div className="flex justify-between"><span className="opacity-60">Est. Cost:</span><span className="font-bold">{formatMoney(song.estimatedCost || 0)}</span></div>
+        <div className="flex justify-between"><span className="opacity-60">Est. Cost:</span><span className="font-bold">{formatMoney(song.estimated_cost || 0)}</span></div>
       </div>
       <div className="flex flex-wrap gap-1 mt-3">
         {song.isSingle && <span className="px-2 py-1 bg-pink-200 text-pink-800 text-[10px] font-bold border border-pink-500">SINGLE</span>}
@@ -305,8 +305,8 @@ export const SongDetailView = ({ song, onBack }) => {
   
   // Lock Era feature: check if this song belongs to a locked era
   const isSongLocked = useMemo(() => 
-    isEraLocked(currentSong.eraIds || currentSong.era_ids || [], data.eras || []), 
-    [currentSong.eraIds, currentSong.era_ids, data.eras]
+    isEraLocked(currentSong.era_ids || currentSong.era_ids || [], data.eras || []), 
+    [currentSong.era_ids, currentSong.era_ids, data.eras]
   );
   
   // Helper function to check if a video type exists in currentSong.videos (Issue #1)
@@ -439,12 +439,12 @@ export const SongDetailView = ({ song, onBack }) => {
       await actions.addSongCustomTask(song.id, {
         title: editingTask.type || editingTask.title || 'New Task',
         type: editingTask.type || editingTask.title || 'Custom',
-        date: editingTask.date || editingTask.dueDate || '',
-        dueDate: editingTask.date || editingTask.dueDate || '',
+        date: editingTask.date || editingTask.due_date || '',
+        due_date: editingTask.date || editingTask.due_date || '',
         status: editingTask.status || 'Not Started',
-        estimatedCost: editingTask.estimatedCost || 0,
-        quotedCost: editingTask.quotedCost || 0,
-        paidCost: editingTask.paidCost || 0,
+        estimated_cost: editingTask.estimated_cost || 0,
+        quoted_cost: editingTask.quoted_cost || 0,
+        amount_paid: editingTask.amount_paid || 0,
         notes: editingTask.notes || editingTask.description || '',
         description: editingTask.description || editingTask.notes || '',
         assignedMembers: editingTask.assignedMembers || [],
@@ -488,9 +488,9 @@ export const SongDetailView = ({ song, onBack }) => {
       stemsNeeded: coreVersion?.stemsNeeded || currentSong.stemsNeeded || false,
       isSingle: coreVersion?.isSingle || currentSong.isSingle || false,
       // Copy metadata (Era, Stage, Tags)
-      eraIds: [...(coreVersion?.eraIds || currentSong.eraIds || [])],
-      stageIds: [...(coreVersion?.stageIds || currentSong.stageIds || [])],
-      tagIds: [...(coreVersion?.tagIds || currentSong.tagIds || [])],
+      era_ids: [...(coreVersion?.era_ids || currentSong.era_ids || [])],
+      stage_ids: [...(coreVersion?.stage_ids || currentSong.stage_ids || [])],
+      tag_ids: [...(coreVersion?.tag_ids || currentSong.tag_ids || [])],
       tags: [...(coreVersion?.tags || currentSong.tags || [])],
       // Copy notes
       notes: coreVersion?.notes || currentSong.notes || '',
@@ -580,7 +580,7 @@ export const SongDetailView = ({ song, onBack }) => {
     [allSongTasks]
   );
   const costPaidValue = useMemo(() => 
-    allSongTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0), 
+    allSongTasks.reduce((sum, t) => sum + (t.amount_paid || 0), 0), 
     [allSongTasks]
   );
 
@@ -596,7 +596,7 @@ export const SongDetailView = ({ song, onBack }) => {
         { key: 'videos', label: 'Videos', bgClass: 'bg-gray-100', render: () => (currentSong.videos || []).length },
         { key: 'overdueTasks', label: 'Overdue Tasks', bgClass: overdueTasks.length > 0 ? 'bg-red-200' : 'bg-green-100', render: () => overdueTasks.length },
         { key: 'costPaid', label: 'Cost Paid', bgClass: 'bg-green-100', render: () => formatMoney(costPaidValue) },
-        { key: 'estimatedCost', label: 'Estimated Cost', bgClass: 'bg-yellow-100', render: () => formatMoney(totalCost) },
+        { key: 'estimated_cost', label: 'Estimated Cost', bgClass: 'bg-yellow-100', render: () => formatMoney(totalCost) },
         { 
           key: 'teamMembers',
           label: 'Team Members on Tasks',
@@ -1183,7 +1183,7 @@ export const SongDetailView = ({ song, onBack }) => {
                   title: 'New Task',
                   date: '',
                   description: '',
-                  estimatedCost: 0,
+                  estimated_cost: 0,
                   status: 'Not Started',
                   notes: '',
                   isAutoTask: false
@@ -1325,14 +1325,14 @@ export const SongDetailView = ({ song, onBack }) => {
       {/* Era, Stage & Tags Module - Consistent across all Item pages */}
       <EraStageTagsModule
         value={{
-          eraIds: form.eraIds || [],
-          stageIds: form.stageIds || [],
-          tagIds: form.tagIds || []
+          era_ids: form.era_ids || [],
+          stage_ids: form.stage_ids || [],
+          tag_ids: form.tag_ids || []
         }}
         onChange={({ eraIds, stageIds, tagIds }) => {
-          handleFieldChange('eraIds', eraIds);
-          handleFieldChange('stageIds', stageIds);
-          handleFieldChange('tagIds', tagIds);
+          handleFieldChange('era_ids', eraIds);
+          handleFieldChange('stage_ids', stageIds);
+          handleFieldChange('tag_ids', tagIds);
         }}
         onSave={handleSave}
       />
@@ -1414,8 +1414,8 @@ export const SongDetailView = ({ song, onBack }) => {
                       </label>
                       <input 
                         type="date" 
-                        value={editingTask.date || editingTask.dueDate || ''} 
-                        onChange={e => setEditingTask(prev => ({ ...prev, date: e.target.value, dueDate: e.target.value }))} 
+                        value={editingTask.date || editingTask.due_date || ''} 
+                        onChange={e => setEditingTask(prev => ({ ...prev, date: e.target.value, due_date: e.target.value }))} 
                         className={cn("w-full", THEME.punk.input, !canEditLockedFields && "bg-gray-100 cursor-not-allowed")}
                         disabled={!canEditLockedFields}
                       />
@@ -1484,8 +1484,8 @@ export const SongDetailView = ({ song, onBack }) => {
                   <label className="block text-xs font-bold uppercase mb-1">Estimated</label>
                   <input 
                     type="number" 
-                    value={editingTask.estimatedCost || 0} 
-                    onChange={e => setEditingTask(prev => ({ ...prev, estimatedCost: parseFloat(e.target.value) || 0 }))} 
+                    value={editingTask.estimated_cost || 0} 
+                    onChange={e => setEditingTask(prev => ({ ...prev, estimated_cost: parseFloat(e.target.value) || 0 }))} 
                     className={cn("w-full text-sm", THEME.punk.input)} 
                   />
                 </div>
@@ -1493,8 +1493,8 @@ export const SongDetailView = ({ song, onBack }) => {
                   <label className="block text-xs font-bold uppercase mb-1">Quoted</label>
                   <input 
                     type="number" 
-                    value={editingTask.quotedCost || 0} 
-                    onChange={e => setEditingTask(prev => ({ ...prev, quotedCost: parseFloat(e.target.value) || 0 }))} 
+                    value={editingTask.quoted_cost || 0} 
+                    onChange={e => setEditingTask(prev => ({ ...prev, quoted_cost: parseFloat(e.target.value) || 0 }))} 
                     className={cn("w-full text-sm", THEME.punk.input)} 
                   />
                 </div>
@@ -1502,8 +1502,8 @@ export const SongDetailView = ({ song, onBack }) => {
                   <label className="block text-xs font-bold uppercase mb-1">Paid</label>
                   <input 
                     type="number" 
-                    value={editingTask.paidCost || 0} 
-                    onChange={e => setEditingTask(prev => ({ ...prev, paidCost: parseFloat(e.target.value) || 0 }))} 
+                    value={editingTask.amount_paid || 0} 
+                    onChange={e => setEditingTask(prev => ({ ...prev, amount_paid: parseFloat(e.target.value) || 0 }))} 
                     className={cn("w-full text-sm", THEME.punk.input)} 
                   />
                 </div>
@@ -1540,8 +1540,8 @@ export const SongDetailView = ({ song, onBack }) => {
                   <div>
                     <label className="block text-[10px] font-bold uppercase mb-1">Era</label>
                     <select 
-                      value={(editingTask.eraIds || [])[0] || ''} 
-                      onChange={e => setEditingTask(prev => ({ ...prev, eraIds: e.target.value ? [e.target.value] : [] }))}
+                      value={(editingTask.era_ids || [])[0] || ''} 
+                      onChange={e => setEditingTask(prev => ({ ...prev, era_ids: e.target.value ? [e.target.value] : [] }))}
                       className={cn("w-full text-xs", THEME.punk.input)}
                     >
                       <option value="">Select Era...</option>
@@ -1551,8 +1551,8 @@ export const SongDetailView = ({ song, onBack }) => {
                   <div>
                     <label className="block text-[10px] font-bold uppercase mb-1">Stage</label>
                     <select 
-                      value={(editingTask.stageIds || [])[0] || ''} 
-                      onChange={e => setEditingTask(prev => ({ ...prev, stageIds: e.target.value ? [e.target.value] : [] }))}
+                      value={(editingTask.stage_ids || [])[0] || ''} 
+                      onChange={e => setEditingTask(prev => ({ ...prev, stage_ids: e.target.value ? [e.target.value] : [] }))}
                       className={cn("w-full text-xs", THEME.punk.input)}
                     >
                       <option value="">Select Stage...</option>
@@ -1562,28 +1562,28 @@ export const SongDetailView = ({ song, onBack }) => {
                   <div>
                     <label className="block text-[10px] font-bold uppercase mb-1">Tags</label>
                     <select 
-                      value={(editingTask.tagIds || [])[0] || ''} 
+                      value={(editingTask.tag_ids || [])[0] || ''} 
                       onChange={e => {
                         const newTagId = e.target.value;
-                        if (newTagId && !(editingTask.tagIds || []).includes(newTagId)) {
-                          setEditingTask(prev => ({ ...prev, tagIds: [...(prev.tagIds || []), newTagId] }));
+                        if (newTagId && !(editingTask.tag_ids || []).includes(newTagId)) {
+                          setEditingTask(prev => ({ ...prev, tag_ids: [...(prev.tag_ids || []), newTagId] }));
                         }
                       }}
                       className={cn("w-full text-xs", THEME.punk.input)}
                     >
                       <option value="">Add tag...</option>
-                      {(data.tags || []).filter(t => !(editingTask.tagIds || []).includes(t.id)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      {(data.tags || []).filter(t => !(editingTask.tag_ids || []).includes(t.id)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                   </div>
                 </div>
-                {(editingTask.tagIds || []).length > 0 && (
+                {(editingTask.tag_ids || []).length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {(editingTask.tagIds || []).map(tagId => {
+                    {(editingTask.tag_ids || []).map(tagId => {
                       const tag = (data.tags || []).find(t => t.id === tagId);
                       return tag ? (
                         <span key={tagId} className="px-2 py-1 bg-yellow-100 border border-black text-[10px] font-bold flex items-center gap-1">
                           {tag.name}
-                          <button onClick={() => setEditingTask(prev => ({ ...prev, tagIds: (prev.tagIds || []).filter(id => id !== tagId) }))} className="text-red-600">×</button>
+                          <button onClick={() => setEditingTask(prev => ({ ...prev, tag_ids: (prev.tag_ids || []).filter(id => id !== tagId) }))} className="text-red-600">×</button>
                         </span>
                       ) : null;
                     })}
@@ -1632,7 +1632,7 @@ export const GlobalTasksView = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [newTask, setNewTask] = useState({ taskName: '', category: 'Other', date: '', description: '', assignedTo: '', status: 'Not Started', estimatedCost: 0, notes: '' });
+  const [newTask, setNewTask] = useState({ taskName: '', category: 'Other', date: '', description: '', assignedTo: '', status: 'Not Started', estimated_cost: 0, notes: '' });
   const [newAssignments, setNewAssignments] = useState({});
   const [newCategory, setNewCategory] = useState({ name: '', color: '#000000', description: '' });
 
@@ -1686,7 +1686,7 @@ export const GlobalTasksView = () => {
 
   const handleAddTask = async () => {
     await actions.addGlobalTask(newTask);
-    setNewTask({ taskName: '', category: 'Other', date: '', description: '', assignedTo: '', status: 'Not Started', estimatedCost: 0, notes: '' });
+    setNewTask({ taskName: '', category: 'Other', date: '', description: '', assignedTo: '', status: 'Not Started', estimated_cost: 0, notes: '' });
     setShowAddForm(false);
   };
 
@@ -1806,7 +1806,7 @@ export const GlobalTasksView = () => {
             </select>
             <input type="date" value={newTask.date} onChange={e => setNewTask({ ...newTask, date: e.target.value })} className={cn("w-full", THEME.punk.input)} />
             <input value={newTask.assignedTo} onChange={e => setNewTask({ ...newTask, assignedTo: e.target.value })} placeholder="Assigned To" className={cn("w-full", THEME.punk.input)} />
-            <input type="number" value={newTask.estimatedCost} onChange={e => setNewTask({ ...newTask, estimatedCost: parseFloat(e.target.value) || 0 })} placeholder="Estimated Cost" className={cn("w-full", THEME.punk.input)} />
+            <input type="number" value={newTask.estimated_cost} onChange={e => setNewTask({ ...newTask, estimated_cost: parseFloat(e.target.value) || 0 })} placeholder="Estimated Cost" className={cn("w-full", THEME.punk.input)} />
             <select value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
             <input value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} placeholder="Description" className={cn("w-full md:col-span-2", THEME.punk.input)} />
             <button onClick={handleAddTask} className={cn("px-4 py-2", THEME.punk.btn, "bg-green-500 text-white")}>Add Task</button>
@@ -1825,7 +1825,7 @@ export const GlobalTasksView = () => {
               </select>
               <input type="date" value={editingTask.date} onChange={e => setEditingTask({ ...editingTask, date: e.target.value })} className={cn("w-full", THEME.punk.input)} />
               <input value={editingTask.assignedTo} onChange={e => setEditingTask({ ...editingTask, assignedTo: e.target.value })} placeholder="Assigned To" className={cn("w-full", THEME.punk.input)} />
-              <input type="number" value={editingTask.estimatedCost} onChange={e => setEditingTask({ ...editingTask, estimatedCost: parseFloat(e.target.value) || 0 })} className={cn("w-full", THEME.punk.input)} />
+              <input type="number" value={editingTask.estimated_cost} onChange={e => setEditingTask({ ...editingTask, estimated_cost: parseFloat(e.target.value) || 0 })} className={cn("w-full", THEME.punk.input)} />
               <select value={editingTask.status} onChange={e => setEditingTask({ ...editingTask, status: e.target.value })} className={cn("w-full", THEME.punk.input)}>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select>
               <input value={editingTask.description} onChange={e => setEditingTask({ ...editingTask, description: e.target.value })} placeholder="Description" className={cn("w-full", THEME.punk.input)} />
               <div className="flex gap-2">
@@ -1862,7 +1862,7 @@ export const GlobalTasksView = () => {
                 <td className="p-3">{task.category}</td>
                 <td className="p-3 max-w-xs truncate">{task.description}</td>
                 <td className="p-3">{task.assignedTo || '-'}</td>
-                <td className="p-3 text-right">{formatMoney(task.estimatedCost || 0)}</td>
+                <td className="p-3 text-right">{formatMoney(task.estimated_cost || 0)}</td>
                 <td className="p-3 text-xs space-y-1">
                   <div className="flex flex-wrap gap-1">
                     {(task.assignedMembers || []).map(m => {
@@ -1984,7 +1984,7 @@ export const ReleasesListView = ({ onSelectRelease, onReleaseCreated }) => {
     { field: 'trackProgress', label: 'Track Progress', align: 'center', render: (item) => `${getTrackStats(item).progress}%` },
     { field: 'hasPhysicalCopies', label: 'Physical', align: 'center', render: (item) => item.hasPhysicalCopies ? <span className="text-green-600 font-bold">YES</span> : <span className="text-gray-400">NO</span> },
     { field: 'progress', label: 'Task Progress', align: 'right', render: (item) => `${releaseProgress(item)}%` },
-    { field: 'estimatedCost', label: 'Est. Cost', sortable: true, align: 'right', render: (item) => formatMoney(item.estimatedCost || 0) }
+    { field: 'estimated_cost', label: 'Est. Cost', sortable: true, align: 'right', render: (item) => formatMoney(item.estimated_cost || 0) }
   ];
 
   // Filter options
@@ -2089,8 +2089,8 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
 
   // Lock Era feature: check if this release belongs to a locked era
   const isReleaseLocked = useMemo(() => 
-    isEraLocked(currentRelease.eraIds || currentRelease.era_ids || [], data.eras || []), 
-    [currentRelease.eraIds, currentRelease.era_ids, data.eras]
+    isEraLocked(currentRelease.era_ids || currentRelease.era_ids || [], data.eras || []), 
+    [currentRelease.era_ids, currentRelease.era_ids, data.eras]
   );
 
   const handleSave = async () => { 
@@ -2125,18 +2125,18 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
       await actions.addReleaseCustomTask(release.id, {
         title: editingTask.type || editingTask.title || 'New Task',
         type: editingTask.type || editingTask.title || 'Custom',
-        date: editingTask.date || editingTask.dueDate || '',
-        dueDate: editingTask.date || editingTask.dueDate || '',
+        date: editingTask.date || editingTask.due_date || '',
+        due_date: editingTask.date || editingTask.due_date || '',
         status: editingTask.status || 'Not Started',
-        estimatedCost: editingTask.estimatedCost || 0,
-        quotedCost: editingTask.quotedCost || 0,
-        paidCost: editingTask.paidCost || 0,
+        estimated_cost: editingTask.estimated_cost || 0,
+        quoted_cost: editingTask.quoted_cost || 0,
+        amount_paid: editingTask.amount_paid || 0,
         notes: editingTask.notes || editingTask.description || '',
         description: editingTask.description || editingTask.notes || '',
         assignedMembers: editingTask.assignedMembers || [],
-        eraIds: editingTask.eraIds || [],
-        stageIds: editingTask.stageIds || [],
-        tagIds: editingTask.tagIds || [],
+        era_ids: editingTask.era_ids || [],
+        stage_ids: editingTask.stage_ids || [],
+        tag_ids: editingTask.tag_ids || [],
         isAutoTask: false
       });
     } else if (editingTaskContext.type === 'auto') {
@@ -2243,7 +2243,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
   const { progress: releaseProgressValue } = calculateTaskProgress(allReleaseTasks);
   
   // Calculate costs
-  const costPaid = useMemo(() => allReleaseTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0), [allReleaseTasks]);
+  const costPaid = useMemo(() => allReleaseTasks.reduce((sum, t) => sum + (t.amount_paid || 0), 0), [allReleaseTasks]);
   const estimatedCost = useMemo(() => allReleaseTasks.reduce((sum, t) => sum + getEffectiveCost(t), 0) + getEffectiveCost(currentRelease), [allReleaseTasks, currentRelease]);
   
   // Calculate overdue tasks
@@ -2316,7 +2316,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
         { key: 'openTasks', label: 'Open Tasks', bgClass: 'bg-gray-100', render: () => openTasks.length },
         { key: 'overdueTasks', label: 'Overdue Tasks', bgClass: overdueTasks.length > 0 ? 'bg-red-200' : 'bg-green-100', render: () => overdueTasks.length },
         { key: 'costPaid', label: 'Cost Paid', bgClass: 'bg-green-100', render: () => formatMoney(costPaid) },
-        { key: 'estimatedCost', label: 'Estimated Cost', bgClass: 'bg-yellow-100', render: () => formatMoney(estimatedCost) },
+        { key: 'estimated_cost', label: 'Estimated Cost', bgClass: 'bg-yellow-100', render: () => formatMoney(estimatedCost) },
         { key: 'type', label: 'Release Type', bgClass: 'bg-gray-100', render: () => (
           <>
             {currentRelease.type}
@@ -2693,7 +2693,7 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
                   title: 'New Task',
                   date: '',
                   description: '',
-                  estimatedCost: 0,
+                  estimated_cost: 0,
                   status: 'Not Started',
                   notes: '',
                   isAutoTask: false
@@ -2786,14 +2786,14 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
       {/* Era, Stage & Tags Module - Consistent across all Item pages */}
       <EraStageTagsModule
         value={{
-          eraIds: form.eraIds || [],
-          stageIds: form.stageIds || [],
-          tagIds: form.tagIds || []
+          era_ids: form.era_ids || [],
+          stage_ids: form.stage_ids || [],
+          tag_ids: form.tag_ids || []
         }}
         onChange={({ eraIds, stageIds, tagIds }) => {
-          handleFieldChange('eraIds', eraIds);
-          handleFieldChange('stageIds', stageIds);
-          handleFieldChange('tagIds', tagIds);
+          handleFieldChange('era_ids', eraIds);
+          handleFieldChange('stage_ids', stageIds);
+          handleFieldChange('tag_ids', tagIds);
         }}
         onSave={handleSave}
       />
@@ -2825,8 +2825,8 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
                 <label className="block text-xs font-bold uppercase mb-1">Due Date</label>
                 <input 
                   type="date" 
-                  value={editingTask.date || editingTask.dueDate || ''} 
-                  onChange={e => setEditingTask(prev => ({ ...prev, date: e.target.value, dueDate: e.target.value }))} 
+                  value={editingTask.date || editingTask.due_date || ''} 
+                  onChange={e => setEditingTask(prev => ({ ...prev, date: e.target.value, due_date: e.target.value }))} 
                   className={cn("w-full", THEME.punk.input)}
                 />
               </div>
@@ -2849,8 +2849,8 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
                   <label className="block text-xs font-bold uppercase mb-1">Estimated</label>
                   <input 
                     type="number" 
-                    value={editingTask.estimatedCost || 0} 
-                    onChange={e => setEditingTask(prev => ({ ...prev, estimatedCost: parseFloat(e.target.value) || 0 }))} 
+                    value={editingTask.estimated_cost || 0} 
+                    onChange={e => setEditingTask(prev => ({ ...prev, estimated_cost: parseFloat(e.target.value) || 0 }))} 
                     className={cn("w-full text-sm", THEME.punk.input)} 
                   />
                 </div>
@@ -2858,8 +2858,8 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
                   <label className="block text-xs font-bold uppercase mb-1">Quoted</label>
                   <input 
                     type="number" 
-                    value={editingTask.quotedCost || 0} 
-                    onChange={e => setEditingTask(prev => ({ ...prev, quotedCost: parseFloat(e.target.value) || 0 }))} 
+                    value={editingTask.quoted_cost || 0} 
+                    onChange={e => setEditingTask(prev => ({ ...prev, quoted_cost: parseFloat(e.target.value) || 0 }))} 
                     className={cn("w-full text-sm", THEME.punk.input)} 
                   />
                 </div>
@@ -2867,8 +2867,8 @@ export const ReleaseDetailView = ({ release, onBack, onSelectSong }) => {
                   <label className="block text-xs font-bold uppercase mb-1">Paid</label>
                   <input 
                     type="number" 
-                    value={editingTask.paidCost || 0} 
-                    onChange={e => setEditingTask(prev => ({ ...prev, paidCost: parseFloat(e.target.value) || 0 }))} 
+                    value={editingTask.amount_paid || 0} 
+                    onChange={e => setEditingTask(prev => ({ ...prev, amount_paid: parseFloat(e.target.value) || 0 }))} 
                     className={cn("w-full text-sm", THEME.punk.input)} 
                   />
                 </div>
@@ -2938,7 +2938,7 @@ export const CombinedTimelineView = () => {
   const [viewMode, setViewMode] = useState('list'); // 'list', 'week', 'month'
   const [selectedItem, setSelectedItem] = useState(null);
   // New sorting options
-  const [sortBy, setSortBy] = useState('date'); // 'date', 'estimatedCost', 'duration'
+  const [sortBy, setSortBy] = useState('date'); // 'date', 'estimated_cost', 'duration'
   const [sortDir, setSortDir] = useState('asc'); // 'asc', 'desc'
   // New filtering options
   const [filterTeamMembers, setFilterTeamMembers] = useState([]); // Multi-select team member IDs
@@ -3012,9 +3012,9 @@ export const CombinedTimelineView = () => {
           name: song.title,
           category: task.category || song.category,
           status: task.status,
-          estimatedCost: task.estimatedCost || 0,
-          quotedCost: task.quotedCost || 0,
-          paidCost: task.paidCost || 0,
+          estimated_cost: task.estimated_cost || 0,
+          quoted_cost: task.quoted_cost || 0,
+          amount_paid: task.amount_paid || 0,
           assignedMembers: task.assignedMembers || [],
           notes: task.notes,
           songId: song.id,
@@ -3033,9 +3033,9 @@ export const CombinedTimelineView = () => {
           name: song.title,
           category: song.category,
           status: task.status,
-          estimatedCost: task.estimatedCost || 0,
-          quotedCost: task.quotedCost || 0,
-          paidCost: task.paidCost || 0,
+          estimated_cost: task.estimated_cost || 0,
+          quoted_cost: task.quoted_cost || 0,
+          amount_paid: task.amount_paid || 0,
           assignedMembers: task.assignedMembers || [],
           notes: task.description || task.notes,
           songId: song.id,
@@ -3055,9 +3055,9 @@ export const CombinedTimelineView = () => {
             name: `${version.name} (${song.title})`,
             category: task.category || 'Version',
             status: task.status,
-            estimatedCost: task.estimatedCost || 0,
-            quotedCost: task.quotedCost || 0,
-            paidCost: task.paidCost || 0,
+            estimated_cost: task.estimated_cost || 0,
+            quoted_cost: task.quoted_cost || 0,
+            amount_paid: task.amount_paid || 0,
             assignedMembers: task.assignedMembers || [],
             notes: task.notes,
             songId: song.id,
@@ -3079,9 +3079,9 @@ export const CombinedTimelineView = () => {
             name: `${video.title} (${song.title})`,
             category: 'Video',
             status: task.status,
-            estimatedCost: task.estimatedCost || 0,
-            quotedCost: task.quotedCost || 0,
-            paidCost: task.paidCost || 0,
+            estimated_cost: task.estimated_cost || 0,
+            quoted_cost: task.quoted_cost || 0,
+            amount_paid: task.amount_paid || 0,
             assignedMembers: task.assignedMembers || [],
             notes: task.notes,
             songId: song.id,
@@ -3100,9 +3100,9 @@ export const CombinedTimelineView = () => {
             name: video.title,
             category: 'Video',
             status: null,
-            estimatedCost: video.estimatedCost || 0,
-            quotedCost: video.quotedCost || 0,
-            paidCost: video.paidCost || 0,
+            estimated_cost: video.estimated_cost || 0,
+            quoted_cost: video.quoted_cost || 0,
+            amount_paid: video.amount_paid || 0,
             assignedMembers: [],
             notes: null,
             songId: song.id,
@@ -3121,9 +3121,9 @@ export const CombinedTimelineView = () => {
           name: song.title,
           category: 'Exclusive',
           status: null,
-          estimatedCost: 0,
-          quotedCost: 0,
-          paidCost: 0,
+          estimated_cost: 0,
+          quoted_cost: 0,
+          amount_paid: 0,
           assignedMembers: [],
           notes: song.exclusiveNotes,
           songId: song.id,
@@ -3143,9 +3143,9 @@ export const CombinedTimelineView = () => {
           name: song.title,
           category: 'Exclusive',
           status: null,
-          estimatedCost: 0,
-          quotedCost: 0,
-          paidCost: 0,
+          estimated_cost: 0,
+          quoted_cost: 0,
+          amount_paid: 0,
           assignedMembers: [],
           notes: song.exclusiveNotes,
           songId: song.id,
@@ -3169,9 +3169,9 @@ export const CombinedTimelineView = () => {
           name: `${video.title} (Standalone)`,
           category: 'Video',
           status: task.status,
-          estimatedCost: task.estimatedCost || 0,
-          quotedCost: task.quotedCost || 0,
-          paidCost: task.paidCost || 0,
+          estimated_cost: task.estimated_cost || 0,
+          quoted_cost: task.quoted_cost || 0,
+          amount_paid: task.amount_paid || 0,
           assignedMembers: task.assignedMembers || [],
           notes: task.notes,
           songId: null,
@@ -3188,9 +3188,9 @@ export const CombinedTimelineView = () => {
           name: `${video.title} (Standalone)`,
           category: 'Video',
           status: null,
-          estimatedCost: video.estimatedCost || 0,
-          quotedCost: video.quotedCost || 0,
-          paidCost: video.paidCost || 0,
+          estimated_cost: video.estimated_cost || 0,
+          quoted_cost: video.quoted_cost || 0,
+          amount_paid: video.amount_paid || 0,
           assignedMembers: [],
           notes: video.notes,
           songId: null,
@@ -3205,8 +3205,8 @@ export const CombinedTimelineView = () => {
       // Calculate cost from tasks
       const eventTasks = [...(event.tasks || []), ...(event.customTasks || [])];
       const taskCost = eventTasks.reduce((sum, t) => sum + getEffectiveCost(t), 0);
-      const taskQuotedCost = eventTasks.reduce((sum, t) => sum + (t.quotedCost || 0), 0);
-      const taskPaidCost = eventTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0);
+      const taskQuotedCost = eventTasks.reduce((sum, t) => sum + (t.quoted_cost || 0), 0);
+      const taskPaidCost = eventTasks.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
       if (eventDate) {
         items.push({
           id: 'event-' + event.id,
@@ -3216,9 +3216,9 @@ export const CombinedTimelineView = () => {
           name: event.title,
           category: 'Event',
           status: null,
-          estimatedCost: taskCost,
-          quotedCost: taskQuotedCost,
-          paidCost: taskPaidCost,
+          estimated_cost: taskCost,
+          quoted_cost: taskQuotedCost,
+          amount_paid: taskPaidCost,
           assignedMembers: [],
           notes: event.description,
           songId: null,
@@ -3238,9 +3238,9 @@ export const CombinedTimelineView = () => {
             name: event.title,
             category: 'Event',
             status: task.status,
-            estimatedCost: task.estimatedCost || 0,
-            quotedCost: task.quotedCost || 0,
-            paidCost: task.paidCost || 0,
+            estimated_cost: task.estimated_cost || 0,
+            quoted_cost: task.quoted_cost || 0,
+            amount_paid: task.amount_paid || 0,
             assignedMembers: task.assignedMembers || [],
             notes: task.notes || task.description,
             songId: null,
@@ -3261,9 +3261,9 @@ export const CombinedTimelineView = () => {
             name: event.title,
             category: 'Event',
             status: task.status,
-            estimatedCost: task.estimatedCost || 0,
-            quotedCost: task.quotedCost || 0,
-            paidCost: task.paidCost || 0,
+            estimated_cost: task.estimated_cost || 0,
+            quoted_cost: task.quoted_cost || 0,
+            amount_paid: task.amount_paid || 0,
             assignedMembers: task.assignedMembers || [],
             notes: task.notes || task.description,
             songId: null,
@@ -3284,9 +3284,9 @@ export const CombinedTimelineView = () => {
         name: task.taskName,
         category: task.category,
         status: task.status,
-        estimatedCost: task.estimatedCost || 0,
-        quotedCost: task.quotedCost || 0,
-        paidCost: task.paidCost || 0,
+        estimated_cost: task.estimated_cost || 0,
+        quoted_cost: task.quoted_cost || 0,
+        amount_paid: task.amount_paid || 0,
         assignedMembers: task.assignedMembers || [],
         notes: task.description,
         songId: null,
@@ -3306,9 +3306,9 @@ export const CombinedTimelineView = () => {
         name: release.name,
         category: release.type, 
         status: null, 
-        estimatedCost: release.estimatedCost || 0, 
-        quotedCost: release.quotedCost || 0,
-        paidCost: release.paidCost || 0,
+        estimated_cost: release.estimated_cost || 0, 
+        quoted_cost: release.quoted_cost || 0,
+        amount_paid: release.amount_paid || 0,
         assignedMembers: [],
         notes: release.notes, 
         songId: null,
@@ -3326,9 +3326,9 @@ export const CombinedTimelineView = () => {
           name: release.name,
           category: task.category, 
           status: task.status, 
-          estimatedCost: task.estimatedCost || 0, 
-          quotedCost: task.quotedCost || 0,
-          paidCost: task.paidCost || 0,
+          estimated_cost: task.estimated_cost || 0, 
+          quoted_cost: task.quoted_cost || 0,
+          amount_paid: task.amount_paid || 0,
           assignedMembers: task.assignedMembers || [],
           notes: task.notes, 
           songId: null,
@@ -3346,9 +3346,9 @@ export const CombinedTimelineView = () => {
           name: release.name,
           category: 'Release Exclusive',
           status: null,
-          estimatedCost: 0,
-          quotedCost: 0,
-          paidCost: 0,
+          estimated_cost: 0,
+          quoted_cost: 0,
+          amount_paid: 0,
           assignedMembers: [],
           notes: release.exclusiveNotes,
           songId: null,
@@ -3378,8 +3378,8 @@ export const CombinedTimelineView = () => {
     // Cost Status filter: Show only unpaid tasks (has estimatedCost/quotedCost but paidCost is 0 or undefined)
     if (filterCostStatus === 'unpaid') {
       filtered = filtered.filter(i => {
-        const hasCost = (i.estimatedCost > 0) || (i.quotedCost > 0);
-        const isPaid = i.paidCost > 0;
+        const hasCost = (i.estimated_cost > 0) || (i.quoted_cost > 0);
+        const isPaid = i.amount_paid > 0;
         return hasCost && !isPaid;
       });
     }
@@ -3391,9 +3391,9 @@ export const CombinedTimelineView = () => {
       if (sortBy === 'date') {
         valA = a.date || '';
         valB = b.date || '';
-      } else if (sortBy === 'estimatedCost') {
-        valA = a.estimatedCost || 0;
-        valB = b.estimatedCost || 0;
+      } else if (sortBy === 'estimated_cost') {
+        valA = a.estimated_cost || 0;
+        valB = b.estimated_cost || 0;
       } else if (sortBy === 'duration') {
         // Duration is not directly available on all items, use 0 as default
         // For tasks, duration could be derived from start/end dates if available
@@ -3598,7 +3598,7 @@ export const CombinedTimelineView = () => {
                         ? 'bg-red-200'
                         : 'bg-gray-200'
                 )}>{item.status}</span>}</td>
-                <td className="p-3 text-right">{formatMoney(item.estimatedCost || 0)}</td>
+                <td className="p-3 text-right">{formatMoney(item.estimated_cost || 0)}</td>
                 <td className="p-3 max-w-xs truncate">{item.notes || '-'}</td>
               </tr>
             ))}
@@ -3620,7 +3620,7 @@ export const CombinedTimelineView = () => {
               <div><span className="font-bold">Date:</span> {selectedItem.date || '-'}</div>
               <div><span className="font-bold">Category:</span> {selectedItem.category}</div>
               {selectedItem.status && <div><span className="font-bold">Status:</span> {selectedItem.status}</div>}
-              {selectedItem.estimatedCost > 0 && <div><span className="font-bold">Est. Cost:</span> {formatMoney(selectedItem.estimatedCost)}</div>}
+              {selectedItem.estimated_cost > 0 && <div><span className="font-bold">Est. Cost:</span> {formatMoney(selectedItem.estimated_cost)}</div>}
               {selectedItem.notes && <div><span className="font-bold">Notes:</span> {selectedItem.notes}</div>}
               {selectedItem.exclusiveEndDate && <div><span className="font-bold">Exclusivity Ends:</span> {selectedItem.exclusiveEndDate}</div>}
             </div>
@@ -3941,9 +3941,9 @@ export const TaskDashboardView = () => {
     category: task.category || 'Other',
     date: task.date,
     status: task.status,
-    estimatedCost: task.estimatedCost,
-    quotedCost: task.quotedCost,
-    paidCost: task.paidCost,
+    estimated_cost: task.estimated_cost,
+    quoted_cost: task.quoted_cost,
+    amount_paid: task.amount_paid,
     source: task.source,
     sourceName: task.sourceName,
     sourceType: task.source.toLowerCase().replace(/\s+/g, '-'),
@@ -4726,9 +4726,9 @@ export const FinancialsView = () => {
   
   // Get cost value based on selected mode
   const getCostValue = useCallback((item) => {
-    if (costMode === 'paid') return item.paidCost || item.amount_paid || 0;
-    if (costMode === 'quoted') return item.quotedCost || item.quoted_cost || 0;
-    if (costMode === 'estimated') return item.estimatedCost || item.estimated_cost || 0;
+    if (costMode === 'paid') return item.amount_paid || item.amount_paid || 0;
+    if (costMode === 'quoted') return item.quoted_cost || item.quoted_cost || 0;
+    if (costMode === 'estimated') return item.estimated_cost || item.estimated_cost || 0;
     return getEffectiveCost(item);
   }, [costMode]);
   
@@ -4740,8 +4740,8 @@ export const FinancialsView = () => {
     (data.songs || []).forEach(song => {
       // Apply filters
       if (filterSong !== 'all' && song.id !== filterSong) return;
-      if (filterEra !== 'all' && !(song.eraIds || []).includes(filterEra)) return;
-      if (filterStage !== 'all' && !(song.stageIds || []).includes(filterStage)) return;
+      if (filterEra !== 'all' && !(song.era_ids || []).includes(filterEra)) return;
+      if (filterStage !== 'all' && !(song.stage_ids || []).includes(filterStage)) return;
       if (filterRelease !== 'all' && song.coreReleaseId !== filterRelease && 
           !(song.versions || []).some(v => (v.releaseIds || []).includes(filterRelease))) return;
       if (filterItemType !== 'all' && filterItemType !== 'song') return;
@@ -4754,13 +4754,13 @@ export const FinancialsView = () => {
           source: 'Song',
           sourceId: song.id,
           itemType: 'song',
-          estimatedCost: song.estimatedCost || 0,
-          quotedCost: song.quotedCost || 0,
-          paidCost: song.paidCost || 0,
+          estimated_cost: song.estimated_cost || 0,
+          quoted_cost: song.quoted_cost || 0,
+          amount_paid: song.amount_paid || 0,
           effectiveCost: getEffectiveCost(song),
           date: song.releaseDate,
-          eraIds: song.eraIds,
-          stageIds: song.stageIds
+          era_ids: song.era_ids,
+          stage_ids: song.stage_ids
         });
       }
       
@@ -4774,13 +4774,13 @@ export const FinancialsView = () => {
             source: 'Song Task',
             sourceId: song.id,
             itemType: 'task',
-            estimatedCost: task.estimatedCost || 0,
-            quotedCost: task.quotedCost || 0,
-            paidCost: task.paidCost || 0,
+            estimated_cost: task.estimated_cost || 0,
+            quoted_cost: task.quoted_cost || 0,
+            amount_paid: task.amount_paid || 0,
             effectiveCost: getEffectiveCost(task),
             date: task.date,
-            eraIds: task.eraIds || song.eraIds,
-            stageIds: task.stageIds || song.stageIds
+            era_ids: task.era_ids || song.era_ids,
+            stage_ids: task.stage_ids || song.stage_ids
           });
         }
       });
@@ -4795,13 +4795,13 @@ export const FinancialsView = () => {
             source: 'Song Custom',
             sourceId: song.id,
             itemType: 'task',
-            estimatedCost: task.estimatedCost || 0,
-            quotedCost: task.quotedCost || 0,
-            paidCost: task.paidCost || 0,
+            estimated_cost: task.estimated_cost || 0,
+            quoted_cost: task.quoted_cost || 0,
+            amount_paid: task.amount_paid || 0,
             effectiveCost: getEffectiveCost(task),
             date: task.date,
-            eraIds: task.eraIds || song.eraIds,
-            stageIds: task.stageIds || song.stageIds
+            era_ids: task.era_ids || song.era_ids,
+            stage_ids: task.stage_ids || song.stage_ids
           });
         }
       });
@@ -4817,13 +4817,13 @@ export const FinancialsView = () => {
             source: 'Version',
             sourceId: song.id,
             itemType: 'version',
-            estimatedCost: v.estimatedCost || 0,
-            quotedCost: v.quotedCost || 0,
-            paidCost: v.paidCost || 0,
+            estimated_cost: v.estimated_cost || 0,
+            quoted_cost: v.quoted_cost || 0,
+            amount_paid: v.amount_paid || 0,
             effectiveCost: getEffectiveCost(v),
             date: v.releaseDate,
-            eraIds: v.eraIds || song.eraIds,
-            stageIds: v.stageIds || song.stageIds
+            era_ids: v.era_ids || song.era_ids,
+            stage_ids: v.stage_ids || song.stage_ids
           });
         }
         
@@ -4837,13 +4837,13 @@ export const FinancialsView = () => {
               source: 'Version Task',
               sourceId: song.id,
               itemType: 'task',
-              estimatedCost: task.estimatedCost || 0,
-              quotedCost: task.quotedCost || 0,
-              paidCost: task.paidCost || 0,
+              estimated_cost: task.estimated_cost || 0,
+              quoted_cost: task.quoted_cost || 0,
+              amount_paid: task.amount_paid || 0,
               effectiveCost: getEffectiveCost(task),
               date: task.date,
-              eraIds: task.eraIds || v.eraIds || song.eraIds,
-              stageIds: task.stageIds || v.stageIds || song.stageIds
+              era_ids: task.era_ids || v.era_ids || song.era_ids,
+              stage_ids: task.stage_ids || v.stage_ids || song.stage_ids
             });
           }
         });
@@ -4860,13 +4860,13 @@ export const FinancialsView = () => {
             source: 'Video',
             sourceId: song.id,
             itemType: 'video',
-            estimatedCost: video.estimatedCost || 0,
-            quotedCost: video.quotedCost || 0,
-            paidCost: video.paidCost || 0,
+            estimated_cost: video.estimated_cost || 0,
+            quoted_cost: video.quoted_cost || 0,
+            amount_paid: video.amount_paid || 0,
             effectiveCost: getEffectiveCost(video),
             date: video.releaseDate,
-            eraIds: video.eraIds || song.eraIds,
-            stageIds: video.stageIds || song.stageIds
+            era_ids: video.era_ids || song.era_ids,
+            stage_ids: video.stage_ids || song.stage_ids
           });
         }
       });
@@ -4885,13 +4885,13 @@ export const FinancialsView = () => {
           source: 'Release',
           sourceId: release.id,
           itemType: 'release',
-          estimatedCost: release.estimatedCost || 0,
-          quotedCost: release.quotedCost || 0,
-          paidCost: release.paidCost || 0,
+          estimated_cost: release.estimated_cost || 0,
+          quoted_cost: release.quoted_cost || 0,
+          amount_paid: release.amount_paid || 0,
           effectiveCost: getEffectiveCost(release),
           date: release.releaseDate,
-          eraIds: release.eraIds,
-          stageIds: release.stageIds
+          era_ids: release.era_ids,
+          stage_ids: release.stage_ids
         });
       }
       
@@ -4905,13 +4905,13 @@ export const FinancialsView = () => {
             source: 'Release Task',
             sourceId: release.id,
             itemType: 'task',
-            estimatedCost: task.estimatedCost || 0,
-            quotedCost: task.quotedCost || 0,
-            paidCost: task.paidCost || 0,
+            estimated_cost: task.estimated_cost || 0,
+            quoted_cost: task.quoted_cost || 0,
+            amount_paid: task.amount_paid || 0,
             effectiveCost: getEffectiveCost(task),
             date: task.date,
-            eraIds: task.eraIds || release.eraIds,
-            stageIds: task.stageIds || release.stageIds
+            era_ids: task.era_ids || release.era_ids,
+            stage_ids: task.stage_ids || release.stage_ids
           });
         }
       });
@@ -4928,13 +4928,13 @@ export const FinancialsView = () => {
           source: 'Global Task',
           sourceId: task.id,
           itemType: 'global',
-          estimatedCost: task.estimatedCost || 0,
-          quotedCost: task.quotedCost || 0,
-          paidCost: task.paidCost || 0,
+          estimated_cost: task.estimated_cost || 0,
+          quoted_cost: task.quoted_cost || 0,
+          amount_paid: task.amount_paid || 0,
           effectiveCost: getEffectiveCost(task),
           date: task.date,
-          eraIds: task.eraIds,
-          stageIds: task.stageIds,
+          era_ids: task.era_ids,
+          stage_ids: task.stage_ids,
           category: task.category
         });
       }
@@ -4953,13 +4953,13 @@ export const FinancialsView = () => {
           source: 'Event',
           sourceId: event.id,
           itemType: 'event',
-          estimatedCost: eventTasks.reduce((sum, t) => sum + (t.estimatedCost || 0), 0),
-          quotedCost: eventTasks.reduce((sum, t) => sum + (t.quotedCost || 0), 0),
-          paidCost: eventTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0),
+          estimated_cost: eventTasks.reduce((sum, t) => sum + (t.estimated_cost || 0), 0),
+          quoted_cost: eventTasks.reduce((sum, t) => sum + (t.quoted_cost || 0), 0),
+          amount_paid: eventTasks.reduce((sum, t) => sum + (t.amount_paid || 0), 0),
           effectiveCost: taskCost,
           date: event.date,
-          eraIds: event.eraIds,
-          stageIds: event.stageIds
+          era_ids: event.era_ids,
+          stage_ids: event.stage_ids
         });
       }
     });
@@ -4976,13 +4976,13 @@ export const FinancialsView = () => {
           source: 'Expense',
           sourceId: expense.id,
           itemType: 'expense',
-          estimatedCost: expense.estimatedCost || 0,
-          quotedCost: expense.quotedCost || 0,
-          paidCost: expense.paidCost || 0,
+          estimated_cost: expense.estimated_cost || 0,
+          quoted_cost: expense.quoted_cost || 0,
+          amount_paid: expense.amount_paid || 0,
           effectiveCost: getEffectiveCost(expense),
           date: expense.date,
-          eraIds: expense.eraIds,
-          stageIds: expense.stageIds
+          era_ids: expense.era_ids,
+          stage_ids: expense.stage_ids
         });
       }
     });
@@ -4993,9 +4993,9 @@ export const FinancialsView = () => {
   // Calculate totals
   const totals = useMemo(() => {
     return costItems.reduce((acc, item) => ({
-      estimated: acc.estimated + (item.estimatedCost || 0),
-      quoted: acc.quoted + (item.quotedCost || 0),
-      paid: acc.paid + (item.paidCost || 0),
+      estimated: acc.estimated + (item.estimated_cost || 0),
+      quoted: acc.quoted + (item.quoted_cost || 0),
+      paid: acc.paid + (item.amount_paid || 0),
       effective: acc.effective + (item.effectiveCost || 0)
     }), { estimated: 0, quoted: 0, paid: 0, effective: 0 });
   }, [costItems]);
@@ -5008,9 +5008,9 @@ export const FinancialsView = () => {
         groups[item.source] = { count: 0, estimated: 0, quoted: 0, paid: 0, effective: 0 };
       }
       groups[item.source].count++;
-      groups[item.source].estimated += item.estimatedCost || 0;
-      groups[item.source].quoted += item.quotedCost || 0;
-      groups[item.source].paid += item.paidCost || 0;
+      groups[item.source].estimated += item.estimated_cost || 0;
+      groups[item.source].quoted += item.quoted_cost || 0;
+      groups[item.source].paid += item.amount_paid || 0;
       groups[item.source].effective += item.effectiveCost || 0;
     });
     return groups;
@@ -5038,7 +5038,7 @@ export const FinancialsView = () => {
   const exportFinancialCsv = () => {
     const rows = [
       ['Name', 'Source', 'Date', 'Estimated', 'Quoted', 'Paid', 'Effective'],
-      ...costItems.map(i => [i.name, i.source, i.date || '', i.estimatedCost || 0, i.quotedCost || 0, i.paidCost || 0, i.effectiveCost || 0])
+      ...costItems.map(i => [i.name, i.source, i.date || '', i.estimated_cost || 0, i.quoted_cost || 0, i.amount_paid || 0, i.effectiveCost || 0])
     ];
     const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -5308,9 +5308,9 @@ export const FinancialsView = () => {
                     {item.source}
                   </span>
                 </td>
-                <td className="p-3 text-right">{formatMoney(item.estimatedCost)}</td>
-                <td className="p-3 text-right">{formatMoney(item.quotedCost)}</td>
-                <td className="p-3 text-right text-green-600 font-bold">{formatMoney(item.paidCost)}</td>
+                <td className="p-3 text-right">{formatMoney(item.estimated_cost)}</td>
+                <td className="p-3 text-right">{formatMoney(item.quoted_cost)}</td>
+                <td className="p-3 text-right text-green-600 font-bold">{formatMoney(item.amount_paid)}</td>
                 <td className="p-3 text-right text-pink-600 font-bold">{formatMoney(item.effectiveCost)}</td>
               </tr>
             ))}
@@ -5339,9 +5339,9 @@ export const ProgressView = () => {
     // Songs
     (data.songs || []).forEach(song => {
       if (filterSong !== 'all' && song.id !== filterSong) return;
-      if (filterEra !== 'all' && !(song.eraIds || []).includes(filterEra)) return;
-      if (filterStage !== 'all' && !(song.stageIds || []).includes(filterStage)) return;
-      if (filterTag !== 'all' && !(song.tagIds || []).includes(filterTag)) return;
+      if (filterEra !== 'all' && !(song.era_ids || []).includes(filterEra)) return;
+      if (filterStage !== 'all' && !(song.stage_ids || []).includes(filterStage)) return;
+      if (filterTag !== 'all' && !(song.tag_ids || []).includes(filterTag)) return;
       if (filterRelease !== 'all' && song.coreReleaseId !== filterRelease) return;
       if (filterItemType !== 'all' && filterItemType !== 'song') return;
       
@@ -5360,9 +5360,9 @@ export const ProgressView = () => {
         totalTasks: progress.totalTasks,
         pointsEarned: progress.pointsEarned,
         progress: progress.progress,
-        eraIds: song.eraIds,
-        stageIds: song.stageIds,
-        tagIds: song.tagIds
+        era_ids: song.era_ids,
+        stage_ids: song.stage_ids,
+        tag_ids: song.tag_ids
       });
       
       // Individual versions
@@ -5379,9 +5379,9 @@ export const ProgressView = () => {
           totalTasks: vProgress.totalTasks,
           pointsEarned: vProgress.pointsEarned,
           progress: vProgress.progress,
-          eraIds: v.eraIds || song.eraIds,
-          stageIds: v.stageIds || song.stageIds,
-          tagIds: v.tagIds || song.tagIds
+          era_ids: v.era_ids || song.era_ids,
+          stage_ids: v.stage_ids || song.stage_ids,
+          tag_ids: v.tag_ids || song.tag_ids
         });
       });
       
@@ -5399,9 +5399,9 @@ export const ProgressView = () => {
           totalTasks: vProgress.totalTasks,
           pointsEarned: vProgress.pointsEarned,
           progress: vProgress.progress,
-          eraIds: video.eraIds || song.eraIds,
-          stageIds: video.stageIds || song.stageIds,
-          tagIds: video.tagIds || song.tagIds
+          era_ids: video.era_ids || song.era_ids,
+          stage_ids: video.stage_ids || song.stage_ids,
+          tag_ids: video.tag_ids || song.tag_ids
         });
       });
     });
@@ -5422,9 +5422,9 @@ export const ProgressView = () => {
         totalTasks: progress.totalTasks,
         pointsEarned: progress.pointsEarned,
         progress: progress.progress,
-        eraIds: release.eraIds,
-        stageIds: release.stageIds,
-        tagIds: release.tagIds
+        era_ids: release.era_ids,
+        stage_ids: release.stage_ids,
+        tag_ids: release.tag_ids
       });
     });
     
@@ -5443,9 +5443,9 @@ export const ProgressView = () => {
         totalTasks: progress.totalTasks,
         pointsEarned: progress.pointsEarned,
         progress: progress.progress,
-        eraIds: event.eraIds,
-        stageIds: event.stageIds,
-        tagIds: event.tagIds
+        era_ids: event.era_ids,
+        stage_ids: event.stage_ids,
+        tag_ids: event.tag_ids
       });
     });
     
@@ -5648,7 +5648,7 @@ export const EventsListView = ({ onSelectEvent, onEventCreated }) => {
       title: 'New Event', 
       date: new Date().toISOString().split('T')[0], 
       type: 'Standalone Event',
-      eraIds: defaultEraIds
+      era_ids: defaultEraIds
     }, false);
     onEventCreated?.(newEvent);
     if (onSelectEvent) onSelectEvent(newEvent);
@@ -5668,7 +5668,7 @@ export const EventsListView = ({ onSelectEvent, onEventCreated }) => {
     { field: 'time', label: 'Time' },
     { field: 'location', label: 'Location' },
     { field: 'progress', label: 'Progress', align: 'right', render: (item) => `${eventProgress(item)}%` },
-    { field: 'estimatedCost', label: 'Task Cost', sortable: true, align: 'right', render: (item) => formatMoney(eventCost(item)) }
+    { field: 'estimated_cost', label: 'Task Cost', sortable: true, align: 'right', render: (item) => formatMoney(eventCost(item)) }
   ];
 
   // Filter options
@@ -5746,18 +5746,18 @@ export const EventDetailView = ({ event, onBack }) => {
       await actions.addEventCustomTask(event.id, {
         title: editingTask.type || editingTask.title || 'New Task',
         type: editingTask.type || editingTask.title || 'Custom',
-        date: editingTask.date || editingTask.dueDate || '',
-        dueDate: editingTask.date || editingTask.dueDate || '',
+        date: editingTask.date || editingTask.due_date || '',
+        due_date: editingTask.date || editingTask.due_date || '',
         status: editingTask.status || 'Not Started',
-        estimatedCost: editingTask.estimatedCost || 0,
-        quotedCost: editingTask.quotedCost || 0,
-        paidCost: editingTask.paidCost || 0,
+        estimated_cost: editingTask.estimated_cost || 0,
+        quoted_cost: editingTask.quoted_cost || 0,
+        amount_paid: editingTask.amount_paid || 0,
         notes: editingTask.notes || editingTask.description || '',
         description: editingTask.description || editingTask.notes || '',
         assignedMembers: editingTask.assignedMembers || [],
-        eraIds: editingTask.eraIds || [],
-        stageIds: editingTask.stageIds || [],
-        tagIds: editingTask.tagIds || [],
+        era_ids: editingTask.era_ids || [],
+        stage_ids: editingTask.stage_ids || [],
+        tag_ids: editingTask.tag_ids || [],
         isAutoTask: false
       });
     } else if (editingTaskContext.type === 'auto') {
@@ -5778,7 +5778,7 @@ export const EventDetailView = ({ event, onBack }) => {
   const { progress: eventProgressValue } = calculateTaskProgress(allEventTasks);
   
   // Phase 2: Calculate costs from tasks only - events derive cost from tasks
-  const costPaid = useMemo(() => allEventTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0), [allEventTasks]);
+  const costPaid = useMemo(() => allEventTasks.reduce((sum, t) => sum + (t.amount_paid || 0), 0), [allEventTasks]);
   const estimatedCost = useMemo(() => allEventTasks.reduce((sum, t) => sum + getEffectiveCost(t), 0), [allEventTasks]);
   
   // Calculate overdue tasks
@@ -5825,7 +5825,7 @@ export const EventDetailView = ({ event, onBack }) => {
         { key: 'overdueTasks', label: 'Overdue Tasks', bgClass: overdueTasks.length > 0 ? 'bg-red-200' : 'bg-green-100', render: () => overdueTasks.length },
         { key: 'entryCost', label: 'Entry Cost', bgClass: 'bg-purple-100', render: (item) => formatMoney(item.entryCost || 0) },
         { key: 'costPaid', label: 'Task Cost Paid', bgClass: 'bg-green-100', render: () => formatMoney(costPaid) },
-        { key: 'estimatedCost', label: 'Total Task Cost', bgClass: 'bg-yellow-100', render: () => formatMoney(estimatedCost) },
+        { key: 'estimated_cost', label: 'Total Task Cost', bgClass: 'bg-yellow-100', render: () => formatMoney(estimatedCost) },
         { 
           key: 'teamMembers',
           label: 'Team Members on Tasks',
@@ -6159,7 +6159,7 @@ export const EventDetailView = ({ event, onBack }) => {
                   title: 'New Task',
                   date: '',
                   description: '',
-                  estimatedCost: 0,
+                  estimated_cost: 0,
                   status: 'Not Started',
                   notes: '',
                   isAutoTask: false
@@ -6252,14 +6252,14 @@ export const EventDetailView = ({ event, onBack }) => {
       {/* Era, Stage & Tags Module - Consistent across all Item pages */}
       <EraStageTagsModule
         value={{
-          eraIds: form.eraIds || [],
-          stageIds: form.stageIds || [],
-          tagIds: form.tagIds || []
+          era_ids: form.era_ids || [],
+          stage_ids: form.stage_ids || [],
+          tag_ids: form.tag_ids || []
         }}
         onChange={({ eraIds, stageIds, tagIds }) => {
-          handleFieldChange('eraIds', eraIds);
-          handleFieldChange('stageIds', stageIds);
-          handleFieldChange('tagIds', tagIds);
+          handleFieldChange('era_ids', eraIds);
+          handleFieldChange('stage_ids', stageIds);
+          handleFieldChange('tag_ids', tagIds);
         }}
         onSave={handleSave}
       />
@@ -6291,8 +6291,8 @@ export const EventDetailView = ({ event, onBack }) => {
                 <label className="block text-xs font-bold uppercase mb-1">Due Date</label>
                 <input 
                   type="date" 
-                  value={editingTask.date || editingTask.dueDate || ''} 
-                  onChange={e => setEditingTask(prev => ({ ...prev, date: e.target.value, dueDate: e.target.value }))} 
+                  value={editingTask.date || editingTask.due_date || ''} 
+                  onChange={e => setEditingTask(prev => ({ ...prev, date: e.target.value, due_date: e.target.value }))} 
                   className={cn("w-full", THEME.punk.input)}
                 />
               </div>
@@ -6315,8 +6315,8 @@ export const EventDetailView = ({ event, onBack }) => {
                   <label className="block text-xs font-bold uppercase mb-1">Estimated</label>
                   <input 
                     type="number" 
-                    value={editingTask.estimatedCost || 0} 
-                    onChange={e => setEditingTask(prev => ({ ...prev, estimatedCost: parseFloat(e.target.value) || 0 }))} 
+                    value={editingTask.estimated_cost || 0} 
+                    onChange={e => setEditingTask(prev => ({ ...prev, estimated_cost: parseFloat(e.target.value) || 0 }))} 
                     className={cn("w-full text-sm", THEME.punk.input)} 
                   />
                 </div>
@@ -6324,8 +6324,8 @@ export const EventDetailView = ({ event, onBack }) => {
                   <label className="block text-xs font-bold uppercase mb-1">Quoted</label>
                   <input 
                     type="number" 
-                    value={editingTask.quotedCost || 0} 
-                    onChange={e => setEditingTask(prev => ({ ...prev, quotedCost: parseFloat(e.target.value) || 0 }))} 
+                    value={editingTask.quoted_cost || 0} 
+                    onChange={e => setEditingTask(prev => ({ ...prev, quoted_cost: parseFloat(e.target.value) || 0 }))} 
                     className={cn("w-full text-sm", THEME.punk.input)} 
                   />
                 </div>
@@ -6333,8 +6333,8 @@ export const EventDetailView = ({ event, onBack }) => {
                   <label className="block text-xs font-bold uppercase mb-1">Paid</label>
                   <input 
                     type="number" 
-                    value={editingTask.paidCost || 0} 
-                    onChange={e => setEditingTask(prev => ({ ...prev, paidCost: parseFloat(e.target.value) || 0 }))} 
+                    value={editingTask.amount_paid || 0} 
+                    onChange={e => setEditingTask(prev => ({ ...prev, amount_paid: parseFloat(e.target.value) || 0 }))} 
                     className={cn("w-full text-sm", THEME.punk.input)} 
                   />
                 </div>
@@ -6451,7 +6451,7 @@ export const ExpensesListView = ({ onSelectExpense, onExpenseCreated }) => {
     { field: 'category', label: 'Category', sortable: true },
     { field: 'date', label: 'Date', sortable: true },
     { field: 'status', label: 'Status' },
-    { field: 'paidCost', label: 'Amount', sortable: true, align: 'right', render: (item) => (
+    { field: 'amount_paid', label: 'Amount', sortable: true, align: 'right', render: (item) => (
       <span className="font-bold text-green-600">{formatMoney(getEffectiveCost(item))}</span>
     )}
   ];
@@ -6556,7 +6556,7 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
 
   // SPECIAL VALIDATION: When status changes to Complete, check if paidCost > 0
   const handleStatusChange = (newStatus) => {
-    if (newStatus === 'Complete' && (!form.paidCost || form.paidCost <= 0)) {
+    if (newStatus === 'Complete' && (!form.amount_paid || form.amount_paid <= 0)) {
       setStatusWarning('Cannot set status to Complete without a Paid Amount greater than 0.');
       return;
     }
@@ -6584,10 +6584,10 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
         },
         { key: 'date', label: 'Date', bgClass: 'bg-blue-100', default: 'Not Set' },
         { 
-          key: 'paidCost', 
+          key: 'amount_paid', 
           label: 'Amount Paid', 
           bgClass: 'bg-green-100',
-          render: (item) => formatMoney(item.paidCost || 0)
+          render: (item) => formatMoney(item.amount_paid || 0)
         },
         { key: 'category', label: 'Category', bgClass: 'bg-purple-100', default: 'General' },
         { 
@@ -6595,10 +6595,10 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
           label: 'Vendor/Payee', 
           colSpan: 2,
           render: (item) => {
-            if (item.vendorMode === 'teamMember' && (item.teamMemberIds || []).length > 0) {
+            if (item.vendorMode === 'teamMember' && (item.team_member_ids || []).length > 0) {
               return (
                 <div className="flex flex-wrap gap-1">
-                  {(item.teamMemberIds || []).map(id => {
+                  {(item.team_member_ids || []).map(id => {
                     const member = (data.teamMembers || []).find(m => m.id === id);
                     return member ? <span key={id} className="px-2 py-1 bg-blue-100 border border-blue-300 text-xs">{member.name}</span> : null;
                   })}
@@ -6646,15 +6646,15 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
         </div>
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Estimated Cost</label>
-          <input type="number" value={form.estimatedCost || 0} onChange={e => handleFieldChange('estimatedCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+          <input type="number" value={form.estimated_cost || 0} onChange={e => handleFieldChange('estimated_cost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
         </div>
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Quoted Cost</label>
-          <input type="number" value={form.quotedCost || 0} onChange={e => handleFieldChange('quotedCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+          <input type="number" value={form.quoted_cost || 0} onChange={e => handleFieldChange('quoted_cost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
         </div>
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Paid Amount</label>
-          <input type="number" value={form.paidCost || 0} onChange={e => { handleFieldChange('paidCost', parseFloat(e.target.value) || 0); setStatusWarning(''); }} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+          <input type="number" value={form.amount_paid || 0} onChange={e => { handleFieldChange('amount_paid', parseFloat(e.target.value) || 0); setStatusWarning(''); }} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
         </div>
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Receipt Location</label>
@@ -6684,13 +6684,13 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
                 <label key={member.id} className="flex items-center gap-1 text-xs font-bold cursor-pointer">
                   <input 
                     type="checkbox" 
-                    checked={(form.teamMemberIds || []).includes(member.id)} 
+                    checked={(form.team_member_ids || []).includes(member.id)} 
                     onChange={e => {
                       const newIds = e.target.checked 
-                        ? [...(form.teamMemberIds || []), member.id]
-                        : (form.teamMemberIds || []).filter(id => id !== member.id);
-                      handleFieldChange('teamMemberIds', newIds);
-                      actions.updateExpense(expense.id, { ...form, teamMemberIds: newIds });
+                        ? [...(form.team_member_ids || []), member.id]
+                        : (form.team_member_ids || []).filter(id => id !== member.id);
+                      handleFieldChange('team_member_ids', newIds);
+                      actions.updateExpense(expense.id, { ...form, team_member_ids: newIds });
                     }}
                     className="w-3 h-3" 
                   />
@@ -6722,14 +6722,14 @@ export const ExpenseDetailView = ({ expense, onBack }) => {
   const eraStageTagsSection = (
     <EraStageTagsModule
       value={{
-        eraIds: form.eraIds || [],
-        stageIds: form.stageIds || [],
-        tagIds: form.tagIds || []
+        era_ids: form.era_ids || [],
+        stage_ids: form.stage_ids || [],
+        tag_ids: form.tag_ids || []
       }}
       onChange={({ eraIds, stageIds, tagIds }) => {
-        handleFieldChange('eraIds', eraIds);
-        handleFieldChange('stageIds', stageIds);
-        handleFieldChange('tagIds', tagIds);
+        handleFieldChange('era_ids', eraIds);
+        handleFieldChange('stage_ids', stageIds);
+        handleFieldChange('tag_ids', tagIds);
       }}
       onSave={handleSave}
     />
@@ -6984,21 +6984,21 @@ export const VideoDetailView = ({ video, onBack }) => {
       const taskData = {
         title: editingTask.type || editingTask.title || 'New Task',
         type: editingTask.type || editingTask.title || 'Custom',
-        date: editingTask.date || editingTask.dueDate || '',
-        dueDate: editingTask.date || editingTask.dueDate || '',
+        date: editingTask.date || editingTask.due_date || '',
+        due_date: editingTask.date || editingTask.due_date || '',
         status: editingTask.status || 'Not Started',
-        estimatedCost: editingTask.estimatedCost || 0,
-        quotedCost: editingTask.quotedCost || 0,
-        paidCost: editingTask.paidCost || 0,
+        estimated_cost: editingTask.estimated_cost || 0,
+        quoted_cost: editingTask.quoted_cost || 0,
+        amount_paid: editingTask.amount_paid || 0,
         notes: editingTask.notes || editingTask.description || '',
         description: editingTask.description || editingTask.notes || '',
         assignedMembers: editingTask.assignedMembers || [],
-        eraIds: editingTask.eraIds || [],
-        stageIds: editingTask.stageIds || [],
-        tagIds: editingTask.tagIds || [],
+        era_ids: editingTask.era_ids || [],
+        stage_ids: editingTask.stage_ids || [],
+        tag_ids: editingTask.tag_ids || [],
         isAutoTask: false,
         parentType: 'video',
-        parentId: video.id
+        parent_item_id: video.id
       };
       if (video._source === 'standalone') {
         await actions.addStandaloneVideoCustomTask(video.id, taskData);
@@ -7052,7 +7052,7 @@ export const VideoDetailView = ({ video, onBack }) => {
   
   // Phase 1.5: Calculate costs from tasks only (not from video level)
   const totalEstimatedCost = useMemo(() => allVideoTasks.reduce((sum, t) => sum + getEffectiveCost(t), 0), [allVideoTasks]);
-  const costPaid = useMemo(() => allVideoTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0), [allVideoTasks]);
+  const costPaid = useMemo(() => allVideoTasks.reduce((sum, t) => sum + (t.amount_paid || 0), 0), [allVideoTasks]);
   
   // Phase 1.5: Budget check - if Total Estimated Cost from Tasks > Budgeted Cost → Show "Over Budget" flag
   const budgetedCost = currentVideo.budgetedCost || 0;
@@ -7065,11 +7065,11 @@ export const VideoDetailView = ({ video, onBack }) => {
   const assignedTeamMembers = useMemo(() => {
     const memberIds = new Set();
     // From video-level teamMemberIds
-    (currentVideo.teamMemberIds || []).forEach(id => memberIds.add(id));
+    (currentVideo.team_member_ids || []).forEach(id => memberIds.add(id));
     // From task assignments
     allVideoTasks.forEach(task => {
       (task.assignedMembers || []).forEach(m => memberIds.add(m.memberId));
-      (task.teamMemberIds || []).forEach(id => memberIds.add(id));
+      (task.team_member_ids || []).forEach(id => memberIds.add(id));
     });
     return teamMembers.filter(m => memberIds.has(m.id));
   }, [currentVideo, allVideoTasks, teamMembers]);
@@ -7109,7 +7109,7 @@ export const VideoDetailView = ({ video, onBack }) => {
         )},
         { key: 'openTasks', label: 'Open Tasks', bgClass: 'bg-gray-100', render: () => openTasks.length },
         { key: 'overdueTasks', label: 'Overdue Tasks', bgClass: overdueTasks.length > 0 ? 'bg-red-200' : 'bg-green-100', render: () => overdueTasks.length },
-        { key: 'estimatedCost', label: 'Est. Cost (Tasks)', bgClass: isOverBudget ? 'bg-red-200' : 'bg-yellow-100', render: () => (
+        { key: 'estimated_cost', label: 'Est. Cost (Tasks)', bgClass: isOverBudget ? 'bg-red-200' : 'bg-yellow-100', render: () => (
           <>
             {formatMoney(totalEstimatedCost)}
             {isOverBudget && <span className="ml-1 text-red-600 text-[10px] font-bold">OVER</span>}
@@ -7346,7 +7346,7 @@ export const VideoDetailView = ({ video, onBack }) => {
                   title: 'New Task',
                   date: '',
                   description: '',
-                  estimatedCost: 0,
+                  estimated_cost: 0,
                   status: 'Not Started',
                   notes: '',
                   isAutoTask: false
@@ -7438,14 +7438,14 @@ export const VideoDetailView = ({ video, onBack }) => {
       {/* Era, Stage & Tags Module - Consistent across all Item pages */}
       <EraStageTagsModule
         value={{
-          eraIds: form.eraIds || [],
-          stageIds: form.stageIds || [],
-          tagIds: form.tagIds || []
+          era_ids: form.era_ids || [],
+          stage_ids: form.stage_ids || [],
+          tag_ids: form.tag_ids || []
         }}
         onChange={({ eraIds, stageIds, tagIds }) => {
-          handleFieldChange('eraIds', eraIds);
-          handleFieldChange('stageIds', stageIds);
-          handleFieldChange('tagIds', tagIds);
+          handleFieldChange('era_ids', eraIds);
+          handleFieldChange('stage_ids', stageIds);
+          handleFieldChange('tag_ids', tagIds);
         }}
         onSave={handleSave}
       />
@@ -7493,8 +7493,8 @@ export const VideoDetailView = ({ video, onBack }) => {
                 <label className="block text-xs font-bold uppercase mb-1">Estimated Cost</label>
                 <input 
                   type="number" 
-                  value={editingTask.estimatedCost || 0} 
-                  onChange={e => setEditingTask({ ...editingTask, estimatedCost: parseFloat(e.target.value) || 0 })} 
+                  value={editingTask.estimated_cost || 0} 
+                  onChange={e => setEditingTask({ ...editingTask, estimated_cost: parseFloat(e.target.value) || 0 })} 
                   className={cn("w-full", THEME.punk.input)} 
                 />
               </div>
@@ -7502,8 +7502,8 @@ export const VideoDetailView = ({ video, onBack }) => {
                 <label className="block text-xs font-bold uppercase mb-1">Quoted Cost</label>
                 <input 
                   type="number" 
-                  value={editingTask.quotedCost || 0} 
-                  onChange={e => setEditingTask({ ...editingTask, quotedCost: parseFloat(e.target.value) || 0 })} 
+                  value={editingTask.quoted_cost || 0} 
+                  onChange={e => setEditingTask({ ...editingTask, quoted_cost: parseFloat(e.target.value) || 0 })} 
                   className={cn("w-full", THEME.punk.input)} 
                 />
               </div>
@@ -7511,8 +7511,8 @@ export const VideoDetailView = ({ video, onBack }) => {
                 <label className="block text-xs font-bold uppercase mb-1">Paid Cost</label>
                 <input 
                   type="number" 
-                  value={editingTask.paidCost || 0} 
-                  onChange={e => setEditingTask({ ...editingTask, paidCost: parseFloat(e.target.value) || 0 })} 
+                  value={editingTask.amount_paid || 0} 
+                  onChange={e => setEditingTask({ ...editingTask, amount_paid: parseFloat(e.target.value) || 0 })} 
                   className={cn("w-full", THEME.punk.input)} 
                 />
               </div>
@@ -7524,12 +7524,12 @@ export const VideoDetailView = ({ video, onBack }) => {
                     <label key={m.id} className="flex items-center gap-1 cursor-pointer">
                       <input 
                         type="checkbox" 
-                        checked={(editingTask.teamMemberIds || []).includes(m.id) || (editingTask.assignedMembers || []).some(am => am.memberId === m.id)} 
+                        checked={(editingTask.team_member_ids || []).includes(m.id) || (editingTask.assignedMembers || []).some(am => am.memberId === m.id)} 
                         onChange={e => {
                           const ids = e.target.checked 
-                            ? [...(editingTask.teamMemberIds || []), m.id]
-                            : (editingTask.teamMemberIds || []).filter(id => id !== m.id);
-                          setEditingTask({ ...editingTask, teamMemberIds: ids });
+                            ? [...(editingTask.team_member_ids || []), m.id]
+                            : (editingTask.team_member_ids || []).filter(id => id !== m.id);
+                          setEditingTask({ ...editingTask, team_member_ids: ids });
                         }}
                         className="w-3 h-3" 
                       />
@@ -7544,8 +7544,8 @@ export const VideoDetailView = ({ video, onBack }) => {
                   <div>
                     <label className="block text-[10px] font-bold uppercase mb-1">Era</label>
                     <select 
-                      value={(editingTask.eraIds || [])[0] || ''} 
-                      onChange={e => setEditingTask({ ...editingTask, eraIds: e.target.value ? [e.target.value] : [] })}
+                      value={(editingTask.era_ids || [])[0] || ''} 
+                      onChange={e => setEditingTask({ ...editingTask, era_ids: e.target.value ? [e.target.value] : [] })}
                       className={cn("w-full text-xs", THEME.punk.input)}
                     >
                       <option value="">Select Era...</option>
@@ -7555,8 +7555,8 @@ export const VideoDetailView = ({ video, onBack }) => {
                   <div>
                     <label className="block text-[10px] font-bold uppercase mb-1">Stage</label>
                     <select 
-                      value={(editingTask.stageIds || [])[0] || ''} 
-                      onChange={e => setEditingTask({ ...editingTask, stageIds: e.target.value ? [e.target.value] : [] })}
+                      value={(editingTask.stage_ids || [])[0] || ''} 
+                      onChange={e => setEditingTask({ ...editingTask, stage_ids: e.target.value ? [e.target.value] : [] })}
                       className={cn("w-full text-xs", THEME.punk.input)}
                     >
                       <option value="">Select Stage...</option>
@@ -7569,25 +7569,25 @@ export const VideoDetailView = ({ video, onBack }) => {
                       value=""
                       onChange={e => {
                         const newTagId = e.target.value;
-                        if (newTagId && !(editingTask.tagIds || []).includes(newTagId)) {
-                          setEditingTask({ ...editingTask, tagIds: [...(editingTask.tagIds || []), newTagId] });
+                        if (newTagId && !(editingTask.tag_ids || []).includes(newTagId)) {
+                          setEditingTask({ ...editingTask, tag_ids: [...(editingTask.tag_ids || []), newTagId] });
                         }
                       }}
                       className={cn("w-full text-xs", THEME.punk.input)}
                     >
                       <option value="">Add tag...</option>
-                      {(data.tags || []).filter(t => !(editingTask.tagIds || []).includes(t.id)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      {(data.tags || []).filter(t => !(editingTask.tag_ids || []).includes(t.id)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                   </div>
                 </div>
-                {(editingTask.tagIds || []).length > 0 && (
+                {(editingTask.tag_ids || []).length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {(editingTask.tagIds || []).map(tagId => {
+                    {(editingTask.tag_ids || []).map(tagId => {
                       const tag = (data.tags || []).find(t => t.id === tagId);
                       return tag ? (
                         <span key={tagId} className="px-2 py-1 bg-yellow-100 border border-black text-[10px] font-bold flex items-center gap-1">
                           {tag.name}
-                          <button onClick={() => setEditingTask({ ...editingTask, tagIds: (editingTask.tagIds || []).filter(id => id !== tagId) })} className="text-red-600">×</button>
+                          <button onClick={() => setEditingTask({ ...editingTask, tag_ids: (editingTask.tag_ids || []).filter(id => id !== tagId) })} className="text-red-600">×</button>
                         </span>
                       ) : null;
                     })}
@@ -7632,7 +7632,7 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
     category: 'Other',
     date: new Date().toISOString().split('T')[0],
     status: 'Not Started',
-    estimatedCost: 0,
+    estimated_cost: 0,
     notes: ''
   });
 
@@ -7717,7 +7717,7 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
       category: 'Other',
       date: new Date().toISOString().split('T')[0],
       status: 'Not Started',
-      estimatedCost: 0,
+      estimated_cost: 0,
       notes: ''
     });
     setShowAddTaskModal(true);
@@ -7736,7 +7736,7 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
     { field: 'category', label: 'Category', sortable: true },
     { field: 'date', label: 'Date', sortable: true },
     { field: 'status', label: 'Status', sortable: true },
-    { field: 'estimatedCost', label: 'Est. Cost', sortable: true, align: 'right', render: (item) => formatMoney(getEffectiveCost(item)) }
+    { field: 'estimated_cost', label: 'Est. Cost', sortable: true, align: 'right', render: (item) => formatMoney(getEffectiveCost(item)) }
   ];
 
   // Render grid card
@@ -7791,7 +7791,7 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
         {task.date && (
           <div className="text-xs text-gray-600 mb-1">📅 {task.date}</div>
         )}
-        {task.estimatedCost > 0 && (
+        {task.estimated_cost > 0 && (
           <div className="text-xs text-gray-600 mb-2">💰 {formatMoney(getEffectiveCost(task))}</div>
         )}
         
@@ -8097,8 +8097,8 @@ export const GlobalTasksListView = ({ onSelectTask, onTaskCreated }) => {
                 <label className="block text-xs font-bold uppercase mb-1">Estimated Cost</label>
                 <input 
                   type="number" 
-                  value={newTaskForm.estimatedCost} 
-                  onChange={e => setNewTaskForm(prev => ({ ...prev, estimatedCost: parseFloat(e.target.value) || 0 }))} 
+                  value={newTaskForm.estimated_cost} 
+                  onChange={e => setNewTaskForm(prev => ({ ...prev, estimated_cost: parseFloat(e.target.value) || 0 }))} 
                   className={cn("w-full", THEME.punk.input)} 
                 />
               </div>
@@ -8149,8 +8149,8 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
 
   // Lock Era feature: check if this task belongs to a locked era
   const isTaskLocked = useMemo(() => 
-    isEraLocked(currentTask.eraIds || currentTask.era_ids || [], data.eras || []), 
-    [currentTask.eraIds, currentTask.era_ids, data.eras]
+    isEraLocked(currentTask.era_ids || currentTask.era_ids || [], data.eras || []), 
+    [currentTask.era_ids, currentTask.era_ids, data.eras]
   );
 
   const handleSave = useCallback(async () => { 
@@ -8218,16 +8218,16 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
         { key: 'date', label: 'Due Date', bgClass: 'bg-blue-100', default: 'Not Set' },
         { key: 'category', label: 'Category', bgClass: 'bg-purple-100', default: 'Other' },
         { 
-          key: 'paidCost', 
+          key: 'amount_paid', 
           label: 'Cost Paid', 
           bgClass: 'bg-green-100',
-          render: (item) => formatMoney(item.paidCost || 0)
+          render: (item) => formatMoney(item.amount_paid || 0)
         },
         { 
-          key: 'estimatedCost', 
+          key: 'estimated_cost', 
           label: 'Estimated Cost', 
           bgClass: 'bg-yellow-100',
-          render: (item) => formatMoney(item.estimatedCost || 0)
+          render: (item) => formatMoney(item.estimated_cost || 0)
         },
         ...(currentTask.assignedTo ? [{ key: 'assignedTo', label: 'Assigned To' }] : []),
         { 
@@ -8317,15 +8317,15 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
         </div>
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Estimated Cost</label>
-          <input type="number" value={form.estimatedCost || 0} onChange={e => handleFieldChange('estimatedCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+          <input type="number" value={form.estimated_cost || 0} onChange={e => handleFieldChange('estimated_cost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
         </div>
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Quoted Cost</label>
-          <input type="number" value={form.quotedCost || 0} onChange={e => handleFieldChange('quotedCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+          <input type="number" value={form.quoted_cost || 0} onChange={e => handleFieldChange('quoted_cost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
         </div>
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Paid Cost</label>
-          <input type="number" value={form.paidCost || 0} onChange={e => handleFieldChange('paidCost', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
+          <input type="number" value={form.amount_paid || 0} onChange={e => handleFieldChange('amount_paid', parseFloat(e.target.value) || 0)} onBlur={handleSave} className={cn("w-full", THEME.punk.input)} />
         </div>
         <div>
           <label className="block text-xs font-bold uppercase mb-1">Assigned To <span className="text-gray-400">(Simple text)</span></label>
@@ -8374,15 +8374,15 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
   const eraStageTagsSection = (
     <EraStageTagsModule
       value={{
-        eraIds: form.eraIds || [],
-        stageIds: form.stageIds || [],
-        tagIds: form.tagIds || []
+        era_ids: form.era_ids || [],
+        stage_ids: form.stage_ids || [],
+        tag_ids: form.tag_ids || []
       }}
       onChange={({ eraIds, stageIds, tagIds }) => {
         if (isTaskLocked) return;
-        handleFieldChange('eraIds', eraIds);
-        handleFieldChange('stageIds', stageIds);
-        handleFieldChange('tagIds', tagIds);
+        handleFieldChange('era_ids', eraIds);
+        handleFieldChange('stage_ids', stageIds);
+        handleFieldChange('tag_ids', tagIds);
       }}
       onSave={handleSave}
     />
@@ -8453,32 +8453,32 @@ export const PayablesView = () => {
     };
 
     (data.songs || []).forEach(song => {
-      const eraIds = song.eraIds || [];
+      const eraIds = song.era_ids || [];
       (song.deadlines || []).forEach(t => push(t, eraIds));
       (song.customTasks || []).forEach(t => push(t, eraIds));
       (song.versions || []).forEach(v => {
-        const vEraIds = v.eraIds || eraIds;
+        const vEraIds = v.era_ids || eraIds;
         (v.tasks || []).forEach(t => push(t, vEraIds));
       });
       (song.videos || []).forEach(vid => {
-        const vEraIds = vid.eraIds || eraIds;
+        const vEraIds = vid.era_ids || eraIds;
         (vid.tasks || []).forEach(t => push(t, vEraIds));
       });
     });
 
     (data.releases || []).forEach(rel => {
-      const eraIds = rel.eraIds || [];
+      const eraIds = rel.era_ids || [];
       (rel.tasks || []).forEach(t => push(t, eraIds));
       (rel.customTasks || []).forEach(t => push(t, eraIds));
     });
 
     (data.events || []).forEach(evt => {
-      const eraIds = evt.eraIds || [];
+      const eraIds = evt.era_ids || [];
       (evt.tasks || []).forEach(t => push(t, eraIds));
       (evt.customTasks || []).forEach(t => push(t, eraIds));
     });
 
-    (data.globalTasks || []).forEach(t => push(t, t.eraIds || []));
+    (data.globalTasks || []).forEach(t => push(t, t.era_ids || []));
 
     return tasks;
   }, [data.songs, data.releases, data.events, data.globalTasks]);
@@ -8516,7 +8516,7 @@ export const PayablesView = () => {
         const stat = getOrCreate(memberId);
         stat.totalTasks += 1;
 
-        const paid = task.paidCost || 0;
+        const paid = task.amount_paid || 0;
         const effective = getEffectiveCost(task);
 
         stat.amountPaid += paid;

@@ -445,7 +445,7 @@ export const Editor = ({ task, onClose }) => {
     const addSubTask = () => {
         const cleanedSubTask = sub.trim();
         if (!cleanedSubTask) return;
-        actions.add('tasks', { title: cleanedSubTask, parentId: form.id, status: 'Not Started' });
+        actions.add('tasks', { title: cleanedSubTask, parent_item_id: form.id, status: 'Not Started' });
         setSub('');
     };
     const artistName = data.settings?.artistName || 'Artist';
@@ -505,7 +505,7 @@ export const Editor = ({ task, onClose }) => {
                         <div className="grid grid-cols-2 gap-4">
                             <div><label className="text-xs font-bold opacity-50">Checklist</label><select value={form.checklistState || ''} onChange={e => setForm({...form, checklistState: e.target.value})} className={cn("w-full", THEME.punk.input)}>{['', 'Complete', 'Paid', 'Complete but unpaid', 'Paid but incomplete', 'Archived'].map(s => <option key={s} value={s}>{s || 'Select state'}</option>)}</select></div>
                             <div><label className="text-xs font-bold opacity-50">Stage</label><select value={form.stageId || ''} onChange={e => setForm({...form, stageId: e.target.value})} className={cn("w-full", THEME.punk.input)}>{data.stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-                            <div><label className="text-xs font-bold opacity-50">Due</label><input type="date" value={form.dueDate || ''} onChange={e => setForm({...form, dueDate: e.target.value})} className={cn("w-full", THEME.punk.input)} /></div>
+                            <div><label className="text-xs font-bold opacity-50">Due</label><input type="date" value={form.due_date || ''} onChange={e => setForm({...form, due_date: e.target.value})} className={cn("w-full", THEME.punk.input)} /></div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
@@ -643,7 +643,7 @@ export const UnifiedTaskEditor = ({
                             <label className="block text-xs font-bold uppercase mb-1">Due Date</label>
                             <input 
                                 type="date" 
-                                value={form.date || form.dueDate || ''} 
+                                value={form.date || form.due_date || ''} 
                                 onChange={e => handleChange(form.date !== undefined ? 'date' : 'dueDate', e.target.value)} 
                                 className={cn("w-full", THEME.punk.input)} 
                             />
@@ -666,7 +666,7 @@ export const UnifiedTaskEditor = ({
                             <label className="block text-xs font-bold uppercase mb-1">Estimated</label>
                             <input 
                                 type="number" 
-                                value={form.estimatedCost || 0} 
+                                value={form.estimated_cost || 0} 
                                 onChange={e => handleChange('estimatedCost', parseFloat(e.target.value) || 0)} 
                                 className={cn("w-full text-sm", THEME.punk.input)} 
                             />
@@ -675,7 +675,7 @@ export const UnifiedTaskEditor = ({
                             <label className="block text-xs font-bold uppercase mb-1">Quoted</label>
                             <input 
                                 type="number" 
-                                value={form.quotedCost || 0} 
+                                value={form.quoted_cost || 0} 
                                 onChange={e => handleChange('quotedCost', parseFloat(e.target.value) || 0)} 
                                 className={cn("w-full text-sm", THEME.punk.input)} 
                             />
@@ -684,7 +684,7 @@ export const UnifiedTaskEditor = ({
                             <label className="block text-xs font-bold uppercase mb-1">Paid</label>
                             <input 
                                 type="number" 
-                                value={form.paidCost || 0} 
+                                value={form.amount_paid || 0} 
                                 onChange={e => handleChange('paidCost', parseFloat(e.target.value) || 0)} 
                                 className={cn("w-full text-sm", THEME.punk.input)} 
                             />
@@ -851,7 +851,7 @@ export const QuickAddSongModal = ({ isOpen, onClose, onAdd }) => {
 
         const newSong = {
             title: name.trim(),
-            eraIds: selectedEraId ? [selectedEraId] : [],
+            era_ids: selectedEraId ? [selectedEraId] : [],
             releaseDate: '', // Will be set later
             isSingle: false, // Default
             videoType: 'None',
@@ -964,7 +964,7 @@ export const QuickAddReleaseModal = ({ isOpen, onClose, onAdd }) => {
         const newRelease = {
             name: name.trim(),
             releaseType,
-            eraIds: selectedEraId ? [selectedEraId] : [],
+            era_ids: selectedEraId ? [selectedEraId] : [],
             releaseDate: '', // Will be set later
             attachedSongIds: [],
             requiredRecordings: [],

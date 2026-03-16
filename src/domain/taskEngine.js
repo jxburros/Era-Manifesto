@@ -131,43 +131,32 @@ export const EVENT_TASK_TYPES = [
 /**
  * Lightweight task factory.
  * Does NOT import createUnifiedTask from Store.jsx to avoid circular deps.
- * Provides the same field layout (underscore_case primary + camelCase aliases).
+ * Uses only underscore_case fields as the source of truth.
  *
  * @param {object} overrides  - Field overrides to apply on top of defaults.
  * @returns {object}          - New task object.
  */
 const createTask = (overrides = {}) => {
-  const rawDate = overrides.due_date || overrides.dueDate || overrides.date || '';
+  const rawDate = overrides.due_date || '';
 
   return {
     id:             crypto.randomUUID(),
-    type:           overrides.type  || 'Custom',
-    name:           overrides.type  || overrides.name  || overrides.title || '',
-    title:          overrides.title || overrides.type  || overrides.name  || '',
+    type:           overrides.type     || 'Custom',
+    name:           overrides.type     || overrides.name || '',
     status:         'Not Started',
     due_date:       rawDate,
-    date:           rawDate,
-    dueDate:        rawDate,
-    category:       overrides.category   || 'Other',
+    category:       overrides.category  || 'Other',
     parentType:     overrides.parentType || null,
     estimated_cost: 0,
-    estimatedCost:  0,
     quoted_cost:    0,
-    quotedCost:     0,
     amount_paid:    0,
-    paidCost:       0,
     era_ids:        [],
-    eraIds:         [],
     tag_ids:        [],
-    tagIds:         [],
     isOverridden:   false,
     isArchived:     false,
     notes:          '',
     ...overrides,
-    // Ensure date aliases stay consistent even when overrides supply only one form
-    due_date:  overrides.due_date  || overrides.dueDate || overrides.date || rawDate,
-    date:      overrides.date      || overrides.due_date || overrides.dueDate || rawDate,
-    dueDate:   overrides.dueDate   || overrides.due_date || overrides.date   || rawDate,
+    due_date: overrides.due_date || rawDate,
   };
 };
 
@@ -261,8 +250,6 @@ const TaskEngine = {
       return {
         ...task,
         due_date: recalcDate,
-        date:     recalcDate,
-        dueDate:  recalcDate,
       };
     });
   },
@@ -310,11 +297,9 @@ function _buildTasks(typeArray, dateStr, parentType, offsets = {}) {
     const days = offsets[def.type] ?? def.daysBeforeRelease ?? def.daysBeforeEvent ?? 0;
     const taskDate = subtractDays(dateStr, days);
     return createTask({
-      type:       def.type,
-      category:   def.category,
-      due_date:   taskDate,
-      date:       taskDate,
-      dueDate:    taskDate,
+      type:      def.type,
+      category:  def.category,
+      due_date:  taskDate,
       parentType,
     });
   });
@@ -376,7 +361,7 @@ function _generateSongTasks(opts) {
     if (def.appliesTo === 'single' && !isSingle) return;
     const days = deadlineOffsets[def.type] ?? def.daysBeforeRelease;
     const d = subtractDays(releaseDate, days);
-    tasks.push(createTask({ type: def.type, category: def.category, due_date: d, date: d, dueDate: d, parentType: 'song' }));
+    tasks.push(createTask({ type: def.type, category: def.category, due_date: d, parentType: 'song' }));
   });
 
   // Stems tasks
@@ -384,7 +369,7 @@ function _generateSongTasks(opts) {
     STEMS_TASK_TYPES.forEach(def => {
       const days = deadlineOffsets[def.type] ?? def.daysBeforeRelease;
       const d = subtractDays(releaseDate, days);
-      tasks.push(createTask({ type: def.type, category: def.category, due_date: d, date: d, dueDate: d, parentType: 'song' }));
+      tasks.push(createTask({ type: def.type, category: def.category, due_date: d, parentType: 'song' }));
     });
   }
 
@@ -394,11 +379,11 @@ function _generateSongTasks(opts) {
       if (!def.videoTypes.includes(videoTypeKey)) return;
       const days = deadlineOffsets[def.type] ?? def.daysBeforeRelease;
       const d = subtractDays(releaseDate, days);
-      tasks.push(createTask({ type: def.type, category: def.category, due_date: d, date: d, dueDate: d, parentType: 'song' }));
+      tasks.push(createTask({ type: def.type, category: def.category, due_date: d, parentType: 'song' }));
     });
   }
 
-  tasks.sort((a, b) => a.date.localeCompare(b.date));
+  tasks.sort((a, b) => a.due_date.localeCompare(b.due_date));
   return tasks;
 }
 
@@ -408,7 +393,7 @@ function _generateVersionTasks(opts) {
   if (!releaseDate) return [];
 
   const tasks = _buildTasks(VERSION_TASK_TYPES, releaseDate, 'version', deadlineOffsets);
-  tasks.sort((a, b) => a.date.localeCompare(b.date));
+  tasks.sort((a, b) => a.due_date.localeCompare(b.due_date));
   return tasks;
 }
 
@@ -419,7 +404,7 @@ function _generateVideoTasks(opts) {
 
   const filtered = VIDEO_TASK_TYPES.filter(def => def.videoTypes.includes(videoTypeKey));
   const tasks = _buildTasks(filtered, releaseDate, 'video', deadlineOffsets);
-  tasks.sort((a, b) => a.date.localeCompare(b.date));
+  tasks.sort((a, b) => a.due_date.localeCompare(b.due_date));
   return tasks;
 }
 
@@ -433,7 +418,7 @@ function _generateReleaseTasks(opts) {
     ...(hasPhysicalCopies ? PHYSICAL_RELEASE_TASK_TYPES : []),
   ];
   const tasks = _buildTasks(typeArray, releaseDate, 'release', deadlineOffsets);
-  tasks.sort((a, b) => a.date.localeCompare(b.date));
+  tasks.sort((a, b) => a.due_date.localeCompare(b.due_date));
   return tasks;
 }
 
@@ -450,14 +435,12 @@ function _generateEventTasks(opts) {
       type:       def.type,
       category:   def.category,
       due_date:   d,
-      date:       d,
-      dueDate:    d,
       parentType: 'event',
       isOptional: !def.required,
     });
   });
 
-  tasks.sort((a, b) => a.date.localeCompare(b.date));
+  tasks.sort((a, b) => a.due_date.localeCompare(b.due_date));
   return tasks;
 }
 

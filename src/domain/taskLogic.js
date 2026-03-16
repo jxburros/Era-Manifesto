@@ -52,12 +52,11 @@ export const calculateTaskProgress = (tasks = []) => {
   return { pointsEarned, totalTasks: tasks.length, progress };
 };
 
-export const getTaskDueDate = (task = {}) => task.due_date || task.dueDate || task.date || '';
+export const getTaskDueDate = (task = {}) => task.due_date || '';
 
 export const getPrimaryDate = (item = {}, releases = [], extraReleaseIds = [], releaseMap = null) => {
   if (!item) return '';
   if (item.primary_date) return item.primary_date;
-  if (item.primaryDate) return item.primaryDate;
   if (item.primaryDateOverride) return item.primaryDateOverride;
   if (item.releaseDate) return item.releaseDate;
 
@@ -94,10 +93,10 @@ export const resolveCostPrecedence = (entity = {}, model = 'paid-first') => {
   };
 
   const actual = normalizeCost(entity.actualCost, entity.actual_cost);
-  const paid = normalizeCost(entity.amount_paid, entity.paidCost, entity.amountPaid);
+  const paid = normalizeCost(entity.amount_paid, entity.amountPaid);
   const partial = normalizeCost(entity.partially_paid, entity.partiallyPaidAmount, entity.partialPaidCost);
-  const quoted = normalizeCost(entity.quoted_cost, entity.quotedCost);
-  const estimated = normalizeCost(entity.estimated_cost, entity.estimatedCost);
+  const quoted = normalizeCost(entity.quoted_cost);
+  const estimated = normalizeCost(entity.estimated_cost);
   
   // Apply cost calculation model
   if (model === 'quoted-first') {
