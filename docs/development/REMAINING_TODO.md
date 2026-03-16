@@ -81,9 +81,9 @@ This document lists the remaining features that have not yet been implemented, o
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Auto-generated task definitions | ⚠️ Partial | Toggle exists, no granular control |
-| Auto-deadline formulas | ⚠️ Partial | Hardcoded offsets in Store.jsx |
+| Auto-deadline formulas | ✅ Done | `settings/taskOffsets.js` — configurable Single/EP/Album/Version templates |
 | Default Stage/Era | ⚠️ Partial | defaultEraId exists |
-| Cost calculation rules | ❌ Missing | Precedence is hardcoded |
+| Cost calculation rules | ✅ Done | `settings/costModels.js` — 5 configurable cost models |
 | Visibility rules | ⚠️ Partial | Some toggles exist |
 | Dashboard customization | ❌ Missing | No widget show/hide toggles |
 | Filtering rules/presets | ❌ Missing | No saved filter presets |
