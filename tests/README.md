@@ -16,7 +16,13 @@ We use **simple, fast unit tests** to ensure code quality and catch bugs early. 
 ### Unit Tests
 
 - **taskLogic.test.js** - Tests for task business logic (status points, progress calculation, date resolution, cost precedence)
-- **utils.test.js** - Additional tests for core domain logic
+- **taskEngine.test.js** - Tests for the auto-task generation engine (song, version, video, release, event tasks)
+- **taskOffsets.test.js** - Tests for configurable deadline offset templates (Single, EP, Album, Version)
+- **costModels.test.js** - Tests for configurable cost calculation models (actual-first, paid-first, quoted-first, estimated-first, custom)
+- **dataIntegrity.test.js** - Tests for data validation and auto-repair diagnostics (orphaned tasks, invalid statuses, broken links)
+- **memoization.test.js** - Tests for memoized selectors (budget totals, aggregate progress, financial summaries, task statistics)
+- **navigationPersistence.test.js** - Tests for scroll position and form draft persistence across navigation
+- **utils.test.js** - Additional tests for core domain logic and utilities
 
 ### Archived E2E Tests
 
@@ -86,6 +92,12 @@ Current test coverage focuses on:
 - ✅ Task status and progress calculations
 - ✅ Date resolution and precedence logic
 - ✅ Cost precedence and effective cost calculation
+- ✅ Auto-task generation engine (songs, versions, videos, releases, events)
+- ✅ Configurable deadline offset templates
+- ✅ Configurable cost calculation models
+- ✅ Data integrity diagnostics and auto-repair
+- ✅ Memoized selectors and performance utilities
+- ✅ Navigation persistence (scroll positions, form drafts)
 - ✅ Edge cases and error handling
 
 ## Performance

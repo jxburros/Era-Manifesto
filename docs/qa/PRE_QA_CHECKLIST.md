@@ -20,7 +20,7 @@ This checklist defines the minimum readiness gate before full regression testing
    - Re-open detail page and verify override persisted.
 3. **Cost precedence flow**
    - Enter estimated, quoted, then paid values.
-   - Validate effective cost uses paid > quoted > estimated.
+   - Validate effective cost uses actual > paid > partial > quoted > estimated (configurable in Settings).
 4. **Global tasks + team assignments**
    - Create standalone task.
    - Assign multiple team members with split costs.
@@ -31,7 +31,6 @@ This checklist defines the minimum readiness gate before full regression testing
 
 ## P1 (should follow immediately)
 - [ ] Performance pass on bundle size and route-level code splitting plan.
-- [ ] Add E2E smoke automation for top 3 user journeys.
 - [ ] Add accessibility pass for keyboard + focus workflows.
 
 ## P2 (next sprint)

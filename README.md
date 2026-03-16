@@ -19,8 +19,8 @@ A comprehensive web application for musicians to manage album creation, release 
 - **Task Dashboard**: Overview of overdue, due soon, and in-progress tasks with notifications
 
 ### Budget & Financial Management
-- **Three-tier Cost System**: Estimated, Quoted, and Paid costs on every task
-- **Cost Precedence**: Paid > Quoted > Estimated for effective cost calculations
+- **Five-tier Cost System**: Actual, Paid, Partial, Quoted, and Estimated costs on every task
+- **Cost Precedence**: Configurable — default is Actual > Paid > Partial > Quoted > Estimated
 - **Financials View**: Filter and analyze costs by source type, era, stage, tag, and status
 - **Expense Tracking**: Standalone expense management with status tracking
 - **Team Cost Allocation**: Track budget per team member across assignments
@@ -38,6 +38,8 @@ A comprehensive web application for musicians to manage album creation, release 
 - **Timeline**: Combined Gantt-style timeline with filtering
 - **Dashboard**: Task statistics, category breakdowns, and notifications
 - **Financials**: Budget analysis with filtering
+- **Payables**: Focused view of outstanding payable tasks and amounts
+- **Blueprints**: Reusable release blueprint templates for project setup
 - **Progress**: Progress metrics across all items
 - **Active Tasks**: Focus on overdue, due soon, in-progress, and unpaid items
 - **Gallery**: Photo management with upload/download
@@ -223,7 +225,7 @@ npm test
 - **State Management**: React Context API
 - **Performance**: React.memo, react-window virtualization, code splitting
 - **Cloud Sync**: Firebase (Firestore + Anonymous Authentication + Storage)
-- **Testing**: Node.js native test runner + Playwright E2E
+- **Testing**: Node.js native test runner (unit tests)
 - **Icons**: Lucide React
 - **Charts**: Recharts
 - **PDF Export**: jsPDF (lazy-loaded)

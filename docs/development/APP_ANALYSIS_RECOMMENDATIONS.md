@@ -18,8 +18,8 @@
 ### Business rules
 
 - **Progress model**: status-to-points mapping with canonical + legacy aliases.
-- **Cost model**: paid > quoted > estimated precedence.
-- **Auto-generated task model** is configurable via settings toggles but appears partially hardcoded in generation logic.
+- **Cost model**: configurable via `settings/costModels.js`; default precedence is actual > paid > partial > quoted > estimated.
+- **Auto-generated task model** is configurable via `settings/taskOffsets.js` with per-project-type templates (Single, EP, Album, Version).
 
 ### UI composition
 
@@ -56,14 +56,14 @@
 
 ## 4) Gaps / friction points observed
 
-1. **Navigation is not URL-addressable** (tab state only).
-   - Limits deep linking, refresh resilience, and collaboration workflows.
+1. ~~**Navigation is not URL-addressable** (tab state only).~~ ✅ *Resolved: React Router v7 added with full URL paths and backward-compatible hash routing.*
 2. **Schema duality overhead** (underscore + camelCase + legacy fields).
    - Increases maintenance risk and can cause subtle bugs during migrations.
 3. **Partial settings completeness** versus architecture goals.
-   - Dashboard customization, filter presets, and configurable cost rules are still incomplete.
-4. **Today view appears global-task heavy**.
-   - It can under-represent non-global task obligations from songs/releases/events.
+   - ~~Configurable cost rules are still incomplete.~~ ✅ *Resolved: `settings/costModels.js` with 5 configurable models.*
+   - ~~Deadline offset editors are missing.~~ ✅ *Resolved: `settings/taskOffsets.js` with per-project-type templates.*
+   - Dashboard customization and saved filter presets are still incomplete.
+4. ~~**Today view appears global-task heavy**.~~ ✅ *Resolved: Source-based filtering and task aggregation from all sources (songs/versions/releases/videos/events/global) with source badges.*
 5. **Potential scale concerns** in client-side derived computations.
    - As projects grow, broad in-memory filters/sorts may affect perceived performance.
 
@@ -71,35 +71,33 @@
 
 ## P0 (high impact, low/medium effort)
 
-1. **Introduce route-backed navigation** (React Router + tab compatibility layer).
-   - Add URL paths for list/detail views and preserve current stateful behavior while migrating.
+1. ~~**Introduce route-backed navigation** (React Router + tab compatibility layer).~~ ✅ *Implemented: React Router v7 with hybrid hash-based fallback.*
 2. **Unify canonical schema reads/writes**.
    - Adopt one internal source of truth (prefer unified snake_case internally), normalize at boundaries only.
-3. **Upgrade Today dashboard aggregation**.
-   - Include upcoming/overdue tasks from all sources (song/version/video/release/event/global) with source badges.
+3. ~~**Upgrade Today dashboard aggregation**.~~ ✅ *Implemented: All sources displayed with source badges, filtering, and navigation.*
 
 ## P1 (productiveness / quality)
 
 4. **Finish settings-driven customization**.
-   - Dashboard widget toggles, saved filter presets, and deadline offset editors.
-5. **Observability for data integrity**.
-   - Add lightweight diagnostics: invalid task status counts, orphan task checks, migration version markers.
-6. **Performance hygiene for large datasets**.
-   - Memoize expensive selectors, use virtualized tables for long lists, and centralize derived selectors.
+   - ~~Deadline offset editors.~~ ✅ *Implemented: `settings/taskOffsets.js` with Single/EP/Album/Version templates.*
+   - ~~Configurable cost models.~~ ✅ *Implemented: `settings/costModels.js` with 5 models.*
+   - Dashboard widget toggles and saved filter presets still pending.
+5. ~~**Observability for data integrity**.~~ ✅ *Implemented: `utils/dataIntegrity.js` with diagnostics and auto-repair.*
+6. ~~**Performance hygiene for large datasets**.~~ ✅ *Implemented: `utils/memoization.js`, react-window virtualization, code splitting.*
 
 ## P2 (advanced reporting and collaboration)
 
 7. **Expand reporting**.
    - Financial charts and CSV exports for tasks/financials as first reporting increment.
 8. **Improve collaboration semantics**.
-   - Add conflict hints in cloud mode and “last edited by/at” fields for shared projects.
+   - Add conflict hints in cloud mode and "last edited by/at" fields for shared projects.
 
 ## 6) Suggested implementation roadmap (4 sprints)
 
-- **Sprint 1**: Route-backed navigation + deep-link support for primary list/detail pages.
-- **Sprint 2**: Today aggregation unification + selector refactor for task sources.
-- **Sprint 3**: Settings completeness (dashboard toggles + filter presets + deadline editor).
-- **Sprint 4**: Reporting package (CSV + charts) + data quality diagnostics.
+- **Sprint 1**: Route-backed navigation + deep-link support for primary list/detail pages. ✅ *Complete.*
+- **Sprint 2**: Today aggregation unification + selector refactor for task sources. ✅ *Complete.*
+- **Sprint 3**: Settings completeness (dashboard toggles + filter presets + deadline editor). *Partially complete — deadline editor and cost models done; dashboard toggles and filter presets pending.*
+- **Sprint 4**: Reporting package (CSV + charts) + data quality diagnostics. *Data quality diagnostics complete; CSV/charts pending.*
 
 ## 7) Success metrics to track
 

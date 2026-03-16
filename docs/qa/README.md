@@ -38,7 +38,7 @@ For historical reference only. Current testing uses unit tests.
 ## 🧪 Testing Approach
 
 ### Current Testing Strategy
-- **Unit Tests** - Primary testing approach (Jest + React Testing Library)
+- **Unit Tests** - Primary testing approach (Node.js native test runner)
 - **Manual Testing** - Following [TESTING_GUIDE.md](TESTING_GUIDE.md)
 - **Pre-QA Checks** - Using [PRE_QA_CHECKLIST.md](PRE_QA_CHECKLIST.md)
 
