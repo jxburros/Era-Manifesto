@@ -190,6 +190,8 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
     'timeline': '/timeline',
     'financials': '/financials',
     'progress': '/progress',
+    'payables': '/payables',
+    'blueprints': '/blueprints',
     'team': '/team',
     'gallery': '/gallery',
     'files': '/files',
@@ -229,6 +231,8 @@ export const Sidebar = ({ isOpen, setIsOpen, activeTab, setActiveTab }) => {
   // Views sub-items
   const viewsMenu = [
     { id: 'financials', label: 'Financials', icon: 'DollarSign' },
+    { id: 'payables', label: 'Payables', icon: 'CreditCard' },
+    { id: 'blueprints', label: 'Blueprints', icon: 'BookOpen' },
     { id: 'progress', label: 'Progress', icon: 'TrendingUp' },
     { id: 'timeline', label: 'Timeline', icon: 'List' },
     { id: 'active', label: 'Active Tasks', icon: 'Zap' },

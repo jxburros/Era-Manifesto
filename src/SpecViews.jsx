@@ -8435,3 +8435,818 @@ export const GlobalTaskDetailView = ({ task, onBack }) => {
     </>
   );
 };
+
+// ─── PayablesView ──────────────────────────────────────────────────────────────
+export const PayablesView = () => {
+  const { data } = useStore();
+  const isDark = data.settings?.themeMode === 'dark';
+  const [filterEra, setFilterEra] = useState('all');
+
+  // Collect every task from every source, tagged with which eraIds it belongs to
+  const allTasks = useMemo(() => {
+    const tasks = [];
+
+    const push = (task, eraIds = []) => {
+      if (task && (task.assignedMembers || []).length > 0) {
+        tasks.push({ ...task, _eraIds: eraIds });
+      }
+    };
+
+    (data.songs || []).forEach(song => {
+      const eraIds = song.eraIds || [];
+      (song.deadlines || []).forEach(t => push(t, eraIds));
+      (song.customTasks || []).forEach(t => push(t, eraIds));
+      (song.versions || []).forEach(v => {
+        const vEraIds = v.eraIds || eraIds;
+        (v.tasks || []).forEach(t => push(t, vEraIds));
+      });
+      (song.videos || []).forEach(vid => {
+        const vEraIds = vid.eraIds || eraIds;
+        (vid.tasks || []).forEach(t => push(t, vEraIds));
+      });
+    });
+
+    (data.releases || []).forEach(rel => {
+      const eraIds = rel.eraIds || [];
+      (rel.tasks || []).forEach(t => push(t, eraIds));
+      (rel.customTasks || []).forEach(t => push(t, eraIds));
+    });
+
+    (data.events || []).forEach(evt => {
+      const eraIds = evt.eraIds || [];
+      (evt.tasks || []).forEach(t => push(t, eraIds));
+      (evt.customTasks || []).forEach(t => push(t, eraIds));
+    });
+
+    (data.globalTasks || []).forEach(t => push(t, t.eraIds || []));
+
+    return tasks;
+  }, [data.songs, data.releases, data.events, data.globalTasks]);
+
+  // Apply era filter
+  const filteredTasks = useMemo(() => {
+    if (filterEra === 'all') return allTasks;
+    return allTasks.filter(t => (t._eraIds || []).includes(filterEra));
+  }, [allTasks, filterEra]);
+
+  // Build per-member aggregation
+  const memberStats = useMemo(() => {
+    const map = {};
+
+    const getOrCreate = (memberId) => {
+      if (!map[memberId]) {
+        const member = (data.teamMembers || []).find(m => m.id === memberId);
+        map[memberId] = {
+          memberId,
+          name: member ? (member.name || member.displayName || 'Unknown') : 'Unknown',
+          role: member ? (member.role || member.instrument || '') : '',
+          totalTasks: 0,
+          pendingTasks: 0,
+          amountOwed: 0,
+          amountPaid: 0,
+        };
+      }
+      return map[memberId];
+    };
+
+    filteredTasks.forEach(task => {
+      (task.assignedMembers || []).forEach(assignment => {
+        const memberId = assignment.memberId || assignment.id;
+        if (!memberId) return;
+        const stat = getOrCreate(memberId);
+        stat.totalTasks += 1;
+
+        const paid = task.paidCost || 0;
+        const effective = getEffectiveCost(task);
+
+        stat.amountPaid += paid;
+
+        if (paid === 0 && effective > 0) {
+          stat.amountOwed += effective;
+          stat.pendingTasks += 1;
+        } else if (paid === 0 && task.status !== 'complete' && task.status !== 'done') {
+          stat.pendingTasks += 1;
+        }
+      });
+    });
+
+    // Also pull in legacy flat costs from teamMembers
+    (data.teamMembers || []).forEach(member => {
+      if (member.costs && typeof member.costs === 'object') {
+        Object.values(member.costs).forEach(c => {
+          const amount = typeof c === 'number' ? c : (c.amount || 0);
+          if (amount > 0) {
+            const stat = getOrCreate(member.id);
+            stat.amountOwed += amount;
+          }
+        });
+      }
+    });
+
+    return Object.values(map).sort((a, b) => b.amountOwed - a.amountOwed);
+  }, [filteredTasks, data.teamMembers]);
+
+  const totalOwed = memberStats.reduce((s, m) => s + m.amountOwed, 0);
+  const totalPaid = memberStats.reduce((s, m) => s + m.amountPaid, 0);
+
+  const eras = data.eras || [];
+
+  return (
+    <div className="p-6 pb-24">
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className={cn(
+          "text-2xl font-black uppercase border-b-4 pb-2 mb-1",
+          isDark ? "border-slate-400 text-slate-50" : "border-black text-slate-900"
+        )}>
+          <Icon name="DollarSign" size={22} className="inline mr-2 mb-1" />
+          Team Payables
+        </h2>
+        <p className={cn("text-sm", isDark ? "text-slate-400" : "text-slate-500")}>
+          Amounts owed per team member across all active tasks
+        </p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div>
+          <label className={cn("block text-xs font-bold uppercase mb-1", isDark ? "text-slate-400" : "text-slate-600")}>Era</label>
+          <select
+            value={filterEra}
+            onChange={e => setFilterEra(e.target.value)}
+            className={cn("px-3 py-2 text-sm border-2 font-bold", isDark ? "bg-slate-800 border-slate-600 text-slate-50" : "bg-white border-black text-slate-900")}
+          >
+            <option value="all">All Eras</option>
+            {eras.map(era => (
+              <option key={era.id} value={era.id}>{era.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Summary Banner */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className={cn("p-4 border-4", isDark ? "border-yellow-400 bg-slate-800" : "border-black bg-yellow-100")}>
+          <div className={cn("text-xs font-black uppercase mb-1", isDark ? "text-yellow-400" : "text-slate-600")}>Total Owed</div>
+          <div className={cn("text-2xl font-black", isDark ? "text-yellow-300" : "text-slate-900")}>{formatMoney(totalOwed)}</div>
+        </div>
+        <div className={cn("p-4 border-4", isDark ? "border-green-400 bg-slate-800" : "border-black bg-green-100")}>
+          <div className={cn("text-xs font-black uppercase mb-1", isDark ? "text-green-400" : "text-slate-600")}>Total Paid</div>
+          <div className={cn("text-2xl font-black", isDark ? "text-green-300" : "text-slate-900")}>{formatMoney(totalPaid)}</div>
+        </div>
+      </div>
+
+      {/* Table */}
+      {memberStats.length === 0 ? (
+        <div className={cn("p-8 text-center border-4", isDark ? "border-slate-600 bg-slate-800 text-slate-400" : "border-black bg-slate-50 text-slate-500")}>
+          <Icon name="Users" size={36} className="mx-auto mb-3 opacity-40" />
+          <p className="font-bold uppercase">No team members with assigned tasks</p>
+          <p className="text-sm mt-1">Assign team members to tasks to see payables here.</p>
+        </div>
+      ) : (
+        <div className={cn("border-4 overflow-x-auto", isDark ? "border-slate-600" : "border-black")}>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className={cn(isDark ? "bg-slate-700 text-slate-100" : "bg-black text-white")}>
+                <th className="text-left font-black uppercase px-4 py-3 border-r-2 border-current">Member</th>
+                <th className="text-left font-black uppercase px-4 py-3 border-r-2 border-current">Role</th>
+                <th className="text-center font-black uppercase px-4 py-3 border-r-2 border-current">Total Tasks</th>
+                <th className="text-center font-black uppercase px-4 py-3 border-r-2 border-current">Pending</th>
+                <th className="text-right font-black uppercase px-4 py-3 border-r-2 border-current">Amount Owed</th>
+                <th className="text-right font-black uppercase px-4 py-3 border-r-2 border-current">Amount Paid</th>
+                <th className="text-center font-black uppercase px-4 py-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {memberStats.map((m, i) => (
+                <tr
+                  key={m.memberId}
+                  className={cn(
+                    "border-t-2",
+                    isDark
+                      ? (i % 2 === 0 ? "bg-slate-800 border-slate-600" : "bg-slate-850 border-slate-600")
+                      : (i % 2 === 0 ? "bg-white border-black" : "bg-slate-50 border-black")
+                  )}
+                >
+                  <td className={cn("px-4 py-3 font-bold border-r-2", isDark ? "border-slate-600 text-slate-100" : "border-black text-slate-900")}>
+                    {m.name}
+                  </td>
+                  <td className={cn("px-4 py-3 border-r-2", isDark ? "border-slate-600 text-slate-400" : "border-black text-slate-600")}>
+                    {m.role || <span className="opacity-40">—</span>}
+                  </td>
+                  <td className={cn("px-4 py-3 text-center border-r-2", isDark ? "border-slate-600 text-slate-300" : "border-black text-slate-700")}>
+                    {m.totalTasks}
+                  </td>
+                  <td className={cn("px-4 py-3 text-center border-r-2", isDark ? "border-slate-600" : "border-black")}>
+                    <span className={cn(
+                      "font-bold",
+                      m.pendingTasks > 0
+                        ? (isDark ? "text-yellow-300" : "text-orange-600")
+                        : (isDark ? "text-green-400" : "text-green-600")
+                    )}>
+                      {m.pendingTasks}
+                    </span>
+                  </td>
+                  <td className={cn("px-4 py-3 text-right font-black border-r-2 text-lg", isDark ? "border-slate-600 text-yellow-300" : "border-black text-slate-900")}>
+                    {formatMoney(m.amountOwed)}
+                  </td>
+                  <td className={cn("px-4 py-3 text-right border-r-2", isDark ? "border-slate-600 text-green-400" : "border-black text-green-700")}>
+                    {formatMoney(m.amountPaid)}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span title="Not implemented" className={cn(
+                      "inline-block px-3 py-1 text-xs font-black uppercase border-2 cursor-not-allowed opacity-50 select-none",
+                      isDark ? "border-slate-500 text-slate-400" : "border-slate-400 text-slate-500"
+                    )}>
+                      <Icon name="CheckCircle" size={12} className="inline mr-1 mb-0.5" />
+                      Mark Paid
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            {/* Totals row */}
+            <tfoot>
+              <tr className={cn("border-t-4", isDark ? "border-slate-400 bg-slate-700 text-slate-100" : "border-black bg-black text-white")}>
+                <td colSpan={4} className={cn("px-4 py-3 font-black uppercase border-r-2", isDark ? "border-slate-500" : "border-slate-700")}>
+                  Totals
+                </td>
+                <td className={cn("px-4 py-3 text-right font-black text-lg border-r-2", isDark ? "border-slate-500 text-yellow-300" : "border-slate-700 text-yellow-300")}>
+                  {formatMoney(totalOwed)}
+                </td>
+                <td className={cn("px-4 py-3 text-right font-black border-r-2", isDark ? "border-slate-500 text-green-300" : "border-slate-700 text-green-300")}>
+                  {formatMoney(totalPaid)}
+                </td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── ReleaseBlueprintsView ─────────────────────────────────────────────────────
+const DEFAULT_BLUEPRINTS = [
+  {
+    name: 'Single Blueprint',
+    releaseType: 'Single',
+    description: 'Standard single release workflow',
+    tasks: [
+      { type: 'Complete All Tracks', category: 'Production', daysBeforeRelease: 60 },
+      { type: 'Finalize Album Art', category: 'Marketing', daysBeforeRelease: 45 },
+      { type: 'Pitch to Playlists', category: 'Marketing', daysBeforeRelease: 30 },
+      { type: 'Submit Release', category: 'Distribution', daysBeforeRelease: 14 },
+      { type: 'Social Campaign Launch', category: 'Marketing', daysBeforeRelease: 7 },
+      { type: 'Release', category: 'Distribution', daysBeforeRelease: 0 },
+    ]
+  },
+  {
+    name: 'Album Blueprint',
+    releaseType: 'Album',
+    description: 'Full album release workflow',
+    tasks: [
+      { type: 'Complete All Tracks', category: 'Production', daysBeforeRelease: 90 },
+      { type: 'Master All Tracks', category: 'Post-Production', daysBeforeRelease: 60 },
+      { type: 'Finalize Album Art', category: 'Marketing', daysBeforeRelease: 45 },
+      { type: 'Press/PR Campaign', category: 'Marketing', daysBeforeRelease: 30 },
+      { type: 'Submit Release', category: 'Distribution', daysBeforeRelease: 14 },
+      { type: 'Release', category: 'Distribution', daysBeforeRelease: 0 },
+    ]
+  },
+  {
+    name: 'EP Blueprint',
+    releaseType: 'EP',
+    description: 'EP release workflow',
+    tasks: [
+      { type: 'Complete All Tracks', category: 'Production', daysBeforeRelease: 60 },
+      { type: 'Finalize Album Art', category: 'Marketing', daysBeforeRelease: 30 },
+      { type: 'Submit Release', category: 'Distribution', daysBeforeRelease: 14 },
+      { type: 'Release', category: 'Distribution', daysBeforeRelease: 0 },
+    ]
+  }
+];
+
+export const ReleaseBlueprintsView = () => {
+  const { data, actions } = useStore();
+  const isDark = data.settings?.themeMode === 'dark';
+
+  const blueprints = (data.settings?.releaseBlueprints) || [];
+
+  // New blueprint form state
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newReleaseType, setNewReleaseType] = useState('Single');
+
+  // Editing state: { blueprintId, field, value }
+  const [editingBlueprintId, setEditingBlueprintId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
+
+  // Apply-to-release state
+  const [applyBlueprintId, setApplyBlueprintId] = useState(null);
+  const [applyReleaseId, setApplyReleaseId] = useState('');
+  const [applySuccess, setApplySuccess] = useState(null);
+
+  // Expanded blueprints (show task list)
+  const [expandedIds, setExpandedIds] = useState({});
+
+  const releases = data.releases || [];
+
+  const toggleExpand = (id) => {
+    setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // ── Create blueprint ──────────────────────────────────────────────────────
+  const handleCreate = () => {
+    if (!newName.trim()) return;
+    const blueprint = {
+      id: crypto.randomUUID(),
+      name: newName.trim(),
+      description: newDesc.trim(),
+      releaseType: newReleaseType,
+      tasks: [],
+      createdAt: new Date().toISOString(),
+    };
+    if (actions.addReleaseBlueprint) {
+      actions.addReleaseBlueprint(blueprint);
+    } else {
+      // Fallback: update settings directly
+      const updated = [...blueprints, blueprint];
+      actions.updateSettings({ releaseBlueprints: updated });
+    }
+    setNewName('');
+    setNewDesc('');
+    setNewReleaseType('Single');
+    setShowNewForm(false);
+  };
+
+  // ── Seed default blueprint ────────────────────────────────────────────────
+  const handleSeedDefault = (def) => {
+    const blueprint = {
+      id: crypto.randomUUID(),
+      ...def,
+      createdAt: new Date().toISOString(),
+    };
+    if (actions.addReleaseBlueprint) {
+      actions.addReleaseBlueprint(blueprint);
+    } else {
+      const updated = [...blueprints, blueprint];
+      actions.updateSettings({ releaseBlueprints: updated });
+    }
+  };
+
+  // ── Delete blueprint ──────────────────────────────────────────────────────
+  const handleDelete = (id) => {
+    if (!window.confirm('Delete this blueprint?')) return;
+    if (actions.deleteReleaseBlueprint) {
+      actions.deleteReleaseBlueprint(id);
+    } else {
+      const updated = blueprints.filter(b => b.id !== id);
+      actions.updateSettings({ releaseBlueprints: updated });
+    }
+    if (editingBlueprintId === id) setEditingBlueprintId(null);
+  };
+
+  // ── Start editing ─────────────────────────────────────────────────────────
+  const startEdit = (bp) => {
+    setEditingBlueprintId(bp.id);
+    setEditDraft({ ...bp, tasks: (bp.tasks || []).map(t => ({ ...t })) });
+  };
+
+  const cancelEdit = () => {
+    setEditingBlueprintId(null);
+    setEditDraft(null);
+  };
+
+  const saveEdit = () => {
+    if (!editDraft) return;
+    if (actions.updateReleaseBlueprint) {
+      actions.updateReleaseBlueprint(editDraft.id, editDraft);
+    } else {
+      const updated = blueprints.map(b => b.id === editDraft.id ? { ...editDraft } : b);
+      actions.updateSettings({ releaseBlueprints: updated });
+    }
+    setEditingBlueprintId(null);
+    setEditDraft(null);
+  };
+
+  const addTaskToDraft = () => {
+    setEditDraft(prev => ({
+      ...prev,
+      tasks: [
+        ...(prev.tasks || []),
+        { type: '', category: '', daysBeforeRelease: 0, notes: '' }
+      ]
+    }));
+  };
+
+  const updateDraftTask = (idx, field, value) => {
+    setEditDraft(prev => {
+      const tasks = prev.tasks.map((t, i) => i === idx ? { ...t, [field]: value } : t);
+      return { ...prev, tasks };
+    });
+  };
+
+  const removeDraftTask = (idx) => {
+    setEditDraft(prev => ({
+      ...prev,
+      tasks: prev.tasks.filter((_, i) => i !== idx)
+    }));
+  };
+
+  // ── Apply blueprint ───────────────────────────────────────────────────────
+  const handleApply = () => {
+    if (!applyBlueprintId || !applyReleaseId) return;
+    if (actions.applyBlueprintToRelease) {
+      actions.applyBlueprintToRelease(applyReleaseId, applyBlueprintId);
+    }
+    setApplySuccess(applyBlueprintId);
+    setApplyBlueprintId(null);
+    setApplyReleaseId('');
+    setTimeout(() => setApplySuccess(null), 3000);
+  };
+
+  const inputCls = cn(
+    "w-full px-3 py-2 text-sm border-2 font-medium",
+    isDark ? "bg-slate-800 border-slate-600 text-slate-100" : "bg-white border-black text-slate-900"
+  );
+  const labelCls = cn("block text-xs font-black uppercase mb-1", isDark ? "text-slate-400" : "text-slate-600");
+  const cardCls = cn("border-4 p-4", isDark ? "border-slate-600 bg-slate-800" : "border-black bg-white");
+
+  return (
+    <div className="p-6 pb-24">
+      {/* Header */}
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className={cn(
+            "text-2xl font-black uppercase border-b-4 pb-2 mb-1",
+            isDark ? "border-slate-400 text-slate-50" : "border-black text-slate-900"
+          )}>
+            <Icon name="BookOpen" size={22} className="inline mr-2 mb-1" />
+            Release Blueprints
+          </h2>
+          <p className={cn("text-sm", isDark ? "text-slate-400" : "text-slate-500")}>
+            Reusable task templates for your releases
+          </p>
+        </div>
+        <button
+          onClick={() => setShowNewForm(v => !v)}
+          className={cn(
+            "px-4 py-2 font-black uppercase text-sm border-2 flex items-center gap-2",
+            isDark ? "bg-slate-100 text-black border-slate-100 hover:bg-slate-200" : "bg-black text-white border-black hover:bg-slate-800"
+          )}
+        >
+          <Icon name="Plus" size={16} />
+          New Blueprint
+        </button>
+      </div>
+
+      {/* Apply success toast */}
+      {applySuccess && (
+        <div className={cn("mb-4 p-3 border-2 text-sm font-bold flex items-center gap-2", isDark ? "border-green-400 bg-green-900 text-green-300" : "border-green-600 bg-green-50 text-green-800")}>
+          <Icon name="CheckCircle" size={16} />
+          Blueprint applied to release successfully!
+        </div>
+      )}
+
+      {/* New Blueprint Form */}
+      {showNewForm && (
+        <div className={cn("mb-6", cardCls)}>
+          <h3 className={cn("text-sm font-black uppercase mb-4", isDark ? "text-slate-200" : "text-slate-900")}>
+            Create New Blueprint
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className={labelCls}>Name *</label>
+              <input
+                className={inputCls}
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                placeholder="e.g. My Single Template"
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Release Type</label>
+              <select
+                className={inputCls}
+                value={newReleaseType}
+                onChange={e => setNewReleaseType(e.target.value)}
+              >
+                {(RELEASE_TYPES || ['Single', 'EP', 'Album', 'Mixtape', 'Compilation', 'Other']).map(rt => (
+                  <option key={rt} value={rt}>{rt}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Description</label>
+              <input
+                className={inputCls}
+                value={newDesc}
+                onChange={e => setNewDesc(e.target.value)}
+                placeholder="Optional short description"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreate}
+              disabled={!newName.trim()}
+              className={cn(
+                "px-4 py-2 text-sm font-black uppercase border-2",
+                newName.trim()
+                  ? (isDark ? "bg-slate-100 text-black border-slate-100" : "bg-black text-white border-black")
+                  : "opacity-40 cursor-not-allowed border-slate-400 text-slate-500"
+              )}
+            >
+              Create
+            </button>
+            <button
+              onClick={() => setShowNewForm(false)}
+              className={cn("px-4 py-2 text-sm font-black uppercase border-2", isDark ? "border-slate-500 text-slate-400" : "border-slate-400 text-slate-600")}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Default Blueprints Starter Section */}
+      {blueprints.length === 0 && (
+        <div className={cn("mb-8 p-4 border-4 border-dashed", isDark ? "border-slate-600 bg-slate-800" : "border-slate-400 bg-slate-50")}>
+          <p className={cn("text-sm font-black uppercase mb-3", isDark ? "text-slate-300" : "text-slate-700")}>
+            No blueprints yet — start with a default:
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {DEFAULT_BLUEPRINTS.map(def => (
+              <button
+                key={def.name}
+                onClick={() => handleSeedDefault(def)}
+                className={cn(
+                  "px-4 py-2 text-sm font-bold border-2 flex items-center gap-2",
+                  isDark ? "border-slate-400 text-slate-300 hover:bg-slate-700" : "border-slate-500 text-slate-700 hover:bg-white"
+                )}
+              >
+                <Icon name="Plus" size={14} />
+                {def.name}
+                <span className={cn("text-xs px-1.5 py-0.5 font-black", isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600")}>
+                  {def.releaseType}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Blueprint Cards */}
+      {blueprints.length === 0 && !showNewForm ? (
+        <div className={cn("p-8 text-center border-4", isDark ? "border-slate-600 bg-slate-800 text-slate-400" : "border-black bg-slate-50 text-slate-500")}>
+          <Icon name="BookOpen" size={36} className="mx-auto mb-3 opacity-40" />
+          <p className="font-bold uppercase">No blueprints saved yet</p>
+          <p className="text-sm mt-1">Create a new blueprint or seed a default above.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {blueprints.map(bp => {
+            const isEditing = editingBlueprintId === bp.id;
+            const isExpanded = expandedIds[bp.id];
+            const isApplying = applyBlueprintId === bp.id;
+            const draft = isEditing ? editDraft : null;
+
+            return (
+              <div key={bp.id} className={cardCls}>
+                {isEditing && draft ? (
+                  // ── Edit Mode ────────────────────────────────────────────
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className={labelCls}>Name</label>
+                        <input
+                          className={inputCls}
+                          value={draft.name}
+                          onChange={e => setEditDraft(prev => ({ ...prev, name: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Release Type</label>
+                        <select
+                          className={inputCls}
+                          value={draft.releaseType}
+                          onChange={e => setEditDraft(prev => ({ ...prev, releaseType: e.target.value }))}
+                        >
+                          {(RELEASE_TYPES || ['Single', 'EP', 'Album', 'Mixtape', 'Compilation', 'Other']).map(rt => (
+                            <option key={rt} value={rt}>{rt}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>Description</label>
+                        <input
+                          className={inputCls}
+                          value={draft.description || ''}
+                          onChange={e => setEditDraft(prev => ({ ...prev, description: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Task list editor */}
+                    <div>
+                      <div className={cn("text-xs font-black uppercase mb-2", isDark ? "text-slate-400" : "text-slate-600")}>
+                        Task Templates ({(draft.tasks || []).length})
+                      </div>
+                      {(draft.tasks || []).length === 0 && (
+                        <p className={cn("text-xs italic mb-2", isDark ? "text-slate-500" : "text-slate-400")}>No tasks yet.</p>
+                      )}
+                      {(draft.tasks || []).map((t, idx) => (
+                        <div key={idx} className={cn("flex flex-wrap gap-2 mb-2 p-2 border-2", isDark ? "border-slate-600" : "border-slate-300")}>
+                          <input
+                            className={cn("flex-1 min-w-0 px-2 py-1 text-xs border font-medium", isDark ? "bg-slate-700 border-slate-500 text-slate-100" : "bg-white border-slate-300 text-slate-900")}
+                            placeholder="Task name / type"
+                            value={t.type || ''}
+                            onChange={e => updateDraftTask(idx, 'type', e.target.value)}
+                          />
+                          <input
+                            className={cn("w-28 px-2 py-1 text-xs border font-medium", isDark ? "bg-slate-700 border-slate-500 text-slate-100" : "bg-white border-slate-300 text-slate-900")}
+                            placeholder="Category"
+                            value={t.category || ''}
+                            onChange={e => updateDraftTask(idx, 'category', e.target.value)}
+                          />
+                          <input
+                            type="number"
+                            className={cn("w-28 px-2 py-1 text-xs border font-medium", isDark ? "bg-slate-700 border-slate-500 text-slate-100" : "bg-white border-slate-300 text-slate-900")}
+                            placeholder="Days before"
+                            value={t.daysBeforeRelease ?? ''}
+                            onChange={e => updateDraftTask(idx, 'daysBeforeRelease', Number(e.target.value))}
+                          />
+                          <input
+                            className={cn("flex-1 min-w-0 px-2 py-1 text-xs border font-medium", isDark ? "bg-slate-700 border-slate-500 text-slate-100" : "bg-white border-slate-300 text-slate-900")}
+                            placeholder="Notes (optional)"
+                            value={t.notes || ''}
+                            onChange={e => updateDraftTask(idx, 'notes', e.target.value)}
+                          />
+                          <button
+                            onClick={() => removeDraftTask(idx)}
+                            className={cn("px-2 py-1 text-xs font-black border", isDark ? "border-red-500 text-red-400 hover:bg-red-900" : "border-red-500 text-red-600 hover:bg-red-50")}
+                          >
+                            <Icon name="Trash2" size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={addTaskToDraft}
+                        className={cn("mt-1 px-3 py-1.5 text-xs font-black uppercase border-2 flex items-center gap-1", isDark ? "border-slate-500 text-slate-300 hover:bg-slate-700" : "border-slate-400 text-slate-600 hover:bg-slate-100")}
+                      >
+                        <Icon name="Plus" size={12} /> Add Task
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={saveEdit}
+                        className={cn("px-4 py-2 text-sm font-black uppercase border-2", isDark ? "bg-slate-100 text-black border-slate-100" : "bg-black text-white border-black")}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className={cn("px-4 py-2 text-sm font-black uppercase border-2", isDark ? "border-slate-500 text-slate-400" : "border-slate-400 text-slate-600")}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // ── Display Mode ─────────────────────────────────────────
+                  <div>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className={cn("text-base font-black", isDark ? "text-slate-100" : "text-slate-900")}>
+                            {bp.name}
+                          </span>
+                          <span className={cn("text-xs px-2 py-0.5 font-black uppercase border", isDark ? "border-slate-500 bg-slate-700 text-slate-300" : "border-slate-400 bg-slate-100 text-slate-600")}>
+                            {bp.releaseType}
+                          </span>
+                          <span className={cn("text-xs font-bold", isDark ? "text-slate-400" : "text-slate-500")}>
+                            {(bp.tasks || []).length} task{(bp.tasks || []).length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        {bp.description && (
+                          <p className={cn("text-sm", isDark ? "text-slate-400" : "text-slate-600")}>{bp.description}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => toggleExpand(bp.id)}
+                          className={cn("px-3 py-1.5 text-xs font-black uppercase border-2 flex items-center gap-1", isDark ? "border-slate-500 text-slate-300 hover:bg-slate-700" : "border-slate-400 text-slate-600 hover:bg-slate-100")}
+                        >
+                          <Icon name={isExpanded ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          {isExpanded ? 'Hide' : 'Tasks'}
+                        </button>
+                        <button
+                          onClick={() => startEdit(bp)}
+                          className={cn("px-3 py-1.5 text-xs font-black uppercase border-2 flex items-center gap-1", isDark ? "border-slate-400 text-slate-300 hover:bg-slate-700" : "border-black text-slate-700 hover:bg-slate-100")}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            setApplyBlueprintId(isApplying ? null : bp.id);
+                            setApplyReleaseId('');
+                          }}
+                          className={cn("px-3 py-1.5 text-xs font-black uppercase border-2 flex items-center gap-1", isDark ? "border-blue-400 text-blue-300 hover:bg-blue-900" : "border-blue-600 text-blue-700 hover:bg-blue-50")}
+                        >
+                          Apply
+                        </button>
+                        <button
+                          onClick={() => handleDelete(bp.id)}
+                          className={cn("px-3 py-1.5 text-xs font-black uppercase border-2 flex items-center gap-1", isDark ? "border-red-500 text-red-400 hover:bg-red-900" : "border-red-500 text-red-600 hover:bg-red-50")}
+                        >
+                          <Icon name="Trash2" size={12} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Apply panel */}
+                    {isApplying && (
+                      <div className={cn("mt-3 p-3 border-2", isDark ? "border-blue-500 bg-slate-750" : "border-blue-500 bg-blue-50")}>
+                        <p className={cn("text-xs font-black uppercase mb-2", isDark ? "text-blue-300" : "text-blue-700")}>
+                          Apply to Release
+                        </p>
+                        <div className="flex gap-2">
+                          <select
+                            className={cn("flex-1 px-2 py-1.5 text-sm border-2 font-medium", isDark ? "bg-slate-800 border-slate-600 text-slate-100" : "bg-white border-black text-slate-900")}
+                            value={applyReleaseId}
+                            onChange={e => setApplyReleaseId(e.target.value)}
+                          >
+                            <option value="">Select a release…</option>
+                            {releases.map(r => (
+                              <option key={r.id} value={r.id}>{r.name || r.title || 'Untitled'}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={handleApply}
+                            disabled={!applyReleaseId}
+                            className={cn(
+                              "px-4 py-1.5 text-sm font-black uppercase border-2",
+                              applyReleaseId
+                                ? (isDark ? "bg-blue-600 text-white border-blue-600" : "bg-blue-700 text-white border-blue-700")
+                                : "opacity-40 cursor-not-allowed border-slate-400 text-slate-500"
+                            )}
+                          >
+                            Apply
+                          </button>
+                          <button
+                            onClick={() => { setApplyBlueprintId(null); setApplyReleaseId(''); }}
+                            className={cn("px-3 py-1.5 text-sm font-black uppercase border-2", isDark ? "border-slate-500 text-slate-400" : "border-slate-400 text-slate-600")}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Expanded task list */}
+                    {isExpanded && (
+                      <div className="mt-3">
+                        {(bp.tasks || []).length === 0 ? (
+                          <p className={cn("text-xs italic", isDark ? "text-slate-500" : "text-slate-400")}>No tasks in this blueprint yet.</p>
+                        ) : (
+                          <table className="w-full text-xs border-collapse">
+                            <thead>
+                              <tr className={cn("border-b-2", isDark ? "border-slate-600 text-slate-400" : "border-slate-300 text-slate-500")}>
+                                <th className="text-left font-black uppercase py-1 pr-3">Task</th>
+                                <th className="text-left font-black uppercase py-1 pr-3">Category</th>
+                                <th className="text-right font-black uppercase py-1">Days Before Release</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(bp.tasks || [])
+                                .slice()
+                                .sort((a, b) => (b.daysBeforeRelease ?? 0) - (a.daysBeforeRelease ?? 0))
+                                .map((t, idx) => (
+                                <tr key={idx} className={cn("border-b", isDark ? "border-slate-700" : "border-slate-200")}>
+                                  <td className={cn("py-1 pr-3 font-medium", isDark ? "text-slate-200" : "text-slate-800")}>{t.type || '—'}</td>
+                                  <td className={cn("py-1 pr-3", isDark ? "text-slate-400" : "text-slate-500")}>{t.category || '—'}</td>
+                                  <td className={cn("py-1 text-right font-bold", isDark ? "text-slate-300" : "text-slate-700")}>
+                                    {t.daysBeforeRelease === 0 ? 'Release day' : `${t.daysBeforeRelease}d`}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
