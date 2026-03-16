@@ -3426,11 +3426,18 @@ export const SettingsView = () => {
                         const songs = data.songs || [];
                         const releases = data.releases || [];
                         const expenses = data.expenses || [];
+                        // Helper to normalize cost fields across entity types
+                        const getEntityCost = (entity, field) => {
+                          if (field === 'paid') return entity.paidCost || entity.amount_paid || 0;
+                          if (field === 'quoted') return entity.quotedCost || entity.quoted_cost || 0;
+                          if (field === 'estimated') return entity.estimatedCost || entity.estimated_cost || 0;
+                          return entity.paidCost || entity.amount_paid || entity.quotedCost || entity.quoted_cost || entity.estimatedCost || entity.estimated_cost || 0;
+                        };
                         const rows = [
                           ['Type', 'Title', 'Artist', 'Estimated Cost', 'Quoted Cost', 'Paid Cost', 'Effective Cost'],
-                          ...songs.map(s => ['Song', s.title || '', s.artist || '', formatCsvMoney(s.estimatedCost), formatCsvMoney(s.quotedCost), formatCsvMoney(s.paidCost || s.amount_paid), formatCsvMoney(s.paidCost || s.quotedCost || s.estimatedCost)]),
-                          ...releases.map(r => ['Release', r.title || '', '', formatCsvMoney(r.estimatedCost), formatCsvMoney(r.quotedCost), formatCsvMoney(r.paidCost || r.amount_paid), formatCsvMoney(r.paidCost || r.quotedCost || r.estimatedCost)]),
-                          ...expenses.map(e => ['Expense', e.description || e.title || '', e.vendor || '', formatCsvMoney(e.estimatedCost), formatCsvMoney(e.quotedCost || e.quoted_cost), formatCsvMoney(e.amount_paid || e.paidCost), formatCsvMoney(e.amount_paid || e.quoted_cost || e.estimatedCost)])
+                          ...songs.map(s => ['Song', s.title || 'Untitled Song', s.artist || '', formatCsvMoney(getEntityCost(s, 'estimated')), formatCsvMoney(getEntityCost(s, 'quoted')), formatCsvMoney(getEntityCost(s, 'paid')), formatCsvMoney(getEntityCost(s, 'effective'))]),
+                          ...releases.map(r => ['Release', r.title || 'Untitled Release', '', formatCsvMoney(getEntityCost(r, 'estimated')), formatCsvMoney(getEntityCost(r, 'quoted')), formatCsvMoney(getEntityCost(r, 'paid')), formatCsvMoney(getEntityCost(r, 'effective'))]),
+                          ...expenses.map(e => ['Expense', e.description || e.title || 'Untitled Expense', e.vendor || '', formatCsvMoney(getEntityCost(e, 'estimated')), formatCsvMoney(getEntityCost(e, 'quoted')), formatCsvMoney(getEntityCost(e, 'paid')), formatCsvMoney(getEntityCost(e, 'effective'))])
                         ];
                         const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
                         const blob = new Blob([csv], { type: 'text/csv' });
@@ -3455,9 +3462,9 @@ export const SettingsView = () => {
                       onClick={() => {
                         const allTasks = [
                           ...(data.tasks || []).map(t => ({ ...t, _source: 'Global Tasks' })),
-                          ...(data.songs || []).flatMap(s => (s.tasks || s.deadlines || []).map(t => ({ ...t, _source: s.title || 'Song', _parent: s.title }))),
-                          ...(data.releases || []).flatMap(r => (r.tasks || []).map(t => ({ ...t, _source: 'Release: ' + (r.title || ''), _parent: r.title }))),
-                          ...(data.events || []).flatMap(e => (e.tasks || []).map(t => ({ ...t, _source: 'Event: ' + (e.name || ''), _parent: e.name }))),
+                          ...(data.songs || []).flatMap(s => (s.tasks || s.deadlines || []).map(t => ({ ...t, _source: s.title || 'Untitled Song', _parent: s.title || 'Untitled Song' }))),
+                          ...(data.releases || []).flatMap(r => (r.tasks || []).map(t => ({ ...t, _source: 'Release: ' + (r.title || 'Untitled Release'), _parent: r.title || 'Untitled Release' }))),
+                          ...(data.events || []).flatMap(e => (e.tasks || []).map(t => ({ ...t, _source: 'Event: ' + (e.name || 'Untitled Event'), _parent: e.name || 'Untitled Event' }))),
                         ];
                         const rows = [
                           ['Source', 'Parent', 'Task Name / Type', 'Status', 'Due Date', 'Category', 'Estimated Cost', 'Assigned To'],
