@@ -21,8 +21,13 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-export const formatMoney = (amount) => {
-  if (typeof amount !== 'number' || isNaN(amount)) return '$0';
+export const formatMoney = (amount, currencySymbol = null) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol || '$'}0`;
+  if (currencySymbol && currencySymbol !== '$') {
+    // Use custom symbol with simple number formatting
+    const formatted = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
+    return `${currencySymbol}${formatted}`;
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
