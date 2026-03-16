@@ -27,7 +27,7 @@ import { BrowserRouter, Routes, Route, useNavigate, useParams, useLocation } fro
 import { StoreProvider, useStore, collectAllTasks } from './Store';
 import { Sidebar, Editor, Icon } from './Components';
 import { ListView, CalendarView, GalleryView, FilesView, TeamView, MiscView, ArchiveView, ActiveView, SettingsView } from './Views';
-import { SongListView, SongDetailView, ReleasesListView, ReleaseDetailView, CombinedTimelineView, TaskDashboardView, FinancialsView, ProgressView, EventsListView, EventDetailView, ExpensesListView, ExpenseDetailView, VideosListView, VideoDetailView, GlobalTasksListView, GlobalTaskDetailView } from './SpecViews';
+import { SongListView, SongDetailView, ReleasesListView, ReleaseDetailView, CombinedTimelineView, TaskDashboardView, FinancialsView, ProgressView, EventsListView, EventDetailView, ExpensesListView, ExpenseDetailView, VideosListView, VideoDetailView, GlobalTasksListView, GlobalTaskDetailView, PayablesView, ReleaseBlueprintsView } from './SpecViews';
 import { COLOR_VALUES, THEME, cn } from './utils';
 
 // Toast notification context and component
@@ -505,6 +505,8 @@ const useRouteSync = (setTab, setSelectedSong, setSelectedRelease, setSelectedEv
     '/timeline': 'timeline',
     '/financials': 'financials',
     '/progress': 'progress',
+    '/payables': 'payables',
+    '/blueprints': 'blueprints',
     '/team': 'team',
     '/gallery': 'gallery',
     '/files': 'files',
@@ -914,7 +916,15 @@ function AppInner() {
   const settings = data.settings || {};
   const isDark = settings.themeMode === 'dark';
   const focusMode = settings.focusMode || false;
-  const accent = COLOR_VALUES[settings.themeColor || 'pink'] || COLOR_VALUES.pink;
+
+  // Era-Specific Themes: when Focus Mode + Era Mode both active and eraSpecificTheme enabled,
+  // apply the active era's themeColor as the accent instead of the global setting.
+  const eraModeActiveForTheme = settings.eraModeActive && settings.eraModeEraId && settings.eraSpecificTheme;
+  const activeEraForTheme = eraModeActiveForTheme ? (data.eras || []).find(e => e.id === settings.eraModeEraId) : null;
+  const eraHexColor = activeEraForTheme?.themeColor || activeEraForTheme?.color || null;
+  const accent = eraHexColor
+    ? { base: eraHexColor, strong: eraHexColor, soft: eraHexColor + '22' }
+    : (COLOR_VALUES[settings.themeColor || 'pink'] || COLOR_VALUES.pink);
 
   // React Router navigation hook (replaces hash-based routing)
   const routerNavigate = useRouteSync(
@@ -1068,6 +1078,8 @@ function AppInner() {
               'timeline': '/timeline',
               'financials': '/financials',
               'progress': '/progress',
+              'payables': '/payables',
+              'blueprints': '/blueprints',
               'team': '/team',
               'gallery': '/gallery',
               'files': '/files',
@@ -1260,6 +1272,8 @@ function AppInner() {
           {/* Financial and Progress Views */}
           {tab === 'financials' && <FinancialsView />}
           {tab === 'progress' && <ProgressView />}
+          {tab === 'payables' && <PayablesView />}
+          {tab === 'blueprints' && <ReleaseBlueprintsView />}
           
           {/* Original Views */}
           {tab === 'list' && <ListView onEdit={setEditing} />}
@@ -1363,6 +1377,8 @@ export default function App() {
             <Route path="/timeline" element={<AppInner />} />
             <Route path="/financials" element={<AppInner />} />
             <Route path="/progress" element={<AppInner />} />
+            <Route path="/payables" element={<AppInner />} />
+            <Route path="/blueprints" element={<AppInner />} />
             <Route path="/team" element={<AppInner />} />
             <Route path="/gallery" element={<AppInner />} />
             <Route path="/files" element={<AppInner />} />

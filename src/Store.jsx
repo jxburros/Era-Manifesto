@@ -76,6 +76,52 @@ export {
   clearMemoizationCache
 };
 
+// Export TaskEngine - unified task generation module
+export { default as TaskEngine } from './domain/taskEngine';
+
+// Role permission levels per Implementation Directive
+export const ROLE_PERMISSIONS = {
+  MANAGER: {
+    canEdit: true,
+    canDelete: true,
+    canExport: true,
+    canManageTeam: true,
+    canViewFinancials: true,
+    canManageEras: true,
+    canApprovePayments: true
+  },
+  ARTIST: {
+    canEdit: true,
+    canDelete: false,
+    canExport: true,
+    canManageTeam: false,
+    canViewFinancials: true,
+    canManageEras: false,
+    canApprovePayments: false
+  },
+  BAND_MEMBER: {
+    canEdit: false,
+    canDelete: false,
+    canExport: false,
+    canManageTeam: false,
+    canViewFinancials: false,
+    canManageEras: false,
+    canApprovePayments: false
+  }
+};
+
+export const APP_ROLES = ['manager', 'artist', 'band_member'];
+
+/**
+ * Get permissions for the current app role
+ * @param {string} role - Current app role ('manager', 'artist', 'band_member')
+ * @returns {Object} Permission flags
+ */
+export const getPermissionsForRole = (role) => {
+  const roleKey = (role || 'artist').toUpperCase().replace('-', '_').replace(' ', '_');
+  return ROLE_PERMISSIONS[roleKey] || ROLE_PERMISSIONS.ARTIST;
+};
+
 // Progress Calculation per APP_ARCHITECTURE.md Section 1.7:
 // Complete = 1 point
 // In-Progress, Waiting on Someone Else, Paid But Not Complete, Complete But Not Paid = 0.5 points
@@ -2218,7 +2264,7 @@ export const StoreProvider = ({ children }) => {
      },
      
      // Recalculate song deadlines from release date
-     recalculateSongDeadlines: async (songId) => {
+      recalculateSongDeadlines: async (songId) => {
        const song = data.songs.find(s => s.id === songId);
        if (song && song.releaseDate) {
          let newDeadlines;
@@ -2240,6 +2286,61 @@ export const StoreProvider = ({ children }) => {
        }
      },
      
+     /**
+      * Shift all upstream production tasks for a release when its date changes.
+      * Preserves manual user overrides (isOverridden === true).
+      * This is the "Smart Deadlines" / "Dependency Tracking" feature.
+      */
+     shiftTaskDeadlines: async (releaseId, newReleaseDate) => {
+       if (!releaseId || !newReleaseDate) return;
+       const release = data.releases?.find(r => r.id === releaseId);
+       if (!release) return;
+
+       const shiftedReleaseTasks = recalculateReleaseTasks(release.tasks || [], newReleaseDate);
+       const releasePatch = { releaseDate: newReleaseDate, tasks: shiftedReleaseTasks };
+
+       const linkedSongIds = new Set();
+       (data.songs || []).forEach(song => {
+         if (
+           song.coreReleaseId === releaseId ||
+           (song.releaseIds || []).includes(releaseId) ||
+           (song.versions || []).some(v => (v.releaseIds || []).includes(releaseId))
+         ) {
+           linkedSongIds.add(song.id);
+         }
+       });
+
+       if (mode === 'cloud') {
+         await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_releases', releaseId), releasePatch);
+         for (const songId of linkedSongIds) {
+           const song = data.songs.find(s => s.id === songId);
+           if (song && song.releaseDate) {
+             const shifted = recalculateDeadlines(song.deadlines || [], song.releaseDate, song.isSingle, song.videoType, data.settings?.deadlineOffsets || {});
+             await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_songs', songId), { deadlines: shifted });
+           }
+         }
+       } else {
+         setData(prev => {
+           const updatedReleases = (prev.releases || []).map(r =>
+             r.id === releaseId ? { ...r, ...releasePatch } : r
+           );
+           const updatedSongs = (prev.songs || []).map(song => {
+             if (!linkedSongIds.has(song.id) || !song.releaseDate) return song;
+             const shifted = recalculateDeadlines(
+               song.deadlines || [],
+               song.releaseDate,
+               song.isSingle,
+               song.videoType,
+               prev.settings?.deadlineOffsets || {}
+             );
+             return { ...song, deadlines: shifted };
+           });
+           return { ...prev, releases: updatedReleases, songs: updatedSongs };
+         });
+       }
+       return { success: true, releaseId, newReleaseDate, linkedSongCount: linkedSongIds.size };
+     },
+
      // Global task actions
      addGlobalTask: async (task) => {
        // Auto-assign artist in Manager Mode
@@ -2444,6 +2545,170 @@ export const StoreProvider = ({ children }) => {
        }
      },
      
+     /**
+      * Sync Era to all children and linked items across the entire dataset.
+      * This is the automated Era Synchronization feature from the Implementation Directive.
+      * Propagates eraId from an Era to all songs, releases, events, globalTasks, and videos belonging to it.
+      */
+     syncEraToAllChildren: async (eraId) => {
+       if (!eraId) return { success: false, error: 'No eraId provided' };
+
+       const updates = { songs: 0, releases: 0, events: 0, globalTasks: 0 };
+
+       const addEraId = (eraIds = []) =>
+         eraIds.includes(eraId) ? eraIds : [...eraIds, eraId];
+
+       const applyToTasks = (tasks = []) =>
+         tasks.map(t => ({ ...t, eraIds: addEraId(t.eraIds) }));
+
+       if (mode === 'cloud') {
+         for (const song of (data.songs || [])) {
+           if (!(song.eraIds || []).includes(eraId)) continue;
+           const updated = {
+             eraIds: addEraId(song.eraIds),
+             deadlines: applyToTasks(song.deadlines),
+             customTasks: applyToTasks(song.customTasks),
+             versions: (song.versions || []).map(v => ({
+               ...v, eraIds: addEraId(v.eraIds),
+               tasks: applyToTasks(v.tasks), customTasks: applyToTasks(v.customTasks)
+             })),
+             videos: (song.videos || []).map(v => ({
+               ...v, eraIds: addEraId(v.eraIds),
+               tasks: applyToTasks(v.tasks)
+             }))
+           };
+           await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_songs', song.id), updated);
+           updates.songs++;
+         }
+         for (const release of (data.releases || [])) {
+           if (!(release.eraIds || []).includes(eraId)) continue;
+           const updated = { eraIds: addEraId(release.eraIds), tasks: applyToTasks(release.tasks), customTasks: applyToTasks(release.customTasks) };
+           await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_releases', release.id), updated);
+           updates.releases++;
+         }
+         for (const event of (data.events || [])) {
+           if (!(event.eraIds || []).includes(eraId)) continue;
+           const updated = { eraIds: addEraId(event.eraIds), tasks: applyToTasks(event.tasks), customTasks: applyToTasks(event.customTasks) };
+           await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_events', event.id), updated);
+           updates.events++;
+         }
+         for (const task of (data.globalTasks || [])) {
+           if (!(task.eraIds || []).includes(eraId)) continue;
+           await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_globalTasks', task.id), { eraIds: addEraId(task.eraIds) });
+           updates.globalTasks++;
+         }
+       } else {
+         setData(prev => {
+           const updatedSongs = (prev.songs || []).map(song => {
+             if (!(song.eraIds || []).includes(eraId)) return song;
+             return {
+               ...song,
+               eraIds: addEraId(song.eraIds),
+               deadlines: applyToTasks(song.deadlines),
+               customTasks: applyToTasks(song.customTasks),
+               versions: (song.versions || []).map(v => ({
+                 ...v, eraIds: addEraId(v.eraIds),
+                 tasks: applyToTasks(v.tasks), customTasks: applyToTasks(v.customTasks)
+               })),
+               videos: (song.videos || []).map(v => ({
+                 ...v, eraIds: addEraId(v.eraIds),
+                 tasks: applyToTasks(v.tasks)
+               }))
+             };
+           });
+           updates.songs = updatedSongs.filter((s, i) => s !== (prev.songs || [])[i]).length;
+
+           const updatedReleases = (prev.releases || []).map(release => {
+             if (!(release.eraIds || []).includes(eraId)) return release;
+             updates.releases++;
+             return { ...release, eraIds: addEraId(release.eraIds), tasks: applyToTasks(release.tasks), customTasks: applyToTasks(release.customTasks) };
+           });
+
+           const updatedEvents = (prev.events || []).map(event => {
+             if (!(event.eraIds || []).includes(eraId)) return event;
+             updates.events++;
+             return { ...event, eraIds: addEraId(event.eraIds), tasks: applyToTasks(event.tasks), customTasks: applyToTasks(event.customTasks) };
+           });
+
+           const updatedGlobalTasks = (prev.globalTasks || []).map(task => {
+             if (!(task.eraIds || []).includes(eraId)) return task;
+             updates.globalTasks++;
+             return { ...task, eraIds: addEraId(task.eraIds) };
+           });
+
+           return { ...prev, songs: updatedSongs, releases: updatedReleases, events: updatedEvents, globalTasks: updatedGlobalTasks };
+         });
+       }
+
+       return { success: true, eraId, updates };
+     },
+
+     // Release Blueprint Library - centralized task templates for release types
+     addReleaseBlueprint: async (blueprint) => {
+       const newBlueprint = {
+         id: blueprint.id || crypto.randomUUID(),
+         name: blueprint.name || 'New Blueprint',
+         description: blueprint.description || '',
+         releaseType: blueprint.releaseType || 'Single',
+         tasks: blueprint.tasks || [],
+         createdAt: new Date().toISOString()
+       };
+       const blueprints = data.settings?.releaseBlueprints || [];
+       await actions.saveSettings({ releaseBlueprints: [...blueprints, newBlueprint] });
+       return newBlueprint;
+     },
+
+     updateReleaseBlueprint: async (blueprintId, updates) => {
+       const blueprints = (data.settings?.releaseBlueprints || []).map(b =>
+         b.id === blueprintId ? { ...b, ...updates, updatedAt: new Date().toISOString() } : b
+       );
+       await actions.saveSettings({ releaseBlueprints: blueprints });
+     },
+
+     deleteReleaseBlueprint: async (blueprintId) => {
+       const blueprints = (data.settings?.releaseBlueprints || []).filter(b => b.id !== blueprintId);
+       await actions.saveSettings({ releaseBlueprints: blueprints });
+     },
+
+     applyBlueprintToRelease: async (releaseId, blueprintId) => {
+       const release = data.releases?.find(r => r.id === releaseId);
+       const blueprint = (data.settings?.releaseBlueprints || []).find(b => b.id === blueprintId);
+       if (!release || !blueprint) return { success: false, error: 'Release or blueprint not found' };
+
+       const releaseDate = release.releaseDate;
+       const newTasks = (blueprint.tasks || []).map(taskTemplate => {
+         const taskDate = releaseDate ? (() => {
+           const d = new Date(releaseDate);
+           d.setDate(d.getDate() - (taskTemplate.daysBeforeRelease || 0));
+           return d.toISOString().split('T')[0];
+         })() : '';
+         return createUnifiedTask({
+           type: taskTemplate.type || 'Custom',
+           name: taskTemplate.name || taskTemplate.type || 'Task',
+           title: taskTemplate.name || taskTemplate.type || 'Task',
+           category: taskTemplate.category || 'Other',
+           date: taskDate,
+           dueDate: taskDate,
+           parentType: 'release',
+           notes: taskTemplate.notes || ''
+         });
+       });
+
+       const existingTypes = new Set((release.tasks || []).map(t => t.type));
+       const tasksToAdd = newTasks.filter(t => !existingTypes.has(t.type));
+       const mergedTasks = [...(release.tasks || []), ...tasksToAdd];
+
+       if (mode === 'cloud') {
+         await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_releases', releaseId), { tasks: mergedTasks });
+       } else {
+         setData(p => ({
+           ...p,
+           releases: (p.releases || []).map(r => r.id === releaseId ? { ...r, tasks: mergedTasks } : r)
+         }));
+       }
+       return { success: true, tasksAdded: tasksToAdd.length, blueprint: blueprint.name };
+     },
+
      // Release actions - Phase 3 enhancement
      addRelease: async (release) => {
        // Auto-spawn release tasks based on release date (respects autoTaskReleases setting)
@@ -4044,6 +4309,9 @@ export const StoreProvider = ({ children }) => {
     return (entity) => resolveCostPrecedence(entity, costModel);
   }, [costModel]);
 
+  const currentRole = data.settings?.appMode || 'artist';
+  const currentPermissions = getPermissionsForRole(currentRole);
+
   return (
     <StoreContext.Provider value={{ 
       data, 
@@ -4059,7 +4327,8 @@ export const StoreProvider = ({ children }) => {
       tagMap,
       getEffectiveCostWithSettings,
       resolveCostPrecedenceWithSettings,
-      costModel
+      costModel,
+      currentPermissions
     }}>
       {children}
     </StoreContext.Provider>

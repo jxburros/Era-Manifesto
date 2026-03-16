@@ -2046,6 +2046,7 @@ export const SettingsView = () => {
     const isLoading = mode === 'loading';
     const [templateDrafts, setTemplateDrafts] = useState(settings.templates || []);
     const [importText, setImportText] = useState('');
+    const [eraSyncStatus, setEraSyncStatus] = useState({});
     const [modImportText, setModImportText] = useState('');
     const [modStatus, setModStatus] = useState('');
 
@@ -2500,6 +2501,43 @@ export const SettingsView = () => {
                   </select>
                 </div>
 
+                {/* Role & Permissions */}
+                <div className="pt-4 border-t-4 border-black">
+                  <h3 className="font-black text-xs uppercase mb-2">Role &amp; Permissions</h3>
+                  <p className="text-[10px] opacity-60 mb-3">Set your role to control data access and edit rights across the app.</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { role: 'manager', label: 'Manager', desc: 'Full access: edit, delete, export, manage team & financials' },
+                      { role: 'artist', label: 'Artist', desc: 'Edit content, view financials. Cannot delete or manage team.' },
+                      { role: 'band_member', label: 'Band Member', desc: 'Read-only access. Cannot edit, delete, or view financials.' },
+                    ].map(({ role, label, desc }) => {
+                      const active = (settings.appMode || 'artist') === role;
+                      return (
+                        <button
+                          key={role}
+                          title={desc}
+                          onClick={() => actions.saveSettings({ appMode: role })}
+                          className={cn(
+                            "py-3 px-2 text-xs font-black uppercase flex flex-col items-center gap-1",
+                            THEME.punk.btn,
+                            active ? "bg-black text-white dark:bg-white dark:text-black" : "bg-white dark:bg-slate-700 dark:text-white"
+                          )}
+                        >
+                          <Icon name={role === 'manager' ? 'ShieldCheck' : role === 'artist' ? 'Mic' : 'Music'} size={16} />
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="text-[10px] mt-2 opacity-60">
+                    {(settings.appMode || 'artist') === 'manager'
+                      ? 'Manager: Full access — edit, delete, export, manage team & eras, approve payments.'
+                      : (settings.appMode || 'artist') === 'band_member'
+                      ? 'Band Member: Read-only — cannot edit, delete, or view financials.'
+                      : 'Artist: Can edit content and view financials. Cannot delete or manage team.'}
+                  </div>
+                </div>
+
                 {/* Theme Mode */}
                 <div className="pt-4 border-t-4 border-black">
                     <h3 className="font-black text-xs uppercase mb-2">Theme Mode</h3>
@@ -2572,6 +2610,17 @@ export const SettingsView = () => {
                     Enable Focus Mode
                   </label>
                   <p className="text-xs opacity-70 mt-2">Simplifies the UI with reduced borders, shadows, and textures for a cleaner look.</p>
+                  {/* Era-Specific Theming toggle */}
+                  <label className="flex items-center gap-2 text-sm font-bold mt-3">
+                    <input
+                      type="checkbox"
+                      checked={settings.eraSpecificTheme || false}
+                      onChange={e => actions.saveSettings({ eraSpecificTheme: e.target.checked })}
+                      className="w-5 h-5"
+                    />
+                    Era-Specific Themes
+                  </label>
+                  <p className="text-xs opacity-70 mt-1">When Era Mode is active, automatically shift UI accent colors to match the active era&apos;s theme color.</p>
                 </div>
 
                 {/* Feature 4: Era Mode - Focus on a single era */}
@@ -3380,6 +3429,31 @@ export const SettingsView = () => {
                               LOCKED
                             </span>
                           )}
+                        </div>
+                        {/* Sync Era to Children Button */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              setEraSyncStatus(prev => ({ ...prev, [era.id]: 'syncing' }));
+                              try {
+                                const result = await actions.syncEraToAllChildren(era.id);
+                                setEraSyncStatus(prev => ({ ...prev, [era.id]: result?.success ? 'done' : 'error' }));
+                                setTimeout(() => setEraSyncStatus(prev => ({ ...prev, [era.id]: null })), 3000);
+                              } catch {
+                                setEraSyncStatus(prev => ({ ...prev, [era.id]: 'error' }));
+                              }
+                            }}
+                            disabled={eraSyncStatus[era.id] === 'syncing'}
+                            className={cn("px-3 py-1 text-xs", THEME.punk.btn, "bg-indigo-600 text-white disabled:opacity-60")}
+                            title="Propagate this era to all child tasks and versions belonging to this era"
+                          >
+                            <Icon name="RefreshCw" size={12} className="inline mr-1" />
+                            {eraSyncStatus[era.id] === 'syncing' ? 'Syncing…'
+                              : eraSyncStatus[era.id] === 'done' ? '✓ Synced'
+                              : eraSyncStatus[era.id] === 'error' ? '✗ Error'
+                              : 'Sync Era'}
+                          </button>
+                          <span className="text-[10px] opacity-60">Propagates era tag to all child tasks</span>
                         </div>
                         {/* Badge Icon */}
                         <div className="flex items-center gap-2">
