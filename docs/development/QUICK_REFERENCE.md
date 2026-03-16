@@ -318,7 +318,7 @@ Navigate to: /dashboard
 ## Contact
 
 For questions about this enhancement:
-- See: ENHANCEMENT_SUMMARY.md
-- See: TESTING_GUIDE.md
-- Check: docs/APP_ARCHITECTURE.txt
-- Check: docs/PROJECT_DIRECTION.md
+- See: [../history/phases/ENHANCEMENT_SUMMARY.md](../history/phases/ENHANCEMENT_SUMMARY.md)
+- See: [../qa/TESTING_GUIDE.md](../qa/TESTING_GUIDE.md)
+- Check: [../architecture/APP_ARCHITECTURE.md](../architecture/APP_ARCHITECTURE.md)
+- Check: [../../PROJECT_DIRECTION.md](../../PROJECT_DIRECTION.md)
