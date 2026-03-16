@@ -67,10 +67,10 @@ export const STAGES = {
 // Task budget resolver - returns the best available cost value
 // Priority: paidCost > actualCost > quotedCost > estimatedCost
 export const getTaskBudget = (task = {}) => {
-  if (task.paidCost !== undefined && task.paidCost > 0) return task.paidCost;
+  if (task.amount_paid !== undefined && task.amount_paid > 0) return task.amount_paid;
   if (task.actualCost !== undefined && task.actualCost > 0) return task.actualCost;
-  if (task.quotedCost !== undefined && task.quotedCost > 0) return task.quotedCost;
-  return task.estimatedCost || 0;
+  if (task.quoted_cost !== undefined && task.quoted_cost > 0) return task.quoted_cost;
+  return task.estimated_cost || 0;
 };
 
 // Status filter helper - combine multiple filter criteria into single pass

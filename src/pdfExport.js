@@ -53,9 +53,9 @@ const getTimestamp = () => {
 
 // Helper to get effective cost (paid > quoted > estimated)
 const getEffectiveCost = (entity = {}) => {
-  if (entity.paidCost > 0) return entity.paidCost;
-  if (entity.quotedCost > 0) return entity.quotedCost;
-  return entity.estimatedCost || 0;
+  if (entity.amount_paid > 0) return entity.amount_paid;
+  if (entity.quoted_cost > 0) return entity.quoted_cost;
+  return entity.estimated_cost || 0;
 };
 
 // Helper to get team member name by ID
@@ -231,8 +231,8 @@ export const exportSongPDF = (song, teamMembers = [], eras = []) => {
   y = checkPageBreak(doc, y);
   y = addSectionHeader(doc, 'Metadata', y);
   
-  if (song.eraIds && song.eraIds.length > 0) {
-    const eraNames = song.eraIds.map(id => getEraName(id, eras)).join(', ');
+  if (song.era_ids && song.era_ids.length > 0) {
+    const eraNames = song.era_ids.map(id => getEraName(id, eras)).join(', ');
     y = addKeyValue(doc, 'Era(s)', eraNames, y);
   }
   
@@ -282,9 +282,9 @@ export const exportSongPDF = (song, teamMembers = [], eras = []) => {
   y = checkPageBreak(doc, y, 40);
   y = addSectionHeader(doc, 'Cost Summary', y);
   
-  const totalEstimated = allTasks.reduce((sum, t) => sum + (t.estimatedCost || 0), 0);
-  const totalQuoted = allTasks.reduce((sum, t) => sum + (t.quotedCost || 0), 0);
-  const totalPaid = allTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0);
+  const totalEstimated = allTasks.reduce((sum, t) => sum + (t.estimated_cost || 0), 0);
+  const totalQuoted = allTasks.reduce((sum, t) => sum + (t.quoted_cost || 0), 0);
+  const totalPaid = allTasks.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
   
   y = addKeyValue(doc, 'Estimated Cost', formatMoney(totalEstimated), y);
   y = addKeyValue(doc, 'Quoted Cost', formatMoney(totalQuoted), y);
@@ -422,9 +422,9 @@ export const exportVideoPDF = (video, teamMembers = []) => {
   }
   
   // Task-level costs
-  const taskEstimated = allTasks.reduce((sum, t) => sum + (t.estimatedCost || 0), 0);
-  const taskQuoted = allTasks.reduce((sum, t) => sum + (t.quotedCost || 0), 0);
-  const taskPaid = allTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0);
+  const taskEstimated = allTasks.reduce((sum, t) => sum + (t.estimated_cost || 0), 0);
+  const taskQuoted = allTasks.reduce((sum, t) => sum + (t.quoted_cost || 0), 0);
+  const taskPaid = allTasks.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
   
   y = addKeyValue(doc, 'Estimated Cost', formatMoney(taskEstimated), y);
   y = addKeyValue(doc, 'Quoted Cost', formatMoney(taskQuoted), y);
@@ -526,15 +526,15 @@ export const exportReleasePDF = (release, songs = []) => {
   y = addSectionHeader(doc, 'Budget Breakdown', y);
   
   // Release-level costs
-  y = addKeyValue(doc, 'Estimated Cost', formatMoney(release.estimatedCost || 0), y);
-  y = addKeyValue(doc, 'Quoted Cost', formatMoney(release.quotedCost || 0), y);
-  y = addKeyValue(doc, 'Amount Paid', formatMoney(release.paidCost || 0), y);
+  y = addKeyValue(doc, 'Estimated Cost', formatMoney(release.estimated_cost || 0), y);
+  y = addKeyValue(doc, 'Quoted Cost', formatMoney(release.quoted_cost || 0), y);
+  y = addKeyValue(doc, 'Amount Paid', formatMoney(release.amount_paid || 0), y);
   
   // Task costs
   const allTasks = [...(release.tasks || []), ...(release.customTasks || [])];
-  const taskEstimated = allTasks.reduce((sum, t) => sum + (t.estimatedCost || 0), 0);
-  const taskQuoted = allTasks.reduce((sum, t) => sum + (t.quotedCost || 0), 0);
-  const taskPaid = allTasks.reduce((sum, t) => sum + (t.paidCost || 0), 0);
+  const taskEstimated = allTasks.reduce((sum, t) => sum + (t.estimated_cost || 0), 0);
+  const taskQuoted = allTasks.reduce((sum, t) => sum + (t.quoted_cost || 0), 0);
+  const taskPaid = allTasks.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
   
   y += 5;
   doc.setFont('helvetica', 'bold');
@@ -547,9 +547,9 @@ export const exportReleasePDF = (release, songs = []) => {
   y = addKeyValue(doc, 'Task Paid', formatMoney(taskPaid), y);
   
   // Total
-  const totalEstimated = (release.estimatedCost || 0) + taskEstimated;
-  const totalQuoted = (release.quotedCost || 0) + taskQuoted;
-  const totalPaid = (release.paidCost || 0) + taskPaid;
+  const totalEstimated = (release.estimated_cost || 0) + taskEstimated;
+  const totalQuoted = (release.quoted_cost || 0) + taskQuoted;
+  const totalPaid = (release.amount_paid || 0) + taskPaid;
   
   y += 5;
   doc.setFont('helvetica', 'bold');
@@ -622,8 +622,8 @@ export const exportEraPDF = (era, releases = [], songs = []) => {
   y += 5;
   
   // Filter releases and songs for this era
-  const eraReleases = releases.filter(r => (r.eraIds || []).includes(era.id));
-  const eraSongs = songs.filter(s => (s.eraIds || []).includes(era.id));
+  const eraReleases = releases.filter(r => (r.era_ids || []).includes(era.id));
+  const eraSongs = songs.filter(s => (s.era_ids || []).includes(era.id));
   
   // Summary Statistics
   y = addSectionHeader(doc, 'Summary', y);
@@ -699,16 +699,16 @@ export const exportEraPDF = (era, releases = [], songs = []) => {
   let releasePaid = 0;
   
   eraReleases.forEach(r => {
-    releaseEstimated += r.estimatedCost || 0;
-    releaseQuoted += r.quotedCost || 0;
-    releasePaid += r.paidCost || 0;
+    releaseEstimated += r.estimated_cost || 0;
+    releaseQuoted += r.quoted_cost || 0;
+    releasePaid += r.amount_paid || 0;
     
     // Include release tasks
     const tasks = [...(r.tasks || []), ...(r.customTasks || [])];
     tasks.forEach(t => {
-      releaseEstimated += t.estimatedCost || 0;
-      releaseQuoted += t.quotedCost || 0;
-      releasePaid += t.paidCost || 0;
+      releaseEstimated += t.estimated_cost || 0;
+      releaseQuoted += t.quoted_cost || 0;
+      releasePaid += t.amount_paid || 0;
     });
   });
   
@@ -724,9 +724,9 @@ export const exportEraPDF = (era, releases = [], songs = []) => {
       ...(s.versions || []).flatMap(v => [...(v.tasks || []), ...(v.customTasks || [])])
     ];
     allTasks.forEach(t => {
-      songEstimated += t.estimatedCost || 0;
-      songQuoted += t.quotedCost || 0;
-      songPaid += t.paidCost || 0;
+      songEstimated += t.estimated_cost || 0;
+      songQuoted += t.quoted_cost || 0;
+      songPaid += t.amount_paid || 0;
     });
   });
   

@@ -259,7 +259,7 @@ const FloatingActionButton = () => {
 
     await actions.addExpense({
       name: expenseName.trim(),
-      paidCost: parsedAmount || 0,
+      amount_paid: parsedAmount || 0,
       status: 'Complete'
     });
     showToast(`Expense "${expenseName.trim()}" logged`, { type: 'success' });

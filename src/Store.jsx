@@ -133,170 +133,44 @@ export const getPermissionsForRole = (role) => {
 // All Items (Song, Version, Video, Release, Event, Standalone Task Category, Global Task Item) share this base
 // Legacy aliases are maintained for backward compatibility with existing UI code
 export const createUnifiedItem = (overrides = {}) => ({
-  // Core properties per Section 6: Item (base)
   id: overrides.id || crypto.randomUUID(),
-  type: overrides.type || 'generic', // 'song', 'version', 'video', 'release', 'event', 'category', 'globalTask'
-  name: overrides.name || overrides.title || '', // name/title
+  type: overrides.type || 'generic',
+  name: overrides.name || overrides.title || '',
   description: overrides.description || overrides.notes || '',
-  // Primary date - unified field name, with legacy alias fallbacks for input
-  primary_date: overrides.primary_date || overrides.primaryDate || overrides.releaseDate || overrides.date || '',
-  // Metadata arrays per Section 6 - underscore_case as primary
-  era_ids: overrides.era_ids || overrides.eraIds || [],
-  tag_ids: overrides.tag_ids || overrides.tagIds || [],
-  stage_ids: overrides.stage_ids || overrides.stageIds || [],
-  team_member_ids: overrides.team_member_ids || overrides.teamMemberIds || [],
-  // Cost fields - using underscore_case as primary per unified schema
-  estimated_cost: overrides.estimated_cost ?? overrides.estimatedCost ?? 0,
-  quoted_cost: overrides.quoted_cost ?? overrides.quotedCost ?? 0,
-  amount_paid: overrides.amount_paid ?? overrides.paidCost ?? overrides.amountPaid ?? 0,
-  // Legacy camelCase aliases - required for backward compatibility with existing UI components
-  // (Views.jsx, SpecViews.jsx, ItemComponents.jsx all use camelCase field names)
-  primaryDate: overrides.primaryDate || overrides.primary_date || overrides.releaseDate || overrides.date || '',
-  eraIds: overrides.eraIds || overrides.era_ids || [],
-  tagIds: overrides.tagIds || overrides.tag_ids || [],
-  stageIds: overrides.stageIds || overrides.stage_ids || [],
-  teamMemberIds: overrides.teamMemberIds || overrides.team_member_ids || [],
-  estimatedCost: overrides.estimatedCost ?? overrides.estimated_cost ?? 0,
-  quotedCost: overrides.quotedCost ?? overrides.quoted_cost ?? 0,
-  paidCost: overrides.paidCost ?? overrides.amount_paid ?? overrides.amountPaid ?? 0,
-  // Extended metadata
+  primary_date: overrides.primary_date || '',
+  era_ids: overrides.era_ids || [],
+  tag_ids: overrides.tag_ids || [],
+  stage_ids: overrides.stage_ids || [],
+  team_member_ids: overrides.team_member_ids || [],
+  estimated_cost: overrides.estimated_cost ?? 0,
+  quoted_cost: overrides.quoted_cost ?? 0,
+  amount_paid: overrides.amount_paid ?? 0,
   metadata: overrides.metadata || {},
   ...overrides
 });
 
-// Normalize any existing Item to the unified format for consistent UI display
-// This allows existing data to be displayed using unified components
-export const normalizeToUnifiedItem = (item = {}, itemType = 'generic') => {
-  // Preserve original ID or generate new one
-  const id = item.id || crypto.randomUUID();
-  
-  // Handle assignedMembers which could be an array of objects or IDs
-  const extractMemberIds = (members) => {
-    if (!members || !Array.isArray(members)) return [];
-    return members.map(m => typeof m === 'object' ? (m.memberId || m.id) : m).filter(Boolean);
-  };
-  
-  return {
-    ...createUnifiedItem({ type: itemType }),
-    id,
-    type: itemType,
-    name: item.name || item.title || item.taskName || '',
-    description: item.description || item.notes || '',
-    primary_date: item.primary_date || item.primaryDate || item.releaseDate || item.date || '',
-    era_ids: item.era_ids || item.eraIds || [],
-    tag_ids: item.tag_ids || item.tagIds || [],
-    stage_ids: item.stage_ids || item.stageIds || [],
-    team_member_ids: item.team_member_ids || item.teamMemberIds || extractMemberIds(item.assignedMembers),
-    estimatedCost: item.estimatedCost || item.estimated_cost || 0,
-    quotedCost: item.quotedCost || item.quoted_cost || 0,
-    paidCost: item.paidCost || item.amount_paid || item.amountPaid || 0,
-    // Legacy aliases
-    primaryDate: item.primaryDate || item.primary_date || item.releaseDate || item.date || '',
-    eraIds: item.eraIds || item.era_ids || [],
-    tagIds: item.tagIds || item.tag_ids || [],
-    stageIds: item.stageIds || item.stage_ids || [],
-    teamMemberIds: item.teamMemberIds || item.team_member_ids || extractMemberIds(item.assignedMembers),
-    // Preserve original item data
-    _original: item
-  };
-};
-
-// Normalize any existing Task to the unified format for consistent UI display
-export const normalizeToUnifiedTask = (task = {}, parentType = null) => {
-  // Preserve original ID or generate new one
-  const id = task.id || crypto.randomUUID();
-  
-  // Handle assignedMembers which could be an array of objects or IDs
-  const extractMemberIds = (members) => {
-    if (!members || !Array.isArray(members)) return [];
-    return members.map(m => typeof m === 'object' ? (m.memberId || m.id) : m).filter(Boolean);
-  };
-  
-  // Preserve assignedMembers in original format for UI components
-  const assignedMembers = task.assignedMembers || [];
-  
-  return {
-    ...createUnifiedTask({ parentType }),
-    id,
-    parent_item_id: task.parent_item_id || task.parentItemId || task.parentId || null,
-    name: task.name || task.title || task.type || task.taskName || '',
-    status: task.status || 'Not Started',
-    due_date: task.due_date || task.dueDate || task.date || '',
-    team_member_ids: task.team_member_ids || task.teamMemberIds || extractMemberIds(assignedMembers),
-    estimated_cost: task.estimated_cost ?? task.estimatedCost ?? 0,
-    quoted_cost: task.quoted_cost ?? task.quotedCost ?? 0,
-    amount_paid: task.amount_paid ?? task.paidCost ?? task.amountPaid ?? 0,
-    partially_paid: task.partially_paid ?? task.partiallyPaid ?? false,
-    era_ids: task.era_ids || task.eraIds || [],
-    tag_ids: task.tag_ids || task.tagIds || [],
-    stage_ids: task.stage_ids || task.stageIds || [],
-    notes: task.notes || task.description || '',
-    type: task.type || 'Custom',
-    category: task.category || 'Other',
-    parentType: parentType || task.parentType || null,
-    isOverridden: task.isOverridden || false,
-    isArchived: task.isArchived || false,
-    // Legacy aliases - parent_item_id is source of truth for parent reference
-    parentId: task.parent_item_id || task.parentItemId || task.parentId || null,
-    parentItemId: task.parent_item_id || task.parentItemId || task.parentId || null,
-    title: task.title || task.name || task.type || task.taskName || '',
-    description: task.description || task.notes || '',
-    date: task.due_date || task.dueDate || task.date || '',
-    dueDate: task.due_date || task.dueDate || task.date || '',
-    estimatedCost: task.estimatedCost ?? task.estimated_cost ?? 0,
-    quotedCost: task.quotedCost ?? task.quoted_cost ?? 0,
-    paidCost: task.paidCost ?? task.amount_paid ?? task.amountPaid ?? 0,
-    // Preserve original assignedMembers format for UI components
-    assignedMembers: assignedMembers,
-    eraIds: task.eraIds || task.era_ids || [],
-    tagIds: task.tagIds || task.tag_ids || [],
-    stageIds: task.stageIds || task.stage_ids || [],
-    // Preserve original task data
-    _original: task
-  };
-};
-
 // Unified Task schema factory - per APP_ARCHITECTURE.md Section 6
 // All Tasks share this common structure regardless of parent type
 export const createUnifiedTask = (overrides = {}) => ({
-  // Core properties per Section 6: Task
   id: overrides.id || crypto.randomUUID(),
-  parent_item_id: overrides.parent_item_id || overrides.parentItemId || overrides.parentId || null,
-  name: overrides.name || overrides.title || overrides.type || '',
+  parent_item_id: overrides.parent_item_id || null,
+  name: overrides.name || overrides.type || '',
   status: overrides.status || 'Not Started',
-  due_date: overrides.due_date || overrides.dueDate || overrides.date || '',
-  team_member_ids: overrides.team_member_ids || overrides.teamMemberIds || overrides.assignedMembers || [],
-  // Cost fields per Section 6 and 2.2
-  estimated_cost: overrides.estimated_cost ?? overrides.estimatedCost ?? 0,
-  quoted_cost: overrides.quoted_cost ?? overrides.quotedCost ?? 0,
-  amount_paid: overrides.amount_paid ?? overrides.paidCost ?? overrides.amountPaid ?? 0,
-  partially_paid: overrides.partially_paid ?? overrides.partiallyPaid ?? false,
-  // Metadata per Section 6
-  era_ids: overrides.era_ids || overrides.eraIds || [],
-  tag_ids: overrides.tag_ids || overrides.tagIds || [],
-  stage_ids: overrides.stage_ids || overrides.stageIds || [],
-  notes: overrides.notes || overrides.description || '',
-  // Additional properties for UI and categorization
+  due_date: overrides.due_date || '',
+  team_member_ids: overrides.team_member_ids || [],
+  estimated_cost: overrides.estimated_cost ?? 0,
+  quoted_cost: overrides.quoted_cost ?? 0,
+  amount_paid: overrides.amount_paid ?? 0,
+  partially_paid: overrides.partially_paid ?? false,
+  era_ids: overrides.era_ids || [],
+  tag_ids: overrides.tag_ids || [],
+  stage_ids: overrides.stage_ids || [],
+  notes: overrides.notes || '',
   type: overrides.type || 'Custom',
   category: overrides.category || 'Other',
   parentType: overrides.parentType || null,
   isOverridden: overrides.isOverridden || false,
   isArchived: overrides.isArchived || false,
-  // Legacy aliases for backwards compatibility with existing UI
-  // parent_item_id is the source of truth for parent reference
-  parentId: overrides.parent_item_id || overrides.parentItemId || overrides.parentId || null,
-  parentItemId: overrides.parent_item_id || overrides.parentItemId || overrides.parentId || null,
-  title: overrides.title || overrides.name || overrides.type || '',
-  description: overrides.description || overrides.notes || '',
-  date: overrides.due_date || overrides.dueDate || overrides.date || '',
-  dueDate: overrides.due_date || overrides.dueDate || overrides.date || '',
-  estimatedCost: overrides.estimatedCost ?? overrides.estimated_cost ?? 0,
-  quotedCost: overrides.quotedCost ?? overrides.quoted_cost ?? 0,
-  paidCost: overrides.paidCost ?? overrides.amount_paid ?? overrides.amountPaid ?? 0,
-  assignedMembers: overrides.assignedMembers || overrides.team_member_ids || overrides.teamMemberIds || [],
-  eraIds: overrides.eraIds || overrides.era_ids || [],
-  tagIds: overrides.tagIds || overrides.tag_ids || [],
-  stageIds: overrides.stageIds || overrides.stage_ids || [],
   ...overrides
 });
 
@@ -313,10 +187,10 @@ export const collectAllTasks = (data = {}) => {
       source: meta.source,
       sourceName: meta.sourceName,
       sourceId: meta.sourceId,
-      estimatedCost: task.estimatedCost ?? task.estimated_cost ?? 0,
-      quotedCost: task.quotedCost ?? task.quoted_cost ?? 0,
-      paidCost: task.paidCost ?? task.amount_paid ?? 0,
-      stageId: task.stageId || (task.stageIds || [])[0] || ''
+      estimated_cost: task.estimated_cost ?? 0,
+      quoted_cost: task.quoted_cost ?? 0,
+      amount_paid: task.amount_paid ?? 0,
+      stageId: task.stageId || (task.stage_ids || [])[0] || ''
     });
   };
 
@@ -341,7 +215,7 @@ export const itemBelongsToEra = (item, eraModeEraId) => {
   if (!item) return false;
   
   // Check eraIds array (primary)
-  const itemEraIds = item.eraIds || item.era_ids || [];
+  const itemEraIds = item.era_ids || [];
   if (itemEraIds.includes(eraModeEraId)) return true;
   
   // Fallback: check single eraId field
@@ -432,7 +306,7 @@ export const generateVideoTasks = (releaseDate, videoTypeKey, deadlineOffsets = 
         type: taskType.type,
         category: taskType.category,
         date: taskDate.toISOString().split('T')[0],
-        dueDate: taskDate.toISOString().split('T')[0],
+        due_date: taskDate.toISOString().split('T')[0],
         parentType: 'video'
       }));
     }
@@ -491,7 +365,7 @@ export const generateEventTasks = (eventDate, includePreparation = true) => {
         type: taskType.type,
         category: taskType.category,
         date: taskDate.toISOString().split('T')[0],
-        dueDate: taskDate.toISOString().split('T')[0],
+        due_date: taskDate.toISOString().split('T')[0],
         parentType: 'event',
         isOptional: !taskType.required
       }));
@@ -550,7 +424,7 @@ export const calculateSongTasks = (releaseDate, isSingle, videoType, stemsNeeded
       type: taskType.type,
       category: taskType.category,
       date: taskDate.toISOString().split('T')[0],
-      dueDate: taskDate.toISOString().split('T')[0],
+      due_date: taskDate.toISOString().split('T')[0],
       parentType: 'song'
     }));
   });
@@ -566,7 +440,7 @@ export const calculateSongTasks = (releaseDate, isSingle, videoType, stemsNeeded
         type: taskType.type,
         category: taskType.category,
         date: taskDate.toISOString().split('T')[0],
-        dueDate: taskDate.toISOString().split('T')[0],
+        due_date: taskDate.toISOString().split('T')[0],
         parentType: 'song'
       }));
     });
@@ -584,7 +458,7 @@ export const calculateSongTasks = (releaseDate, isSingle, videoType, stemsNeeded
           type: taskType.type,
           category: taskType.category,
           date: taskDate.toISOString().split('T')[0],
-          dueDate: taskDate.toISOString().split('T')[0],
+          due_date: taskDate.toISOString().split('T')[0],
           parentType: 'song'
         }));
       }
@@ -619,7 +493,7 @@ export const calculateReleaseTasks = (releaseDate, deadlineOffsets = {}) => {
       type: taskType.type,
       category: taskType.category,
       date: taskDate.toISOString().split('T')[0],
-      dueDate: taskDate.toISOString().split('T')[0],
+      due_date: taskDate.toISOString().split('T')[0],
       parentType: 'release'
     }));
   });
@@ -655,7 +529,7 @@ export const recalculateDeadlines = (existingDeadlines, releaseDate, isSingle, v
       const newDate = new Date(release);
       newDate.setDate(newDate.getDate() + offsets[deadline.type]);
       deadline.date = newDate.toISOString().split('T')[0];
-      deadline.dueDate = newDate.toISOString().split('T')[0];
+      deadline.due_date = newDate.toISOString().split('T')[0];
     }
   });
   
@@ -679,7 +553,7 @@ export const recalculateReleaseTasks = (existingTasks, releaseDate) => {
       const newDate = new Date(release);
       newDate.setDate(newDate.getDate() + offsets[task.type]);
       task.date = newDate.toISOString().split('T')[0];
-      task.dueDate = newDate.toISOString().split('T')[0];
+      task.due_date = newDate.toISOString().split('T')[0];
     }
   });
   
@@ -687,22 +561,22 @@ export const recalculateReleaseTasks = (existingTasks, releaseDate) => {
 };
 
 const applyMetadataDefaults = (entity = {}, fallback = {}) => {
-  const fallbackEras = fallback.eraIds || [];
-  const fallbackStages = fallback.stageIds || [];
-  const fallbackTags = fallback.tagIds || [];
+  const fallbackEras = fallback.era_ids || [];
+  const fallbackStages = fallback.stage_ids || [];
+  const fallbackTags = fallback.tag_ids || [];
   return {
     ...entity,
-    eraIds: (entity.eraIds && entity.eraIds.length > 0) ? entity.eraIds : [...fallbackEras],
-    stageIds: (entity.stageIds && entity.stageIds.length > 0) ? entity.stageIds : [...fallbackStages],
-    tagIds: (entity.tagIds && entity.tagIds.length > 0) ? entity.tagIds : [...fallbackTags]
+    era_ids: (entity.era_ids && entity.era_ids.length > 0) ? entity.era_ids : [...fallbackEras],
+    stage_ids: (entity.stage_ids && entity.stage_ids.length > 0) ? entity.stage_ids : [...fallbackStages],
+    tag_ids: (entity.tag_ids && entity.tag_ids.length > 0) ? entity.tag_ids : [...fallbackTags]
   };
 };
 
 const propagateSongMetadata = (song) => {
   const meta = {
-    eraIds: song.eraIds || [],
-    stageIds: song.stageIds || [],
-    tagIds: song.tagIds || []
+    era_ids: song.era_ids || [],
+    stage_ids: song.stage_ids || [],
+    tag_ids: song.tag_ids || []
   };
 
   const mapTasks = (tasks = []) => tasks.map(task => {
@@ -724,15 +598,6 @@ const propagateSongMetadata = (song) => {
       ...applyMetadataDefaults(video, meta),
       tasks: mapTasks(video.tasks || [])
     }))
-  };
-};
-
-// Migration function for legacy data - returns data in expected format
-const migrateLegacyData = (data) => {
-  if (!data) return { items: [], tasks: [] };
-  return {
-    items: data.items || [],
-    tasks: data.tasks || []
   };
 };
 
@@ -811,8 +676,7 @@ export const StoreProvider = ({ children }) => {
       const localData = JSON.parse(localStorage.getItem(appId)) || {};
       setData(prev => {
         const merged = { ...prev, ...localData };
-        const migrated = migrateLegacyData(merged);
-        return { ...merged, items: migrated.items, tasksV2: migrated.tasks };
+        return { ...merged };
       });
       setMode('local');
     };
@@ -904,11 +768,11 @@ export const StoreProvider = ({ children }) => {
     const visible = data.tasks.filter(t => !t.archived);
     let min = 0, max = 0, act = 0;
     const processNode = (nodeId) => {
-        const children = visible.filter(t => t.parentId === nodeId);
+        const children = visible.filter(t => t.parent_item_id === nodeId);
         let pMin = 0, pMax = 0, pAct = 0;
         const t = visible.find(v => v.id === nodeId);
         const selfAct = t?.actualCost || 0;
-        const selfEst = selfAct > 0 ? selfAct : (t?.quotedCost || t?.estimatedCost || 0);
+        const selfEst = selfAct > 0 ? selfAct : (t?.quoted_cost || t?.estimated_cost || 0);
         
         if (children.length === 0) {
              if (!t) return {min:0, max:0, act:0};
@@ -935,7 +799,7 @@ export const StoreProvider = ({ children }) => {
         if (t) pAct += (t.actualCost || 0);
         return { min: pMin + selfEst, max: pMax + selfEst, act: pAct + selfAct };
     };
-    visible.filter(t => !t.parentId).forEach(t => {
+    visible.filter(t => !t.parent_item_id).forEach(t => {
         const nodeStats = processNode(t.id);
         min += nodeStats.min; max += nodeStats.max; act += nodeStats.act;
     });
@@ -1260,14 +1124,14 @@ export const StoreProvider = ({ children }) => {
              title: baseTitle,
              description: action.template?.description || '',
              status: action.template?.status || 'Not Started',
-             dueDate: action.template?.dueDate || action.template?.date || '',
-             estimatedCost: action.template?.estimatedCost || 0,
-             quotedCost: action.template?.quotedCost || 0,
-             paidCost: action.template?.paidCost || 0,
+             due_date: action.template?.due_date || action.template?.date || '',
+             estimated_cost: action.template?.estimated_cost || 0,
+             quoted_cost: action.template?.quoted_cost || 0,
+             amount_paid: action.template?.amount_paid || 0,
              notes: action.template?.notes || '',
              metadata: action.template?.metadata || {},
              parentType: action.template?.parentType || null,
-             parentId: action.template?.parentId || null
+             parent_item_id: action.template?.parent_item_id || null
            });
            await actions.add('tasks', newTask);
            return newTask;
@@ -1278,11 +1142,11 @@ export const StoreProvider = ({ children }) => {
              title: baseTitle,
              taskName: baseTitle,
              status: action.template?.status || 'Not Started',
-             date: action.template?.primaryDate || action.template?.date || '',
+             date: action.template?.primary_date || action.template?.date || '',
              category: action.template?.category || 'Other',
-             estimatedCost: action.template?.estimatedCost || 0,
-             quotedCost: action.template?.quotedCost || 0,
-             paidCost: action.template?.paidCost || 0,
+             estimated_cost: action.template?.estimated_cost || 0,
+             quoted_cost: action.template?.quoted_cost || 0,
+             amount_paid: action.template?.amount_paid || 0,
              notes: action.template?.notes || '',
              parentType: 'global'
            });
@@ -1324,12 +1188,12 @@ export const StoreProvider = ({ children }) => {
          description: task.description || '',
          date: task.date || '',
          status: task.status || 'Not Started',
-         estimatedCost: task.estimatedCost || 0,
-         quotedCost: task.quotedCost || 0,
-         paidCost: task.paidCost || 0,
+         estimated_cost: task.estimated_cost || 0,
+         quoted_cost: task.quoted_cost || 0,
+         amount_paid: task.amount_paid || 0,
          notes: task.notes || '',
          parentType: 'event',
-         parentId: eventId
+         parent_item_id: eventId
        });
        if (mode === 'cloud') {
          const event = data.events.find(e => e.id === eventId);
@@ -1387,7 +1251,7 @@ export const StoreProvider = ({ children }) => {
      // Events have: Name, Era/Stage, Team Members, Tasks, Notes, Location, Time/Date, Entry Cost, Progress
      // Phase 2: Events derive cost from Tasks only - no event-level cost fields
      addEvent: async (event, includePreparation = true) => {
-       const defaultEraIds = event.eraIds || (data.settings?.defaultEraId ? [data.settings.defaultEraId] : []);
+       const defaultEraIds = event.era_ids || (data.settings?.defaultEraId ? [data.settings.defaultEraId] : []);
        // Auto-assign artist in Manager Mode
        const artistId = event.artistId || (data.settings?.appMode === 'manager' && data.settings?.selectedArtistId ? data.settings.selectedArtistId : '');
        // Generate auto-tasks per Section 3.5 (respects autoTaskEvents setting)
@@ -1411,10 +1275,10 @@ export const StoreProvider = ({ children }) => {
          // Phase 2.1: Attendees - simple list of names (no functional logic)
          attendees: event.attendees || [],
          // Metadata
-         eraIds: defaultEraIds,
-         stageIds: event.stageIds || [],
-         tagIds: event.tagIds || [],
-         teamMemberIds: event.teamMemberIds || [],
+         era_ids: defaultEraIds,
+         stage_ids: event.stage_ids || [],
+         tag_ids: event.tag_ids || [],
+         team_member_ids: event.team_member_ids || [],
          // Auto-generated tasks per Section 3.5
          tasks: autoTasks,
          customTasks: []
@@ -1662,13 +1526,13 @@ export const StoreProvider = ({ children }) => {
      
      // Song-specific actions - per APP_ARCHITECTURE.md Section 5.1
     addSong: async (song) => {
-      const defaultEraIds = song.eraIds || (data.settings?.defaultEraId ? [data.settings.defaultEraId] : []);
+      const defaultEraIds = song.era_ids || (data.settings?.defaultEraId ? [data.settings.defaultEraId] : []);
       // Auto-assign artist in Manager Mode
       const artistId = song.artistId || (data.settings?.appMode === 'manager' && data.settings?.selectedArtistId ? data.settings.selectedArtistId : '');
       const metaDefaults = {
-        eraIds: defaultEraIds,
-        stageIds: song.stageIds || [],
-        tagIds: song.tagIds || []
+        era_ids: defaultEraIds,
+        stage_ids: song.stage_ids || [],
+        tag_ids: song.tag_ids || []
       };
       // Pass stemsNeeded to calculateDeadlines per Section 3.2
       // Respect autoTaskSongs setting - only generate tasks if enabled
@@ -1691,9 +1555,9 @@ export const StoreProvider = ({ children }) => {
         writers: song.writers || [],
         composers: song.composers || [],
         // Cost layers with precedence: paidCost > quotedCost > estimatedCost
-        estimatedCost: song.estimatedCost || 0,
-        quotedCost: song.quotedCost || 0,
-        paidCost: song.paidCost || 0,
+        estimated_cost: song.estimated_cost || 0,
+        quoted_cost: song.quoted_cost || 0,
+        amount_paid: song.amount_paid || 0,
         // Availability windows for exclusivity
         exclusiveType: song.exclusiveType || 'None',
         exclusiveStartDate: song.exclusiveStartDate || '',
@@ -1701,9 +1565,9 @@ export const StoreProvider = ({ children }) => {
         exclusiveNotes: song.exclusiveNotes || '',
         instruments: song.instruments || [],
         musicians: song.musicians || [],
-        eraIds: defaultEraIds,
-        stageIds: song.stageIds || [],
-        tagIds: song.tagIds || [],
+        era_ids: defaultEraIds,
+        stage_ids: song.stage_ids || [],
+        tag_ids: song.tag_ids || [],
         deadlines: deadlines,
         customTasks: [],
         versions: [
@@ -1718,13 +1582,13 @@ export const StoreProvider = ({ children }) => {
             exclusiveNotes: song.exclusiveNotes || '',
             instruments: song.instruments || [],
             musicians: song.musicians || [],
-            eraIds: defaultEraIds,
-            stageIds: song.stageIds || [],
-            tagIds: song.tagIds || [],
+            era_ids: defaultEraIds,
+            stage_ids: song.stage_ids || [],
+            tag_ids: song.tag_ids || [],
             // Cost layers
-            estimatedCost: 0,
-            quotedCost: 0,
-            paidCost: 0,
+            estimated_cost: 0,
+            quoted_cost: 0,
+            amount_paid: 0,
             basedOnCore: true
           }
         ],
@@ -1741,7 +1605,7 @@ export const StoreProvider = ({ children }) => {
     updateSong: async (songId, updates) => {
       const song = data.songs.find(s => s.id === songId);
       // Lock Era guard: prevent edits if song belongs to a locked era
-      if (song && isEraLocked(song.eraIds || song.era_ids || [], data.eras || [])) {
+      if (song && isEraLocked(song.era_ids || song.era_ids || [], data.eras || [])) {
         console.warn('Cannot update song: belongs to a locked era');
         return { error: 'Era is locked', locked: true };
       }
@@ -1764,7 +1628,7 @@ export const StoreProvider = ({ children }) => {
        // Capture snapshot for undo
        const existing = data.songs?.find(s => s.id === songId);
        // Lock Era guard: prevent deletion if song belongs to a locked era
-       if (existing && isEraLocked(existing.eraIds || existing.era_ids || [], data.eras || [])) {
+       if (existing && isEraLocked(existing.era_ids || existing.era_ids || [], data.eras || [])) {
          console.warn('Cannot delete song: belongs to a locked era');
          return { error: 'Era is locked', locked: true };
        }
@@ -1788,12 +1652,12 @@ export const StoreProvider = ({ children }) => {
         date: task.date || '',
         status: task.status || 'Not Started',
         // Cost layers with precedence
-        estimatedCost: task.estimatedCost || 0,
-        quotedCost: task.quotedCost || 0,
-        paidCost: task.paidCost || 0,
+        estimated_cost: task.estimated_cost || 0,
+        quoted_cost: task.quoted_cost || 0,
+        amount_paid: task.amount_paid || 0,
         notes: task.notes || '',
         parentType: 'song',
-        parentId: songId
+        parent_item_id: songId
       });
       const song = data.songs.find(s => s.id === songId) || {};
       const taskWithMeta = applyMetadataDefaults(newTask, song);
@@ -1949,9 +1813,9 @@ export const StoreProvider = ({ children }) => {
         instruments: [...(template.instruments || [])],
         musicians: [...(template.musicians || [])],
         // Cost layers
-        estimatedCost: template.estimatedCost || 0,
-        quotedCost: template.quotedCost || 0,
-        paidCost: template.paidCost || 0,
+        estimated_cost: template.estimated_cost || 0,
+        quoted_cost: template.quoted_cost || 0,
+        amount_paid: template.amount_paid || 0,
         // Core inheritance
         basedOnCore: baseData?.basedOnCore !== undefined ? baseData.basedOnCore : true,
         // Video type selections (copied from template)
@@ -2173,14 +2037,14 @@ export const StoreProvider = ({ children }) => {
         title: task.title || 'New Task',
         description: task.description || '',
         date: task.date || '',
-        dueDate: task.date || task.dueDate || '',
+        due_date: task.date || task.due_date || '',
         status: task.status || 'Not Started',
-        estimatedCost: task.estimatedCost || 0,
-        quotedCost: task.quotedCost || 0,
-        paidCost: task.paidCost || 0,
+        estimated_cost: task.estimated_cost || 0,
+        quoted_cost: task.quoted_cost || 0,
+        amount_paid: task.amount_paid || 0,
         notes: task.notes || '',
         parentType: 'version',
-        parentId: versionId
+        parent_item_id: versionId
       });
       const updatedVersions = (song.versions || []).map(v => {
         if (v.id !== versionId) return v;
@@ -2203,7 +2067,7 @@ export const StoreProvider = ({ children }) => {
          ...task,
          id: crypto.randomUUID(),
          parentType: 'song',
-         parentId: songId
+         parent_item_id: songId
        });
        if (mode === 'cloud') {
          const song = data.songs.find(s => s.id === songId);
@@ -2356,9 +2220,9 @@ export const StoreProvider = ({ children }) => {
          assignedTo: task.assignedTo || '',
          status: task.status || 'Not Started',
          // Cost layers with precedence
-         estimatedCost: task.estimatedCost || 0,
-         quotedCost: task.quotedCost || 0,
-         paidCost: task.paidCost || 0,
+         estimated_cost: task.estimated_cost || 0,
+         quoted_cost: task.quoted_cost || 0,
+         amount_paid: task.amount_paid || 0,
          notes: task.notes || '',
          parentType: 'global',
          artistId: artistId
@@ -2375,7 +2239,7 @@ export const StoreProvider = ({ children }) => {
        // Capture snapshot for undo
        const existing = data.globalTasks?.find(t => t.id === taskId);
        // Lock Era guard: prevent edits if task belongs to a locked era
-       if (existing && isEraLocked(existing.eraIds || existing.era_ids || [], data.eras || [])) {
+       if (existing && isEraLocked(existing.era_ids || existing.era_ids || [], data.eras || [])) {
          console.warn('Cannot update task: belongs to a locked era');
          return { error: 'Era is locked', locked: true };
        }
@@ -2396,7 +2260,7 @@ export const StoreProvider = ({ children }) => {
        // Capture snapshot for undo
        const existing = data.globalTasks?.find(t => t.id === taskId);
        // Lock Era guard: prevent deletion if task belongs to a locked era
-       if (existing && isEraLocked(existing.eraIds || existing.era_ids || [], data.eras || [])) {
+       if (existing && isEraLocked(existing.era_ids || existing.era_ids || [], data.eras || [])) {
          console.warn('Cannot delete task: belongs to a locked era');
          return { error: 'Era is locked', locked: true };
        }
@@ -2436,9 +2300,9 @@ export const StoreProvider = ({ children }) => {
          description: taskData.description || '',
          assignedTo: memberName,
          status: taskData.status || 'Not Started',
-         estimatedCost: taskData.estimatedCost || 0,
-         quotedCost: taskData.quotedCost || 0,
-         paidCost: taskData.paidCost || 0,
+         estimated_cost: taskData.estimated_cost || 0,
+         quoted_cost: taskData.quoted_cost || 0,
+         amount_paid: taskData.amount_paid || 0,
          notes: taskData.notes || '',
          parentType: 'global',
          // Pre-fill assigned members with this team member
@@ -2555,25 +2419,25 @@ export const StoreProvider = ({ children }) => {
 
        const updates = { songs: 0, releases: 0, events: 0, globalTasks: 0 };
 
-       const addEraId = (eraIds = []) =>
-         eraIds.includes(eraId) ? eraIds : [...eraIds, eraId];
+       const addEraId = (currentEraIds = []) =>
+         currentEraIds.includes(eraId) ? currentEraIds : [...currentEraIds, eraId];
 
        const applyToTasks = (tasks = []) =>
-         tasks.map(t => ({ ...t, eraIds: addEraId(t.eraIds) }));
+         tasks.map(t => ({ ...t, era_ids: addEraId(t.era_ids) }));
 
        if (mode === 'cloud') {
          for (const song of (data.songs || [])) {
-           if (!(song.eraIds || []).includes(eraId)) continue;
+           if (!(song.era_ids || []).includes(eraId)) continue;
            const updated = {
-             eraIds: addEraId(song.eraIds),
+             era_ids: addEraId(song.era_ids),
              deadlines: applyToTasks(song.deadlines),
              customTasks: applyToTasks(song.customTasks),
              versions: (song.versions || []).map(v => ({
-               ...v, eraIds: addEraId(v.eraIds),
+               ...v, era_ids: addEraId(v.era_ids),
                tasks: applyToTasks(v.tasks), customTasks: applyToTasks(v.customTasks)
              })),
              videos: (song.videos || []).map(v => ({
-               ...v, eraIds: addEraId(v.eraIds),
+               ...v, era_ids: addEraId(v.era_ids),
                tasks: applyToTasks(v.tasks)
              }))
            };
@@ -2581,37 +2445,37 @@ export const StoreProvider = ({ children }) => {
            updates.songs++;
          }
          for (const release of (data.releases || [])) {
-           if (!(release.eraIds || []).includes(eraId)) continue;
-           const updated = { eraIds: addEraId(release.eraIds), tasks: applyToTasks(release.tasks), customTasks: applyToTasks(release.customTasks) };
+           if (!(release.era_ids || []).includes(eraId)) continue;
+           const updated = { era_ids: addEraId(release.era_ids), tasks: applyToTasks(release.tasks), customTasks: applyToTasks(release.customTasks) };
            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_releases', release.id), updated);
            updates.releases++;
          }
          for (const event of (data.events || [])) {
-           if (!(event.eraIds || []).includes(eraId)) continue;
-           const updated = { eraIds: addEraId(event.eraIds), tasks: applyToTasks(event.tasks), customTasks: applyToTasks(event.customTasks) };
+           if (!(event.era_ids || []).includes(eraId)) continue;
+           const updated = { era_ids: addEraId(event.era_ids), tasks: applyToTasks(event.tasks), customTasks: applyToTasks(event.customTasks) };
            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_events', event.id), updated);
            updates.events++;
          }
          for (const task of (data.globalTasks || [])) {
-           if (!(task.eraIds || []).includes(eraId)) continue;
-           await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_globalTasks', task.id), { eraIds: addEraId(task.eraIds) });
+           if (!(task.era_ids || []).includes(eraId)) continue;
+           await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'album_globalTasks', task.id), { era_ids: addEraId(task.era_ids) });
            updates.globalTasks++;
          }
        } else {
          setData(prev => {
            const updatedSongs = (prev.songs || []).map(song => {
-             if (!(song.eraIds || []).includes(eraId)) return song;
+             if (!(song.era_ids || []).includes(eraId)) return song;
              return {
                ...song,
-               eraIds: addEraId(song.eraIds),
+               era_ids: addEraId(song.era_ids),
                deadlines: applyToTasks(song.deadlines),
                customTasks: applyToTasks(song.customTasks),
                versions: (song.versions || []).map(v => ({
-                 ...v, eraIds: addEraId(v.eraIds),
+                 ...v, era_ids: addEraId(v.era_ids),
                  tasks: applyToTasks(v.tasks), customTasks: applyToTasks(v.customTasks)
                })),
                videos: (song.videos || []).map(v => ({
-                 ...v, eraIds: addEraId(v.eraIds),
+                 ...v, era_ids: addEraId(v.era_ids),
                  tasks: applyToTasks(v.tasks)
                }))
              };
@@ -2619,21 +2483,21 @@ export const StoreProvider = ({ children }) => {
            updates.songs = updatedSongs.filter((s, i) => s !== (prev.songs || [])[i]).length;
 
            const updatedReleases = (prev.releases || []).map(release => {
-             if (!(release.eraIds || []).includes(eraId)) return release;
+             if (!(release.era_ids || []).includes(eraId)) return release;
              updates.releases++;
-             return { ...release, eraIds: addEraId(release.eraIds), tasks: applyToTasks(release.tasks), customTasks: applyToTasks(release.customTasks) };
+             return { ...release, era_ids: addEraId(release.era_ids), tasks: applyToTasks(release.tasks), customTasks: applyToTasks(release.customTasks) };
            });
 
            const updatedEvents = (prev.events || []).map(event => {
-             if (!(event.eraIds || []).includes(eraId)) return event;
+             if (!(event.era_ids || []).includes(eraId)) return event;
              updates.events++;
-             return { ...event, eraIds: addEraId(event.eraIds), tasks: applyToTasks(event.tasks), customTasks: applyToTasks(event.customTasks) };
+             return { ...event, era_ids: addEraId(event.era_ids), tasks: applyToTasks(event.tasks), customTasks: applyToTasks(event.customTasks) };
            });
 
            const updatedGlobalTasks = (prev.globalTasks || []).map(task => {
-             if (!(task.eraIds || []).includes(eraId)) return task;
+             if (!(task.era_ids || []).includes(eraId)) return task;
              updates.globalTasks++;
-             return { ...task, eraIds: addEraId(task.eraIds) };
+             return { ...task, era_ids: addEraId(task.era_ids) };
            });
 
            return { ...prev, songs: updatedSongs, releases: updatedReleases, events: updatedEvents, globalTasks: updatedGlobalTasks };
@@ -2688,7 +2552,7 @@ export const StoreProvider = ({ children }) => {
            title: taskTemplate.name || taskTemplate.type || 'Task',
            category: taskTemplate.category || 'Other',
            date: taskDate,
-           dueDate: taskDate,
+           due_date: taskDate,
            parentType: 'release',
            notes: taskTemplate.notes || ''
          });
@@ -2726,7 +2590,7 @@ export const StoreProvider = ({ children }) => {
              type: taskType.type,
              category: taskType.category,
              date: taskDate.toISOString().split('T')[0],
-             dueDate: taskDate.toISOString().split('T')[0],
+             due_date: taskDate.toISOString().split('T')[0],
              parentType: 'release'
            }));
          });
@@ -2746,9 +2610,9 @@ export const StoreProvider = ({ children }) => {
          releaseDate: release.releaseDate || '',
          artistId: artistId,
          // Cost layers with precedence: paidCost > quotedCost > estimatedCost
-         estimatedCost: release.estimatedCost || 0,
-         quotedCost: release.quotedCost || 0,
-         paidCost: release.paidCost || 0,
+         estimated_cost: release.estimated_cost || 0,
+         quoted_cost: release.quoted_cost || 0,
+         amount_paid: release.amount_paid || 0,
          notes: release.notes || '',
          // Phase 3.2: Exclusive YES/NO pattern (like Songs/Versions/Videos)
          hasExclusivity: release.hasExclusivity || false,
@@ -2766,9 +2630,9 @@ export const StoreProvider = ({ children }) => {
          // Phase 3: Custom tasks on releases
          customTasks: [],
          // Phase 3.4: Stage/Era/Tags directly on Release
-         eraIds: release.eraIds || [],
-         stageIds: release.stageIds || [],
-         tagIds: release.tagIds || [],
+         era_ids: release.era_ids || [],
+         stage_ids: release.stage_ids || [],
+         tag_ids: release.tag_ids || [],
          // Legacy: Attached content (replaced by tracks module but kept for migration)
          attachedSongIds: release.attachedSongIds || [],
          attachedVersions: release.attachedVersions || [], // [{songId, versionId}]
@@ -2787,7 +2651,7 @@ export const StoreProvider = ({ children }) => {
       // Capture snapshot for undo before any changes
       const releaseForUndo = data.releases.find(r => r.id === releaseId);
       // Lock Era guard: prevent edits if release belongs to a locked era
-      if (releaseForUndo && isEraLocked(releaseForUndo.eraIds || releaseForUndo.era_ids || [], data.eras || [])) {
+      if (releaseForUndo && isEraLocked(releaseForUndo.era_ids || releaseForUndo.era_ids || [], data.eras || [])) {
         console.warn('Cannot update release: belongs to a locked era');
         return { error: 'Era is locked', locked: true };
       }
@@ -2811,7 +2675,7 @@ export const StoreProvider = ({ children }) => {
             type: taskType.type,
             category: taskType.category,
             date: taskDate.toISOString().split('T')[0],
-            dueDate: taskDate.toISOString().split('T')[0],
+            due_date: taskDate.toISOString().split('T')[0],
             parentType: 'release'
           }));
         });
@@ -2893,7 +2757,7 @@ export const StoreProvider = ({ children }) => {
        // Capture snapshot for undo
        const existing = data.releases?.find(r => r.id === releaseId);
        // Lock Era guard: prevent deletion if release belongs to a locked era
-       if (existing && isEraLocked(existing.eraIds || existing.era_ids || [], data.eras || [])) {
+       if (existing && isEraLocked(existing.era_ids || existing.era_ids || [], data.eras || [])) {
          console.warn('Cannot delete release: belongs to a locked era');
          return { error: 'Era is locked', locked: true };
        }
@@ -2999,14 +2863,14 @@ export const StoreProvider = ({ children }) => {
         title: task.title || 'New Task',
         description: task.description || '',
         date: task.date || '',
-        dueDate: task.date || task.dueDate || '',
+        due_date: task.date || task.due_date || '',
         status: task.status || 'Not Started',
-        estimatedCost: task.estimatedCost || 0,
-        quotedCost: task.quotedCost || 0,
-        paidCost: task.paidCost || 0,
+        estimated_cost: task.estimated_cost || 0,
+        quoted_cost: task.quoted_cost || 0,
+        amount_paid: task.amount_paid || 0,
         notes: task.notes || '',
         parentType: 'release',
-        parentId: releaseId
+        parent_item_id: releaseId
       });
       const release = data.releases.find(r => r.id === releaseId);
       if (release) {
@@ -3310,9 +3174,9 @@ export const StoreProvider = ({ children }) => {
         // Phase 1.5: Cost cleanup - remove estimated/quoted/paid, add budgetedCost
         budgetedCost: video.budgetedCost || 0,
         // Phase 1.6: Stage/Era/Tags for Videos
-        eraIds: video.eraIds || song?.eraIds || [],
-        stageIds: video.stageIds || song?.stageIds || [],
-        tagIds: video.tagIds || song?.tagIds || [],
+        era_ids: video.era_ids || song?.era_ids || [],
+        stage_ids: video.stage_ids || song?.stage_ids || [],
+        tag_ids: video.tag_ids || song?.tag_ids || [],
         // Phase 1.3: Attached items for tracking
         attachedReleaseIds: video.attachedReleaseIds || [],
         attachedEventIds: video.attachedEventIds || [],
@@ -3322,7 +3186,7 @@ export const StoreProvider = ({ children }) => {
         customTasks: video.customTasks || [],
         // Team members/musicians assigned to video
         musicians: video.musicians || [],
-        teamMemberIds: video.teamMemberIds || [],
+        team_member_ids: video.team_member_ids || [],
         // Notes
         notes: video.notes || ''
       };
@@ -3376,14 +3240,14 @@ export const StoreProvider = ({ children }) => {
         title: task.title || 'New Task',
         description: task.description || '',
         date: task.date || '',
-        dueDate: task.date || task.dueDate || '',
+        due_date: task.date || task.due_date || '',
         status: task.status || 'Not Started',
-        estimatedCost: task.estimatedCost || 0,
-        quotedCost: task.quotedCost || 0,
-        paidCost: task.paidCost || 0,
+        estimated_cost: task.estimated_cost || 0,
+        quoted_cost: task.quoted_cost || 0,
+        amount_paid: task.amount_paid || 0,
         notes: task.notes || '',
         parentType: 'video',
-        parentId: videoId
+        parent_item_id: videoId
       });
       setData(prev => ({
         ...prev,
@@ -3498,9 +3362,9 @@ export const StoreProvider = ({ children }) => {
         // Phase 1.5: Cost cleanup - remove estimated/quoted/paid, add budgetedCost
         budgetedCost: video.budgetedCost || 0,
         // Phase 1.6: Stage/Era/Tags for Videos
-        eraIds: video.eraIds || [],
-        stageIds: video.stageIds || [],
-        tagIds: video.tagIds || [],
+        era_ids: video.era_ids || [],
+        stage_ids: video.stage_ids || [],
+        tag_ids: video.tag_ids || [],
         // Phase 1.3: Attached items for tracking
         attachedReleaseIds: video.attachedReleaseIds || [],
         attachedEventIds: video.attachedEventIds || [],
@@ -3509,7 +3373,7 @@ export const StoreProvider = ({ children }) => {
         // Custom tasks on videos
         customTasks: video.customTasks || [],
         // Team members
-        teamMemberIds: video.teamMemberIds || [],
+        team_member_ids: video.team_member_ids || [],
         // Notes
         notes: video.notes || ''
       };
@@ -3659,9 +3523,9 @@ export const StoreProvider = ({ children }) => {
          name: expense.name || 'New Expense',
          date: expense.date || new Date().toISOString().split('T')[0],
          // Cost layers with precedence: paidCost > quotedCost > estimatedCost
-         estimatedCost: expense.estimatedCost || 0,
-         quotedCost: expense.quotedCost || 0,
-         paidCost: expense.paidCost || expense.amount || 0,
+         estimated_cost: expense.estimated_cost || 0,
+         quoted_cost: expense.quoted_cost || 0,
+         amount_paid: expense.amount_paid || expense.amount || 0,
          partiallyPaid: expense.partiallyPaid || 0,
          // Metadata
          category: expense.category || 'General',
@@ -3669,18 +3533,18 @@ export const StoreProvider = ({ children }) => {
          vendorMode: expense.vendorMode || 'text', // 'text' or 'teamMember'
          vendorText: expense.vendorText || '', // Short text input for vendor name
          vendorId: expense.vendorId || '', // Legacy - kept for backwards compatibility
-         teamMemberIds: expense.teamMemberIds || [], // Team members as vendor/payees
+         team_member_ids: expense.team_member_ids || [], // Team members as vendor/payees
          // Phase 4.4: Receipt Location field
          receiptLocation: expense.receiptLocation || '', // URL, path, or note for receipt
          // Metadata arrays
-         eraIds: expense.eraIds || [],
-         stageIds: expense.stageIds || [],
-         tagIds: expense.tagIds || [],
+         era_ids: expense.era_ids || [],
+         stage_ids: expense.stage_ids || [],
+         tag_ids: expense.tag_ids || [],
          // Status using unified STATUS_OPTIONS
          status: expense.status || 'Complete',
          // Parent relationship (optional - can link to Song, Release, Event, etc.)
          parentType: expense.parentType || null,
-         parentId: expense.parentId || null,
+         parent_item_id: expense.parent_item_id || null,
          notes: expense.notes || '',
          isArchived: false
        };
@@ -3752,18 +3616,18 @@ export const StoreProvider = ({ children }) => {
          // Categories don't need dates typically, but support them for sorting
          date: category.date || '',
          // Cost layers (aggregated from tasks, but can have own costs)
-         estimatedCost: category.estimatedCost || 0,
-         quotedCost: category.quotedCost || 0,
-         paidCost: category.paidCost || 0,
+         estimated_cost: category.estimated_cost || 0,
+         quoted_cost: category.quoted_cost || 0,
+         amount_paid: category.amount_paid || 0,
          // Metadata
          color: category.color || '#000000',
          icon: category.icon || 'Folder',
          order: category.order || 0,
          // Metadata arrays
-         eraIds: category.eraIds || [],
-         stageIds: category.stageIds || [],
-         tagIds: category.tagIds || [],
-         teamMemberIds: category.teamMemberIds || [],
+         era_ids: category.era_ids || [],
+         stage_ids: category.stage_ids || [],
+         tag_ids: category.tag_ids || [],
+         team_member_ids: category.team_member_ids || [],
          // Status
          status: category.status || 'Not Started',
          isArchived: false,

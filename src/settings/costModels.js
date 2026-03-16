@@ -68,10 +68,10 @@ const normalizeCost = (...values) => {
 const extractCosts = (entity = {}) => {
   return {
     actual: normalizeCost(entity.actualCost, entity.actual_cost),
-    paid: normalizeCost(entity.amount_paid, entity.paidCost, entity.amountPaid),
+    paid: normalizeCost(entity.amount_paid, entity.amountPaid),
     partially_paid: normalizeCost(entity.partially_paid, entity.partiallyPaidAmount, entity.partialPaidCost),
-    quoted: normalizeCost(entity.quoted_cost, entity.quotedCost),
-    estimated: normalizeCost(entity.estimated_cost, entity.estimatedCost)
+    quoted: normalizeCost(entity.quoted_cost),
+    estimated: normalizeCost(entity.estimated_cost)
   };
 };
 
